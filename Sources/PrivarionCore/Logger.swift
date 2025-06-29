@@ -156,6 +156,35 @@ public class PrivarionLogger {
         }
         logger.critical(Logger.Message(stringLiteral: message), metadata: loggerMetadata)
     }
+    
+    /// Get log statistics
+    public func getLogStatistics() -> LogStatistics {
+        guard let fileHandler = logFileHandler else {
+            return LogStatistics(
+                currentLogSize: 0,
+                totalLogFiles: 0,
+                lastRotationDate: nil
+            )
+        }
+        
+        return LogStatistics(
+            currentLogSize: fileHandler.getCurrentLogSize(),
+            totalLogFiles: fileHandler.getLogFileCount(),
+            lastRotationDate: fileHandler.getLastRotationDate()
+        )
+    }
+    
+    /// Manually rotate the log file
+    public func rotateLog() {
+        logFileHandler?.rotateLog()
+        info("Log rotation completed manually")
+    }
+    
+    /// Update log level
+    public func updateLogLevel(_ level: Logger.Level) {
+        logger.logLevel = level
+        info("Log level updated", metadata: ["level": level.rawValue])
+    }
 }
 
 /// Log statistics
