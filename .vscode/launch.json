@@ -1,0 +1,22 @@
+{
+    "configurations": [
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:privarion}",
+            "name": "Debug privacyctl",
+            "program": "${workspaceFolder:privarion}/.build/debug/privacyctl",
+            "preLaunchTask": "swift: Build Debug privacyctl"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:privarion}",
+            "name": "Release privacyctl",
+            "program": "${workspaceFolder:privarion}/.build/release/privacyctl",
+            "preLaunchTask": "swift: Build Release privacyctl"
+        }
+    ]
+}

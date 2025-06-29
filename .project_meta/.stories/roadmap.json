@@ -4,10 +4,10 @@
     "last_updated": "2025-06-29T00:00:00Z",
     "project_name": "Privarion Privacy Protection System",
     "roadmap_status": "active",
-    "total_stories": 0,
+    "total_stories": 3,
     "completed_stories": 0,
     "in_progress_stories": 0,
-    "planned_stories": 0
+    "planned_stories": 3
   },
   "phases": {
     "phase_1_foundation": {
@@ -16,7 +16,7 @@
       "description": "Establish core system infrastructure and basic module framework",
       "target_completion": "2025-08-29",
       "status": "planned",
-      "stories": [],
+      "stories": ["STORY-2025-001"],
       "dependencies": [],
       "success_criteria": [
         "Core engine module operational",
