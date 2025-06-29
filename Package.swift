@@ -6,7 +6,7 @@ import PackageDescription
 let package = Package(
     name: "Privarion",
     platforms: [
-        .macOS(.v12)
+        .macOS(.v13)
     ],
     products: [
         // Executable CLI tool
@@ -23,6 +23,11 @@ let package = Package(
         .library(
             name: "PrivarionHook",
             targets: ["PrivarionHook"]
+        ),
+        // SwiftUI GUI application  
+        .executable(
+            name: "PrivarionGUI",
+            targets: ["PrivarionGUI"]
         )
     ],
     dependencies: [
@@ -31,7 +36,9 @@ let package = Package(
         // Swift Log for structured logging
         .package(url: "https://github.com/apple/swift-log", from: "1.5.0"),
         // Swift Collections for advanced data structures
-        .package(url: "https://github.com/apple/swift-collections", from: "1.0.0")
+        .package(url: "https://github.com/apple/swift-collections", from: "1.0.0"),
+        // KeyboardShortcuts for global macOS shortcuts
+        .package(url: "https://github.com/sindresorhus/KeyboardShortcuts", from: "1.15.0")
     ],
     targets: [
         // CLI executable target
@@ -55,6 +62,15 @@ let package = Package(
         .target(
             name: "PrivarionHook",
             dependencies: []
+        ),
+        // SwiftUI GUI application target
+        .executableTarget(
+            name: "PrivarionGUI",
+            dependencies: [
+                "PrivarionCore",
+                .product(name: "Logging", package: "swift-log"),
+                .product(name: "KeyboardShortcuts", package: "KeyboardShortcuts")
+            ]
         ),
         // Tests for core library
         .testTarget(

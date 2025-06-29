@@ -247,7 +247,7 @@
       ]
     },
     {
-    "session_id": "CTX7-2025-004",
+      "session_id": "CTX7-2025-004",
     "timestamp": "2025-06-30T02:00:00Z",
     "library_id": "/apple/swift-argument-parser",
     "topic": "CLI design patterns and best practices",
@@ -295,7 +295,7 @@
         "Regular validation against official updates"
       ]
     }
-  }
+    }
   ],
   "research_sessions": {
     "session_20250629_001": {

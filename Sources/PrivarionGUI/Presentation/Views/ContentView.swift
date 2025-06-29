@@ -1,0 +1,208 @@
+import SwiftUI
+import Logging
+
+/// Main content view of the application
+/// Implements native macOS design patterns following Context7 research
+/// Enhanced with comprehensive error handling system
+struct ContentView: View {
+    
+    @EnvironmentObject private var appState: AppState
+    private let logger = Logger(label: "ContentView")
+    
+    var body: some View {
+        VStack(spacing: 0) {
+            // Navigation Bar
+            NavigationBarView()
+                .padding(.horizontal, 12)
+                .padding(.top, 8)
+            
+            // Main Content
+            NavigationSplitView {
+                SidebarView()
+                    .navigationSplitViewColumnWidth(min: 200, ideal: 250, max: 300)
+            } detail: {
+                DetailView()
+            }
+            .navigationTitle("Privarion")
+        }
+        .sheet(isPresented: $appState.commandManager.isShowingPalette) {
+            CommandPaletteView()
+                .environmentObject(appState)
+        }
+        .toolbar {
+            ToolbarItem(placement: .navigation) {
+                Button {
+                    // Toggle sidebar - handled by system
+                } label: {
+                    Label("Toggle Sidebar", systemImage: "sidebar.left")
+                }
+            }
+            
+            ToolbarItemGroup(placement: .primaryAction) {
+                // Refresh button
+                Button {
+                    Task {
+                        await appState.refreshAll()
+                    }
+                } label: {
+                    Image(systemName: "arrow.clockwise")
+                }
+                .disabled(appState.isLoading.values.contains(true))
+                .help("Refresh all data")
+                
+                // Command Palette button
+                Button {
+                    appState.showCommandPalette()
+                } label: {
+                    Image(systemName: "command")
+                }
+                .help("Show Command Palette (⌘⇧P)")
+                
+                // System status with menu
+                Menu {
+                    Button("System Details") {
+                        // TODO: Show system details
+                    }
+                    
+                    Divider()
+                    
+                    Button("Start System") {
+                        // TODO: Start system
+                    }
+                    .disabled(appState.systemStatus == .running)
+                    
+                    Button("Stop System") {
+                        // TODO: Stop system
+                    }
+                    .disabled(appState.systemStatus == .stopped)
+                } label: {
+                    SystemStatusIndicator()
+                }
+            }
+        }
+        .withErrorHandling(errorManager: appState.errorManager)
+        .onAppear {
+            logger.info("ContentView appeared with error handling")
+        }
+    }
+}
+
+/// Sidebar navigation view
+struct SidebarView: View {
+    
+    @EnvironmentObject private var appState: AppState
+    
+    var body: some View {
+        List(selection: Binding(
+            get: { appState.currentView },
+            set: { if let view = $0 { appState.navigateTo(view) } }
+        )) {
+            Section("Overview") {
+                NavigationLink(value: AppView.dashboard) {
+                    Label("Dashboard", systemImage: "speedometer")
+                }
+            }
+            
+            Section("Privacy") {
+                NavigationLink(value: AppView.modules) {
+                    HStack {
+                        Label("Modules", systemImage: "shield.lefthalf.filled")
+                        Spacer()
+                        if !appState.modules.isEmpty {
+                            Text("\(appState.modules.filter(\.isEnabled).count)")
+                                .font(.caption2)
+                                .fontWeight(.medium)
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(appState.modules.filter(\.isEnabled).count > 0 ? Color.green : Color.gray)
+                                .clipShape(Capsule())
+                        }
+                    }
+                }
+                
+                NavigationLink(value: AppView.profiles) {
+                    HStack {
+                        Label("Profiles", systemImage: "person.2.circle")
+                        Spacer()
+                        if !appState.profiles.isEmpty {
+                            Text("\(appState.profiles.count)")
+                                .font(.caption2)
+                                .fontWeight(.medium)
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(Color.blue)
+                                .clipShape(Capsule())
+                        }
+                    }
+                }
+            }
+            
+            Section("System") {
+                NavigationLink(value: AppView.logs) {
+                    Label("Activity Logs", systemImage: "list.bullet.rectangle")
+                }
+                
+                NavigationLink(value: AppView.settings) {
+                    Label("Settings", systemImage: "gearshape")
+                }
+            }
+        }
+        .listStyle(.sidebar)
+        .navigationTitle("Privarion")
+    }
+}
+
+/// Detail view showing selected content
+struct DetailView: View {
+    
+    @EnvironmentObject private var appState: AppState
+    
+    var body: some View {
+        Group {
+            switch appState.currentView {
+            case .dashboard:
+                DashboardView()
+            case .modules:
+                ModulesView()
+            case .profiles:
+                ProfilesView()
+            case .logs:
+                LogsView()
+            case .settings:
+                SettingsView()
+            }
+        }
+        .frame(minWidth: 600, minHeight: 400)
+    }
+}
+
+/// System status indicator in toolbar
+struct SystemStatusIndicator: View {
+    
+    @EnvironmentObject private var appState: AppState
+    
+    var body: some View {
+        HStack(spacing: 6) {
+            Circle()
+                .fill(appState.systemStatus.color)
+                .frame(width: 8, height: 8)
+            
+            Text(appState.systemStatus.rawValue)
+                .font(.caption)
+                .foregroundColor(.secondary)
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
+        .background(Color.secondary.opacity(0.1))
+        .clipShape(Capsule())
+    }
+}
+
+// MARK: - Preview
+
+#Preview {
+    ContentView()
+        .environmentObject(AppState())
+}

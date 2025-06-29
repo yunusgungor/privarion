@@ -1,0 +1,242 @@
+{
+  "story_id": "STORY-2025-006",
+  "title": "GUI-Backend Integration ve Gerçek Sistem Bağlantısı",
+  "phase": "phase_3_advanced_features",
+  "priority": "Critical",
+  "status": "In Progress",
+  "created_date": "2025-06-30T14:50:00Z",
+  "estimated_effort": "16-24 hours",
+  "complexity_level": "High",
+  "business_value": "Critical",
+  
+  "user_story": {
+    "as_a": "PrivarionGUI kullanıcısı",
+    "i_want": "GUI üzerinden gerçek Privarion sistem modüllerini yönetebilmek",
+    "so_that": "CLI kullanmadan tüm gizlilik özelliklerini aktifleştirip konfigüre edebilirim"
+  },
+  
+  "detailed_description": "Şu anda PrivarionGUI mock data ile çalışmaktadır. Bu story, GUI'yı gerçek PrivarionCore modülleri ile entegre ederek functional bir gizlilik yönetim arayüzü haline getirmeyi amaçlar. GUI, CLI tool ile aynı backend functionality'sine sahip olacak ve kullanıcılar terminal kullanmadan tüm Privarion özelliklerini yönetebilecek.",
+  
+  "context7_research": {
+    "external_validation": false,
+    "research_sources": [
+      "Swift Process class documentation",
+      "Swift interprocess communication patterns", 
+      "SwiftUI state management for system integration"
+    ],
+    "key_findings": [
+      "Swift Process class ile CLI integration mümkün",
+      "Shared framework patterns ile direct module access optimal",
+      "NSXPCConnection ile secure IPC communication sağlanabilir",
+      "Combine publishers ile real-time system monitoring yapılabilir"
+    ],
+    "research_completeness_score": 7
+  },
+  
+  "sequential_thinking": {
+    "analysis_id": "ST-2025-006",
+    "key_decisions": [
+      "Integration Approach: Shared PrivarionCore framework kullanımı",
+      "Communication Pattern: Direct framework calls + CLI fallback",
+      "State Management: Real-time system status via Combine",
+      "Architecture: Clean separation between GUI and Core logic"
+    ],
+    "risk_assessment": [
+      {"level": "Medium", "description": "PrivarionCore modules'ların GUI environment'da çalışması"},
+      {"level": "Low", "description": "Permission handling için elevated privileges"},
+      {"level": "Medium", "description": "Real-time data synchronization complexity"}
+    ],
+    "alternative_evaluation": [
+      "Direct framework calls vs CLI proxy - Direct calls seçildi",
+      "Polling vs push notifications - Combine publishers ile push seçildi",
+      "Monolithic vs modular integration - Modular integration seçildi"
+    ]
+  },
+  
+  "acceptance_criteria": [
+    {
+      "id": "AC-006-001",
+      "title": "PrivarionCore Framework Integration",
+      "given": "GUI uygulama başlatıldığında",
+      "when": "sistem modülleri yüklendiğinde", 
+      "then": "gerçek modül durumları görüntülenir ve CLI mock data kullanılmaz",
+      "technical_requirements": [
+        "PrivarionCore framework import edilir",
+        "ModuleManager, ConfigurationManager, IdentitySpoofingManager erişilebilir",
+        "Gerçek sistem durumu AppState'e aktarılır",
+        "Mock data dependencies kaldırılır"
+      ]
+    },
+    {
+      "id": "AC-006-002", 
+      "title": "Gerçek Modül Enable/Disable Functionality",
+      "given": "kullanıcı bir modülü enable/disable etmek istediğinde",
+      "when": "GUI'da toggle düğmesine tıkladığında",
+      "then": "gerçek sistem modülü aktifleşir/deaktif olur ve durum güncellenir",
+      "technical_requirements": [
+        "IdentitySpoofingManager.enable/disable method'ları çağırılır",
+        "Modül durumu gerçek zamanlı güncellenir",
+        "Error handling ve user feedback sağlanır",
+        "Sistem permissions kontrol edilir"
+      ]
+    },
+    {
+      "id": "AC-006-003",
+      "title": "Configuration Management Integration", 
+      "given": "kullanıcı modül ayarlarını değiştirmek istediğinde",
+      "when": "GUI settings panel'ini kullandığında",
+      "then": "gerçek configuration dosyaları güncellenir ve sistem değişiklikleri uygular",
+      "technical_requirements": [
+        "ConfigurationManager ile integration",
+        "Profile switching gerçek profilleri kullanır", 
+        "Configuration validation ve error handling",
+        "Real-time configuration reload"
+      ]
+    },
+    {
+      "id": "AC-006-004",
+      "title": "System Status Monitoring",
+      "given": "sistem çalışırken",
+      "when": "modüller aktif olduğunda",
+      "then": "gerçek zamanlı sistem durumu, log entries ve module activity görüntülenir",
+      "technical_requirements": [
+        "Logger system integration",
+        "Real-time log streaming",
+        "System resource monitoring",
+        "Module health check indicators"
+      ]
+    },
+    {
+      "id": "AC-006-005",
+      "title": "CLI Tool Compatibility",
+      "given": "GUI ile CLI tool aynı sistem üzerinde çalıştığında", 
+      "when": "her iki araç da kullanıldığında",
+      "then": "state synchronization sağlanır ve conflict olmaz",
+      "technical_requirements": [
+        "Shared configuration file format",
+        "File locking ve concurrent access handling",
+        "State change notifications",
+        "CLI command execution via GUI"
+      ]
+    }
+  ],
+  
+  "technical_approach": {
+    "architecture_decisions": [
+      {
+        "decision": "Shared Framework Pattern",
+        "rationale": "PrivarionCore'u hem CLI hem GUI tarafından kullanılabilir hale getirmek",
+        "implementation": "Framework target oluştur, shared types ve protocols tanımla"
+      },
+      {
+        "decision": "Direct Module Access",
+        "rationale": "CLI proxy yerine direct access daha performanslı ve güvenilir",
+        "implementation": "PrivarionCore modules'ı doğrudan AppState'den erişilebilir yap"
+      },
+      {
+        "decision": "Combine-based Real-time Updates",
+        "rationale": "Real-time GUI updates için reactive programming pattern",
+        "implementation": "Publishers ile system events'i GUI'ya stream et"
+      }
+    ],
+    "integration_points": [
+      "AppState -> PrivarionCore modules",
+      "GUI Views -> Real system data", 
+      "Configuration UI -> ConfigurationManager",
+      "Dashboard -> Real-time system monitoring"
+    ]
+  },
+  
+  "dependencies": {
+    "blocked_by": [],
+    "blocks": ["STORY-2025-007"],
+    "related": ["STORY-2025-005", "STORY-2025-004"],
+    "external_dependencies": [
+      "PrivarionCore framework modifications",
+      "System permissions setup",
+      "Configuration file structure"
+    ]
+  },
+  
+  "definition_of_done": [
+    "PrivarionCore framework successfully integrated with GUI",
+    "All mock data replaced with real system calls",
+    "Module enable/disable functionality works with real modules",
+    "Configuration management connected to real config files",
+    "Real-time system monitoring displays actual system status",
+    "Error handling implemented for all system interactions",
+    "Unit tests for integration layer written and passing",
+    "Integration tests with real modules passing",
+    "GUI-CLI compatibility verified",
+    "Documentation updated with integration patterns"
+  ],
+  
+  "implementation_plan": {
+    "phase_1": {
+      "title": "Framework Integration Setup",
+      "tasks": [
+        "Modify PrivarionCore for framework usage",
+        "Update AppState for direct module access",
+        "Remove mock data dependencies"
+      ],
+      "estimated_hours": 6
+    },
+    "phase_2": {
+      "title": "Module Management Integration",
+      "tasks": [
+        "Connect module enable/disable to real systems",
+        "Implement error handling and user feedback",
+        "Add permission management"
+      ],
+      "estimated_hours": 8
+    },
+    "phase_3": {
+      "title": "Configuration and Monitoring",
+      "tasks": [
+        "Integrate configuration management",
+        "Implement real-time system monitoring",
+        "Add CLI compatibility layer"
+      ],
+      "estimated_hours": 6
+    },
+    "phase_4": {
+      "title": "Testing and Polish",
+      "tasks": [
+        "Integration testing",
+        "Error handling refinement", 
+        "Performance optimization",
+        "Documentation update"
+      ],
+      "estimated_hours": 4
+    }
+  },
+  
+  "risks_and_mitigations": [
+    {
+      "risk": "PrivarionCore modules might not work in GUI environment",
+      "probability": "Medium",
+      "impact": "High", 
+      "mitigation": "Test core modules in isolated GUI context first, implement fallback to CLI proxy"
+    },
+    {
+      "risk": "Permission issues with system-level operations",
+      "probability": "High",
+      "impact": "Medium",
+      "mitigation": "Implement proper permission handling, clear user guidance for elevated privileges"
+    },
+    {
+      "risk": "Real-time data synchronization complexity",
+      "probability": "Medium", 
+      "impact": "Medium",
+      "mitigation": "Use proven Combine patterns, implement robust error handling and retry logic"
+    }
+  ],
+  
+  "success_metrics": [
+    "100% mock data replaced with real system calls",
+    "Module enable/disable success rate > 95%",
+    "Real-time monitoring data accuracy > 98%", 
+    "GUI-CLI state synchronization working",
+    "System resource usage increase < 10%"
+  ]
+}

@@ -17,6 +17,24 @@
             "name": "Release privacyctl",
             "program": "${workspaceFolder:privarion}/.build/release/privacyctl",
             "preLaunchTask": "swift: Build Release privacyctl"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:privarion}",
+            "name": "Debug PrivarionGUI",
+            "program": "${workspaceFolder:privarion}/.build/debug/PrivarionGUI",
+            "preLaunchTask": "swift: Build Debug PrivarionGUI"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:privarion}",
+            "name": "Release PrivarionGUI",
+            "program": "${workspaceFolder:privarion}/.build/release/PrivarionGUI",
+            "preLaunchTask": "swift: Build Release PrivarionGUI"
         }
     ]
 }
