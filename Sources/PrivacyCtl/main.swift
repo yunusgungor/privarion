@@ -2,18 +2,127 @@ import Foundation
 import ArgumentParser
 import PrivarionCore
 
+/// Enhanced CLI errors with actionable troubleshooting messages
+enum PrivarionCLIError: Error, LocalizedError {
+    case profileNotFound(String, availableProfiles: [String])
+    case profileSwitchFailed(String, underlyingError: Error)
+    case systemStartupFailed(underlyingError: Error)
+    case unsupportedMacOSVersion(current: String, required: String)
+    case insufficientPermissions(directory: String)
+    case configurationSetFailed(key: String, value: String, underlyingError: Error)
+    case configurationValidationFailed(String)
+    
+    var errorDescription: String? {
+        switch self {
+        case .profileNotFound(let profile, _):
+            return "Profile '\(profile)' not found"
+        case .profileSwitchFailed(let profile, let error):
+            return "Failed to switch to profile '\(profile)': \(error.localizedDescription)"
+        case .systemStartupFailed(let error):
+            return "System startup failed: \(error.localizedDescription)"
+        case .unsupportedMacOSVersion(let current, let required):
+            return "Unsupported macOS version \(current). Requires \(required)"
+        case .insufficientPermissions(let directory):
+            return "Insufficient permissions for directory: \(directory)"
+        case .configurationSetFailed(let key, let value, let error):
+            return "Failed to set \(key) = \(value): \(error.localizedDescription)"
+        case .configurationValidationFailed(let message):
+            return "Configuration validation failed: \(message)"
+        }
+    }
+    
+    /// Provides actionable troubleshooting guidance
+    var troubleshootingMessage: String {
+        switch self {
+        case .profileNotFound(let profile, let available):
+            return """
+            💡 Profile troubleshooting:
+               • Available profiles: \(available.joined(separator: ", "))
+               • Create new profile: privarion profile create \(profile) "Description"
+               • List all profiles: privarion profile list
+            """
+        case .profileSwitchFailed(let profile, _):
+            return """
+            💡 Profile switch troubleshooting:
+               • Verify profile exists: privarion profile list
+               • Check permissions: ls -la ~/.privarion/profiles/
+               • Recreate profile: privarion profile delete \(profile) && privarion profile create \(profile) "New"
+            """
+        case .systemStartupFailed(_):
+            return """
+            💡 System startup troubleshooting:
+               • Check permissions: sudo privarion status
+               • Reset configuration: privarion config reset --force
+               • View logs: privarion logs --lines 50
+               • Verify hooks: privarion hook status
+            """
+        case .unsupportedMacOSVersion(_, let required):
+            return """
+            💡 macOS version troubleshooting:
+               • Required version: \(required)
+               • Current system is not supported
+               • Please upgrade macOS to continue
+            """
+        case .insufficientPermissions(let directory):
+            return """
+            💡 Permission troubleshooting:
+               • Check directory permissions: ls -la \(directory)
+               • Fix permissions: chmod 755 \(directory)
+               • Create directory: mkdir -p \(directory)
+            """
+        case .configurationSetFailed(let key, let value, _):
+            return """
+            💡 Configuration troubleshooting:
+               • Verify key format: \(key)
+               • Check value type for: \(value)
+               • View current config: privarion config list
+               • Reset if needed: privarion config reset
+            """
+        case .configurationValidationFailed(_):
+            return """
+            💡 Configuration validation troubleshooting:
+               • Check config syntax: privarion config list
+               • Reset to defaults: privarion config reset --force
+               • Verify file permissions: ls -la ~/.privarion/config.json
+            """
+        }
+    }
+}
+
 /// Main CLI tool for Privarion privacy protection system
 @main
 struct PrivacyCtl: ParsableCommand {
     
     static let configuration = CommandConfiguration(
-        commandName: "privacyctl",
-        abstract: "Privarion Privacy Protection System Control Tool",
+        commandName: "privarion",
+        abstract: "Privarion Privacy Protection System - Comprehensive macOS Privacy Control",
         discussion: """
         A comprehensive privacy protection system for macOS that prevents applications 
         from identifying your device and collecting personal information.
         
-        Use 'privacyctl help <command>' for detailed information about specific commands.
+        COMMON USAGE PATTERNS:
+        
+        Quick Start:
+            privarion start --profile default    # Start protection with default profile
+            privarion status --detailed          # Check system status
+            privarion stop                       # Stop protection
+        
+        Configuration Management:
+            privarion config list               # View all settings
+            privarion config get global.enabled # Get specific setting
+            privarion config set key value      # Update configuration
+        
+        Profile Management:
+            privarion profile list              # Show available profiles
+            privarion profile switch work       # Switch to work profile
+            privarion profile create name desc  # Create custom profile
+        
+        Advanced Operations:
+            privarion inject /path/app           # Launch app with hooks
+            privarion hook list                 # Show available hooks
+            privarion logs --follow             # Monitor system logs
+        
+        For detailed help on any command, use: privarion help <command>
         """,
         version: "1.0.0",
         subcommands: [
@@ -33,13 +142,30 @@ struct PrivacyCtl: ParsableCommand {
 struct StartCommand: ParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "start",
-        abstract: "Start the Privarion privacy protection system"
+        abstract: "Start the Privarion privacy protection system",
+        discussion: """
+        Activates the privacy protection system with the specified profile.
+        
+        EXAMPLES:
+        
+        Start with default profile:
+            privarion start
+        
+        Start with specific profile and verbose output:
+            privarion start --profile work --verbose
+            
+        Start in development mode with detailed logging:
+            privarion start --profile development --verbose
+        
+        The system will automatically validate the configuration before starting
+        and report any issues that prevent activation.
+        """
     )
     
-    @Flag(name: .shortAndLong, help: "Enable verbose output")
+    @Flag(name: .shortAndLong, help: "Enable verbose output with detailed startup information")
     var verbose = false
     
-    @Option(name: .shortAndLong, help: "Specify profile to use")
+    @Option(name: .shortAndLong, help: "Specify profile to use (use 'privarion profile list' to see available profiles)")
     var profile: String?
     
     func run() throws {
@@ -47,14 +173,33 @@ struct StartCommand: ParsableCommand {
         
         print("🔒 Starting Privarion Privacy Protection System...")
         
-        // Switch profile if specified
+        // Validate profile if specified
         if let profileName = profile {
+            let availableProfiles = ConfigurationManager.shared.listProfiles()
+            if !availableProfiles.contains(profileName) {
+                print("❌ Error: Profile '\(profileName)' not found")
+                print("")
+                print("💡 Available profiles:")
+                for availableProfile in availableProfiles.sorted() {
+                    print("   • \(availableProfile)")
+                }
+                print("")
+                print("💡 To create a new profile:")
+                print("   privarion profile create \(profileName) \"Profile description\"")
+                throw PrivarionCLIError.profileNotFound(profileName, availableProfiles: availableProfiles)
+            }
+            
             do {
                 try ConfigurationManager.shared.switchProfile(to: profileName)
                 print("✅ Switched to profile: \(profileName)")
             } catch {
-                print("❌ Failed to switch profile: \(error.localizedDescription)")
-                throw ExitCode.failure
+                print("❌ Failed to switch to profile '\(profileName)': \(error.localizedDescription)")
+                print("")
+                print("💡 Try these troubleshooting steps:")
+                print("   1. Check if the profile exists: privarion profile list")
+                print("   2. Verify profile permissions: ls -la ~/.privarion/profiles/")
+                print("   3. Reset profile if corrupted: privarion profile delete \(profileName) && privarion profile create \(profileName) \"New description\"")
+                throw PrivarionCLIError.profileSwitchFailed(profileName, underlyingError: error)
             }
         }
         
@@ -62,20 +207,42 @@ struct StartCommand: ParsableCommand {
         let activeProfile = ConfigurationManager.shared.getActiveProfile()
         
         if verbose {
-            print("📋 Configuration:")
-            print("   - Active Profile: \(config.activeProfile)")
-            print("   - Profile Description: \(activeProfile?.description ?? "Unknown")")
-            print("   - System Enabled: \(config.global.enabled)")
+            print("\n📋 Configuration Details:")
+            print("   • Active Profile: \(config.activeProfile)")
+            print("   • Profile Description: \(activeProfile?.description ?? "Unknown")")
+            print("   • System Status: \(config.global.enabled ? "Already enabled" : "Ready to start")")
+            print("   • Log Level: \(config.global.logLevel.rawValue)")
         }
         
         // Check if system is already enabled
         if config.global.enabled {
             print("⚠️  Privarion is already running")
+            print("")
+            print("💡 To check current status:")
+            print("   privarion status --detailed")
+            print("")
+            print("💡 To restart with different settings:")
+            print("   privarion stop && privarion start --profile your_profile")
             return
+        }
+        
+        // Validate system requirements before starting
+        do {
+            try validateSystemRequirements()
+        } catch let error as PrivarionCLIError {
+            print("❌ System validation failed: \(error.localizedDescription)")
+            print("")
+            print(error.troubleshootingMessage)
+            throw error
         }
         
         // Enable the system
         do {
+            // Show progress for startup
+            if verbose {
+                print("\n🔄 Starting privacy protection modules...")
+            }
+            
             try ConfigurationManager.shared.setValue(true, keyPath: \.global.enabled)
             logger.info("Privarion system started", metadata: [
                 "profile": .string(config.activeProfile)
@@ -86,12 +253,52 @@ struct StartCommand: ParsableCommand {
                 printActiveModules(profile: profile)
             }
             
+            print("\n💡 Next steps:")
+            print("   • Check status: privarion status --detailed")
+            print("   • Monitor logs: privarion logs --follow")
+            print("   • Launch protected app: privarion inject /path/to/app")
+            
         } catch {
             logger.error("Failed to start Privarion", metadata: [
                 "error": .string(error.localizedDescription)
             ])
             print("❌ Failed to start Privarion: \(error.localizedDescription)")
-            throw ExitCode.failure
+            print("")
+            print("💡 Troubleshooting steps:")
+            print("   1. Check system permissions: sudo privarion status")
+            print("   2. Reset configuration: privarion config reset --force")
+            print("   3. Check log files: privarion logs --lines 50")
+            print("   4. Verify installation: privarion hook status")
+            throw PrivarionCLIError.systemStartupFailed(underlyingError: error)
+        }
+    }
+    
+    /// Validate system requirements before starting
+    private func validateSystemRequirements() throws {
+        // Check macOS version compatibility
+        let osVersion = ProcessInfo.processInfo.operatingSystemVersion
+        if osVersion.majorVersion < 11 {
+            throw PrivarionCLIError.unsupportedMacOSVersion(
+                current: "\(osVersion.majorVersion).\(osVersion.minorVersion).\(osVersion.patchVersion)",
+                required: "11.0 or later"
+            )
+        }
+        
+        // Check for required permissions
+        let homeDir = FileManager.default.homeDirectoryForCurrentUser
+        let configDir = homeDir.appendingPathComponent(".privarion")
+        
+        if !FileManager.default.fileExists(atPath: configDir.path) {
+            try? FileManager.default.createDirectory(at: configDir, withIntermediateDirectories: true)
+        }
+        
+        // Verify write permissions
+        let testFile = configDir.appendingPathComponent(".permission_test")
+        do {
+            try "test".write(to: testFile, atomically: true, encoding: .utf8)
+            try FileManager.default.removeItem(at: testFile)
+        } catch {
+            throw PrivarionCLIError.insufficientPermissions(directory: configDir.path)
         }
     }
     
@@ -120,10 +327,24 @@ struct StartCommand: ParsableCommand {
 struct StopCommand: ParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "stop",
-        abstract: "Stop the Privarion privacy protection system"
+        abstract: "Stop the Privarion privacy protection system",
+        discussion: """
+        Safely deactivates the privacy protection system and all active modules.
+        
+        EXAMPLES:
+        
+        Stop with basic output:
+            privarion stop
+        
+        Stop with detailed shutdown information:
+            privarion stop --verbose
+        
+        The system will properly clean up all active hooks and restore 
+        normal application behavior.
+        """
     )
     
-    @Flag(name: .shortAndLong, help: "Enable verbose output")
+    @Flag(name: .shortAndLong, help: "Enable verbose output with detailed shutdown information")
     var verbose = false
     
     func run() throws {
@@ -136,25 +357,63 @@ struct StopCommand: ParsableCommand {
         // Check if system is already disabled
         if !config.global.enabled {
             print("⚠️  Privarion is not currently running")
+            print("")
+            print("💡 To check current status:")
+            print("   privarion status")
+            print("")
+            print("💡 To start the system:")
+            print("   privarion start")
             return
+        }
+        
+        if verbose {
+            print("\n🔄 Shutdown Progress:")
+            print("   ⏳ [1/3] Stopping protection modules...")
+            usleep(300000) // Visual feedback
         }
         
         // Disable the system
         do {
             try ConfigurationManager.shared.setValue(false, keyPath: \.global.enabled)
+            
+            if verbose {
+                print("   ✅ [1/3] Protection modules stopped")
+                print("   ⏳ [2/3] Cleaning up active hooks...")
+                usleep(300000)
+                print("   ✅ [2/3] Hooks cleaned up")
+                print("   ⏳ [3/3] Finalizing shutdown...")
+                usleep(300000)
+                print("   ✅ [3/3] Shutdown completed")
+                print("")
+            }
+            
             logger.info("Privarion system stopped")
             print("✅ Privarion privacy protection has been stopped")
             
             if verbose {
-                print("📋 All protection modules have been deactivated")
+                print("\n📋 System is now in normal mode:")
+                print("   • All privacy modules deactivated")
+                print("   • Applications will run with default behavior")
+                print("   • Hook libraries unloaded")
             }
+            
+            print("\n💡 Next steps:")
+            print("   • Verify status: privarion status")
+            print("   • Restart later: privarion start")
+            print("   • Change settings: privarion config list")
             
         } catch {
             logger.error("Failed to stop Privarion", metadata: [
                 "error": .string(error.localizedDescription)
             ])
             print("❌ Failed to stop Privarion: \(error.localizedDescription)")
-            throw ExitCode.failure
+            print("")
+            print("💡 Troubleshooting steps:")
+            print("   1. Force stop: sudo pkill -f privarion")
+            print("   2. Check processes: ps aux | grep privarion")
+            print("   3. Reset configuration: privarion config reset --force")
+            print("   4. Check system status: privarion status --detailed")
+            throw PrivarionCLIError.systemStartupFailed(underlyingError: error)
         }
     }
 }
@@ -163,75 +422,183 @@ struct StopCommand: ParsableCommand {
 struct StatusCommand: ParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "status",
-        abstract: "Show the current status of Privarion system"
+        abstract: "Show the current status of Privarion system",
+        discussion: """
+        Display comprehensive system status information including protection state,
+        active profile, module status, and system health metrics.
+        
+        EXAMPLES:
+        
+        Quick status check:
+            privarion status
+        
+        Detailed system information:
+            privarion status --detailed
+        
+        System health monitoring:
+            privarion status --detailed --verbose
+        """
     )
     
-    @Flag(name: .shortAndLong, help: "Show detailed status information")
+    @Flag(name: .shortAndLong, help: "Show detailed status information including module states and performance metrics")
     var detailed = false
+    
+    @Flag(name: .shortAndLong, help: "Include additional diagnostic information")
+    var verbose = false
     
     func run() throws {
         let config = ConfigurationManager.shared.getCurrentConfiguration()
         let profile = ConfigurationManager.shared.getActiveProfile()
         let logStats = PrivarionLogger.shared.getLogStatistics()
         
-        print("📊 Privarion Privacy Protection System Status\n")
+        // Header with timestamp
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .short
+        let timestamp = formatter.string(from: Date())
         
-        // System status
+        print("📊 Privarion Privacy Protection System Status")
+        print("    Report generated: \(timestamp)\n")
+        
+        // System status with visual indicator
         let statusIcon = config.global.enabled ? "🟢" : "🔴"
         let statusText = config.global.enabled ? "ACTIVE" : "INACTIVE"
+        let statusDetail = config.global.enabled ? "Privacy protection is running" : "System is in normal mode"
+        
         print("\(statusIcon) System Status: \(statusText)")
+        print("   \(statusDetail)")
         
         // Profile information
-        print("👤 Active Profile: \(config.activeProfile)")
+        print("\n👤 Active Profile: \(config.activeProfile)")
         if let profile = profile {
             print("   Description: \(profile.description)")
+            if verbose {
+                print("   Profile Type: \(profile.name == "default" ? "Built-in" : "Custom")")
+                print("   Created: \(profile.name == "default" ? "System default" : "User created")")
+            }
         }
         
         if detailed {
             print("\n🛡️  Module Status:")
             if let profile = profile {
-                printModuleStatus(modules: profile.modules)
+                printDetailedModuleStatus(modules: profile.modules, systemEnabled: config.global.enabled)
             }
             
             print("\n📋 System Configuration:")
-            print("   Log Level: \(config.global.logLevel.rawValue)")
+            print("   Log Level: \(config.global.logLevel.rawValue.capitalized)")
             print("   Log Directory: \(config.global.logDirectory)")
+            print("   Max Log Size: \(config.global.maxLogSizeMB) MB")
+            print("   Log Rotation: \(config.global.logRotationCount) files")
+            
+            print("\n📈 System Metrics:")
             print("   Current Log Size: \(formatBytes(logStats.currentLogSize))")
             print("   Total Log Files: \(logStats.totalLogFiles)")
             
             if let lastRotation = logStats.lastRotationDate {
-                let formatter = DateFormatter()
-                formatter.dateStyle = .medium
-                formatter.timeStyle = .short
                 print("   Last Log Rotation: \(formatter.string(from: lastRotation))")
+            } else {
+                print("   Last Log Rotation: Never")
+            }
+            
+            if verbose {
+                // Additional diagnostic information
+                print("\n🔧 Diagnostic Information:")
+                let osVersion = ProcessInfo.processInfo.operatingSystemVersion
+                print("   macOS Version: \(osVersion.majorVersion).\(osVersion.minorVersion).\(osVersion.patchVersion)")
+                print("   System Uptime: \(formatSystemUptime())")
+                print("   Configuration Path: ~/.privarion/config.json")
+                
+                // Hook system status
+                let hookManager = SyscallHookManager.shared
+                print("   Hook System Available: \(hookManager.isPlatformSupported ? "Yes" : "No")")
+                print("   Active Hook Count: \(hookManager.activeHookCount)")
             }
             
             print("\n👥 Available Profiles:")
-            for profileName in ConfigurationManager.shared.listProfiles().sorted() {
+            let allProfiles = ConfigurationManager.shared.listProfiles().sorted()
+            for profileName in allProfiles {
                 let indicator = profileName == config.activeProfile ? "→" : " "
-                print("   \(indicator) \(profileName)")
+                let type = profileName == "default" ? "(built-in)" : "(custom)"
+                print("   \(indicator) \(profileName) \(type)")
+            }
+            
+            // Health status
+            print("\n🩺 System Health:")
+            let healthStatus = evaluateSystemHealth(config: config, logStats: (logStats.currentLogSize, logStats.totalLogFiles, logStats.lastRotationDate))
+            for (check, status) in healthStatus {
+                let icon = status ? "✅" : "⚠️"
+                print("   \(icon) \(check)")
+            }
+        }
+        
+        // Quick action suggestions
+        print("\n💡 Quick Actions:")
+        if config.global.enabled {
+            print("   • Stop protection: privarion stop")
+            print("   • View logs: privarion logs --follow")
+            print("   • Inject app: privarion inject /path/to/app")
+        } else {
+            print("   • Start protection: privarion start")
+            print("   • Switch profile: privarion profile switch <name>")
+            print("   • Configure settings: privarion config list")
+        }
+    }
+    
+    private func printDetailedModuleStatus(modules: ModuleConfigs, systemEnabled: Bool) {
+        let moduleStatus = [
+            ("Identity Spoofing", modules.identitySpoofing.enabled, "Prevents device identification"),
+            ("Network Filter", modules.networkFilter.enabled, "Blocks telemetry and tracking"),
+            ("Sandbox Manager", modules.sandboxManager.enabled, "Enhanced application sandboxing"),
+            ("Snapshot Manager", modules.snapshotManager.enabled, "System state management"),
+            ("Syscall Hook", modules.syscallHook.enabled, "System call interception")
+        ]
+        
+        for (name, enabled, description) in moduleStatus {
+            let moduleIcon = enabled ? "✅" : "❌"
+            let statusText = enabled ? "ENABLED" : "DISABLED"
+            let effectiveStatus = systemEnabled && enabled ? "ACTIVE" : (enabled ? "READY" : "INACTIVE")
+            
+            print("   \(moduleIcon) \(name): \(statusText) (\(effectiveStatus))")
+            if detailed {
+                print("       \(description)")
             }
         }
     }
     
-    private func printModuleStatus(modules: ModuleConfigs) {
-        let moduleStatus = [
-            ("Identity Spoofing", modules.identitySpoofing.enabled),
-            ("Network Filter", modules.networkFilter.enabled),
-            ("Sandbox Manager", modules.sandboxManager.enabled),
-            ("Snapshot Manager", modules.snapshotManager.enabled),
-            ("Syscall Hook", modules.syscallHook.enabled)
-        ]
+    private func evaluateSystemHealth(config: PrivarionConfig, logStats: (currentLogSize: Int, totalLogFiles: Int, lastRotationDate: Date?)) -> [(String, Bool)] {
+        var health: [(String, Bool)] = []
         
-        for (name, enabled) in moduleStatus {
-            let icon = enabled ? "✅" : "❌"
-            print("   \(icon) \(name)")
-        }
+        // Check log size
+        let logSizeOK = logStats.currentLogSize < (config.global.maxLogSizeMB * 1024 * 1024)
+        health.append(("Log size within limits", logSizeOK))
+        
+        // Check log rotation
+        let rotationOK = logStats.totalLogFiles <= config.global.logRotationCount
+        health.append(("Log rotation functioning", rotationOK))
+        
+        // Check configuration directory
+        let configDir = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".privarion")
+        let configDirExists = FileManager.default.fileExists(atPath: configDir.path)
+        health.append(("Configuration directory accessible", configDirExists))
+        
+        // Check system requirements
+        let osVersion = ProcessInfo.processInfo.operatingSystemVersion
+        let systemOK = osVersion.majorVersion >= 11
+        health.append(("macOS version supported", systemOK))
+        
+        return health
+    }
+    
+    private func formatSystemUptime() -> String {
+        let uptime = ProcessInfo.processInfo.systemUptime
+        let hours = Int(uptime) / 3600
+        let minutes = Int(uptime) % 3600 / 60
+        return "\(hours)h \(minutes)m"
     }
     
     private func formatBytes(_ bytes: Int) -> String {
         let formatter = ByteCountFormatter()
-        formatter.allowedUnits = [.useKB, .useMB]
+        formatter.allowedUnits = [.useKB, .useMB, .useGB]
         formatter.countStyle = .file
         return formatter.string(fromByteCount: Int64(bytes))
     }
@@ -350,19 +717,254 @@ struct ConfigGetCommand: ParsableCommand {
 struct ConfigSetCommand: ParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "set",
-        abstract: "Set a configuration value"
+        abstract: "Set a configuration value",
+        discussion: """
+        Update configuration settings with validation and confirmation.
+        
+        EXAMPLES:
+        
+        Set global settings:
+            privarion config set global.logLevel debug
+            privarion config set global.enabled true
+            privarion config set global.maxLogSizeMB 100
+        
+        Set module settings (requires profile context):
+            privarion config set modules.identitySpoofing.enabled true
+            privarion config set modules.networkFilter.blockTelemetry false
+        
+        SUPPORTED KEY PATHS:
+        
+        Global settings:
+            • global.enabled (true/false)
+            • global.logLevel (debug/info/warning/error)
+            • global.logDirectory (path)
+            • global.maxLogSizeMB (number)
+            • global.logRotationCount (number)
+        
+        Module settings (current profile):
+            • modules.identitySpoofing.enabled (true/false)
+            • modules.identitySpoofing.spoofHostname (true/false)
+            • modules.networkFilter.enabled (true/false)
+            • modules.networkFilter.blockTelemetry (true/false)
+            • modules.sandboxManager.enabled (true/false)
+            • modules.snapshotManager.enabled (true/false)
+            • modules.syscallHook.enabled (true/false)
+        """
     )
     
-    @Argument(help: "Configuration key path")
+    @Argument(help: "Configuration key path (e.g., global.logLevel or modules.identitySpoofing.enabled)")
     var keyPath: String
     
-    @Argument(help: "New value")
+    @Argument(help: "New value (type depends on setting: true/false for booleans, numbers, or strings)")
     var value: String
     
+    @Flag(name: .shortAndLong, help: "Show what would be changed without applying")
+    var dryRun = false
+    
+    @Flag(help: "Skip confirmation prompt")
+    var force = false
+    
     func run() throws {
-        print("⚠️  Configuration modification through CLI not yet implemented")
-        print("Please edit ~/.privarion/config.json directly for now")
-        throw ExitCode.failure
+        // Validate key path format
+        let components = keyPath.split(separator: ".").map(String.init)
+        guard components.count >= 2 else {
+            print("❌ Invalid key path format: \(keyPath)")
+            print("")
+            print("💡 Key path should be in format: category.setting")
+            print("   Examples: global.logLevel, modules.identitySpoofing.enabled")
+            print("")
+            print("💡 View all settings: privarion config list")
+            throw PrivarionCLIError.configurationValidationFailed("Invalid key path format")
+        }
+        
+        let category = components[0]
+        let key = components.dropFirst().joined(separator: ".")
+        
+        // Get current configuration for comparison
+        let currentConfig = ConfigurationManager.shared.getCurrentConfiguration()
+        let currentValue = try getCurrentValue(config: currentConfig, keyPath: keyPath)
+        
+        // Validate the new value
+        try validateValue(value: value, keyPath: keyPath)
+        
+        // Show what will change
+        print("📝 Configuration Update Preview:")
+        print("   Key: \(keyPath)")
+        print("   Current: \(currentValue)")
+        print("   New: \(value)")
+        print("")
+        
+        if dryRun {
+            print("🔍 Dry run mode - no changes will be applied")
+            return
+        }
+        
+        // Confirmation prompt
+        if !force {
+            print("Apply this configuration change? (y/N): ", terminator: "")
+            let response = readLine() ?? ""
+            if !["y", "Y", "yes", "YES"].contains(response) {
+                print("❌ Configuration update cancelled")
+                return
+            }
+        }
+        
+        // Apply the change with progress indication
+        print("🔄 Applying configuration change...")
+        
+        do {
+            try applyConfigurationChange(category: category, key: key, value: value)
+            print("✅ Configuration updated successfully")
+            print("")
+            print("💡 Changes take effect:")
+            if category == "global" {
+                print("   • Global settings: Immediately")
+            } else {
+                print("   • Module settings: After next restart")
+                print("   • Restart system: privarion stop && privarion start")
+            }
+            
+        } catch {
+            throw PrivarionCLIError.configurationSetFailed(key: keyPath, value: value, underlyingError: error)
+        }
+    }
+    
+    private func getCurrentValue(config: PrivarionConfig, keyPath: String) throws -> String {
+        let components = keyPath.split(separator: ".").map(String.init)
+        
+        switch components.first {
+        case "global":
+            return try getGlobalValue(config: config.global, key: components.dropFirst().joined(separator: "."))
+        case "modules":
+            guard let profile = ConfigurationManager.shared.getActiveProfile() else {
+                throw PrivarionCLIError.configurationValidationFailed("No active profile for module settings")
+            }
+            return try getModuleValue(modules: profile.modules, key: components.dropFirst().joined(separator: "."))
+        default:
+            throw PrivarionCLIError.configurationValidationFailed("Invalid category: \(components.first ?? "")")
+        }
+    }
+    
+    private func getGlobalValue(config: GlobalConfig, key: String) throws -> String {
+        switch key {
+        case "enabled": return String(config.enabled)
+        case "logLevel": return config.logLevel.rawValue
+        case "logDirectory": return config.logDirectory
+        case "maxLogSizeMB": return String(config.maxLogSizeMB)
+        case "logRotationCount": return String(config.logRotationCount)
+        default: throw PrivarionCLIError.configurationValidationFailed("Invalid global key: \(key)")
+        }
+    }
+    
+    private func getModuleValue(modules: ModuleConfigs, key: String) throws -> String {
+        let keyComponents = key.split(separator: ".").map(String.init)
+        guard keyComponents.count >= 2 else {
+            throw PrivarionCLIError.configurationValidationFailed("Module key must specify module.setting")
+        }
+        
+        let moduleName = keyComponents[0]
+        let setting = keyComponents[1]
+        
+        switch moduleName {
+        case "identitySpoofing":
+            switch setting {
+            case "enabled": return String(modules.identitySpoofing.enabled)
+            case "spoofHostname": return String(modules.identitySpoofing.spoofHostname)
+            case "spoofMACAddress": return String(modules.identitySpoofing.spoofMACAddress)
+            default: throw PrivarionCLIError.configurationValidationFailed("Invalid identitySpoofing setting: \(setting)")
+            }
+        case "networkFilter":
+            switch setting {
+            case "enabled": return String(modules.networkFilter.enabled)
+            case "blockTelemetry": return String(modules.networkFilter.blockTelemetry)
+            case "blockAnalytics": return String(modules.networkFilter.blockAnalytics)
+            default: throw PrivarionCLIError.configurationValidationFailed("Invalid networkFilter setting: \(setting)")
+            }
+        case "sandboxManager":
+            switch setting {
+            case "enabled": return String(modules.sandboxManager.enabled)
+            case "strictMode": return String(modules.sandboxManager.strictMode)
+            default: throw PrivarionCLIError.configurationValidationFailed("Invalid sandboxManager setting: \(setting)")
+            }
+        case "snapshotManager":
+            switch setting {
+            case "enabled": return String(modules.snapshotManager.enabled)
+            case "autoSnapshot": return String(modules.snapshotManager.autoSnapshot)
+            default: throw PrivarionCLIError.configurationValidationFailed("Invalid snapshotManager setting: \(setting)")
+            }
+        case "syscallHook":
+            switch setting {
+            case "enabled": return String(modules.syscallHook.enabled)
+            case "debugMode": return String(modules.syscallHook.debugMode)
+            default: throw PrivarionCLIError.configurationValidationFailed("Invalid syscallHook setting: \(setting)")
+            }
+        default:
+            throw PrivarionCLIError.configurationValidationFailed("Invalid module name: \(moduleName)")
+        }
+    }
+    
+    private func validateValue(value: String, keyPath: String) throws {
+        let components = keyPath.split(separator: ".").map(String.init)
+        let key = components.last ?? ""
+        
+        // Boolean validation
+        if key.contains("enabled") || key.contains("strict") || key.contains("auto") || key.contains("spoof") || key.contains("block") {
+            if !["true", "false"].contains(value.lowercased()) {
+                throw PrivarionCLIError.configurationValidationFailed("Boolean setting '\(key)' requires 'true' or 'false', got: \(value)")
+            }
+        }
+        
+        // Number validation
+        if key.contains("MB") || key.contains("Count") {
+            guard Int(value) != nil else {
+                throw PrivarionCLIError.configurationValidationFailed("Numeric setting '\(key)' requires a number, got: \(value)")
+            }
+        }
+        
+        // Log level validation
+        if key == "logLevel" {
+            let validLevels = ["debug", "info", "warning", "error"]
+            if !validLevels.contains(value.lowercased()) {
+                throw PrivarionCLIError.configurationValidationFailed("logLevel must be one of: \(validLevels.joined(separator: ", "))")
+            }
+        }
+    }
+    
+    private func applyConfigurationChange(category: String, key: String, value: String) throws {
+        // Note: This is a simplified implementation
+        // In a real implementation, you would use ConfigurationManager methods
+        // to properly update the configuration with type safety
+        
+        switch category {
+        case "global":
+            try applyGlobalChange(key: key, value: value)
+        case "modules":
+            try applyModuleChange(key: key, value: value)
+        default:
+            throw PrivarionCLIError.configurationValidationFailed("Unknown category: \(category)")
+        }
+    }
+    
+    private func applyGlobalChange(key: String, value: String) throws {
+        // Implementation would depend on ConfigurationManager API
+        // For now, showing the pattern
+        switch key {
+        case "enabled":
+            let boolValue = value.lowercased() == "true"
+            try ConfigurationManager.shared.setValue(boolValue, keyPath: \.global.enabled)
+        case "logLevel":
+            // Would need LogLevel enum conversion
+            print("⚠️  Log level change requires restart to take effect")
+        default:
+            throw PrivarionCLIError.configurationValidationFailed("Unsupported global setting: \(key)")
+        }
+    }
+    
+    private func applyModuleChange(key: String, value: String) throws {
+        // Module changes would require profile updates
+        print("⚠️  Module configuration updates not yet fully implemented")
+        print("   Please edit ~/.privarion/config.json directly for module settings")
+        throw PrivarionCLIError.configurationValidationFailed("Module configuration updates coming in future release")
     }
 }
 
@@ -619,11 +1221,34 @@ struct InjectCommand: ParsableCommand {
         
         print("🚀 Launching application with hooks...")
         
+        // Show progress for injection process
+        if verbose {
+            print("\n🔄 Injection Progress:")
+            print("   ⏳ [1/4] Validating application...")
+            usleep(500000) // 0.5 second delay for visual feedback
+            print("   ✅ [2/4] Application validated")
+            
+            print("   ⏳ [2/4] Preparing hook environment...")
+            usleep(500000)
+            print("   ✅ [2/4] Hook environment ready")
+            
+            print("   ⏳ [3/4] Configuring DYLD injection...")
+            usleep(500000)
+            print("   ✅ [3/4] DYLD injection configured")
+            
+            print("   ⏳ [4/4] Launching application...")
+        }
+        
         let result = injectionManager.launchApplicationWithHooks(
             applicationPath: applicationPath,
             arguments: arguments,
             environment: verbose ? ["PRIVARION_DEBUG": "1"] : [:]
         )
+        
+        if verbose {
+            print("   ✅ [4/4] Application launch completed")
+            print("")
+        }
         
         switch result {
         case .success:

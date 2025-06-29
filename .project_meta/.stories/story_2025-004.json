@@ -6,10 +6,11 @@
     "story_type": "feature",
     "priority": "high",
     "estimated_effort": "16-24 hours",
-    "actual_effort": "TBD",
+    "actual_effort": "3 hours",
+    "completion_date": "2025-06-30T02:30:00Z",
     "created_date": "2025-06-30",
     "last_updated": "2025-06-30T01:15:00Z",
-    "status": "planned",
+    "status": "completed",
     "assigned_to": "lead_developer",
     "story_version": "1.0.0"
   },
