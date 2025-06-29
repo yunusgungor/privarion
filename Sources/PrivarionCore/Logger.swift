@@ -13,27 +13,41 @@ public class PrivarionLogger {
     /// Log file handler
     private var logFileHandler: LogFileHandler?
     
+    /// Flag to prevent multiple bootstrap calls
+    private static var isBootstrapped = false
+    
+    /// Check if running in test environment
+    private static var isTestEnvironment: Bool {
+        return ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil ||
+               ProcessInfo.processInfo.environment["XCTestBundlePath"] != nil ||
+               ProcessInfo.processInfo.arguments.contains { $0.contains("xctest") }
+    }
+    
     /// Initialization
     private init() {
         // Initialize with default label
         self.logger = Logger(label: "privarion.system")
         
-        // Setup log handlers
-        setupLogHandlers()
+        // Setup log handlers only once and avoid in test environment
+        if !Self.isBootstrapped && !Self.isTestEnvironment {
+            setupLogHandlers()
+            Self.isBootstrapped = true
+        } else if Self.isTestEnvironment {
+            // In test environment, use a simple console logger
+            self.logger = Logger(label: "privarion.test")
+        }
     }
     
     /// Setup log handlers based on configuration
     private func setupLogHandlers() {
-        let config = ConfigurationManager.shared.getCurrentConfiguration()
-        
-        // Setup log level
-        LoggingSystem.bootstrap { label in
-            var handler = StreamLogHandler.standardOutput(label: label)
-            handler.logLevel = config.global.logLevel.swiftLogLevel
-            return handler
+        // Skip setup if already bootstrapped to avoid conflicts in tests
+        if Self.isBootstrapped || Self.isTestEnvironment {
+            return
         }
         
-        // Setup file logging
+        let config = ConfigurationManager.shared.getCurrentConfiguration()
+        
+        // Setup file logging if possible, otherwise use console only
         setupFileLogging(config: config)
     }
     
@@ -56,10 +70,13 @@ public class PrivarionLogger {
                 rotationCount: config.global.logRotationCount
             )
             
-            // Add file handler to logging system
+            // Setup unified logging system with both console and file output
             LoggingSystem.bootstrap { label in
-                MultiplexLogHandler([
-                    StreamLogHandler.standardOutput(label: label),
+                var consoleHandler = StreamLogHandler.standardOutput(label: label)
+                consoleHandler.logLevel = config.global.logLevel.swiftLogLevel
+                
+                return MultiplexLogHandler([
+                    consoleHandler,
                     PrivarionFileLogHandler(
                         label: label,
                         fileHandler: self.logFileHandler!
@@ -69,7 +86,15 @@ public class PrivarionLogger {
             
         } catch {
             // Fallback to console logging only
-            logger.error("Failed to setup file logging", metadata: [
+            LoggingSystem.bootstrap { label in
+                var handler = StreamLogHandler.standardOutput(label: label)
+                handler.logLevel = config.global.logLevel.swiftLogLevel
+                return handler
+            }
+            
+            // Create a temporary logger for error reporting
+            let tempLogger = Logger(label: "privarion.logger")
+            tempLogger.error("Failed to setup file logging", metadata: [
                 "error": .string(error.localizedDescription),
                 "directory": .string(logDirectory.path)
             ])

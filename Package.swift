@@ -18,6 +18,11 @@ let package = Package(
         .library(
             name: "PrivarionCore",
             targets: ["PrivarionCore"]
+        ),
+        // Low-level C hook library
+        .library(
+            name: "PrivarionHook",
+            targets: ["PrivarionHook"]
         )
     ],
     dependencies: [
@@ -41,14 +46,25 @@ let package = Package(
         .target(
             name: "PrivarionCore",
             dependencies: [
+                "PrivarionHook",
                 .product(name: "Logging", package: "swift-log"),
                 .product(name: "Collections", package: "swift-collections")
             ]
+        ),
+        // Low-level C hook library
+        .target(
+            name: "PrivarionHook",
+            dependencies: []
         ),
         // Tests for core library
         .testTarget(
             name: "PrivarionCoreTests",
             dependencies: ["PrivarionCore"]
+        ),
+        // Tests for hook library
+        .testTarget(
+            name: "PrivarionHookTests",
+            dependencies: ["PrivarionHook", "PrivarionCore"]
         )
     ]
 )

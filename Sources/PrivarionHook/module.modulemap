@@ -1,0 +1,4 @@
+module PrivarionHook {
+    header "include/privarion_hook.h"
+    export *
+}
