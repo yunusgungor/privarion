@@ -1,0 +1,257 @@
+{
+  "architecture_version": "1.0.0",
+  "last_updated": "2025-06-29T00:00:00Z",
+  "system_overview": {
+    "name": "Privarion Privacy Protection System",
+    "description": "Modular macOS privacy protection system preventing application fingerprinting and tracking",
+    "architecture_style": "Modular, Event-Driven, Microservices-inspired",
+    "target_platform": "macOS 12.0+",
+    "programming_languages": ["Swift", "Objective-C", "C++"],
+    "architecture_principles": [
+      "Modular design with independent modules",
+      "Minimal privilege principle",
+      "Performance-first implementation",
+      "Security by design",
+      "Transparency and auditability"
+    ]
+  },
+  "core_modules": {
+    "core_engine": {
+      "module_id": "core_engine",
+      "name": "Core Engine",
+      "description": "Central coordination and management system",
+      "type": "core",
+      "language": "Swift",
+      "dependencies": [],
+      "interfaces": ["ModuleManagerProtocol", "ConfigurationManagerProtocol", "LoggerProtocol"],
+      "components": [
+        {
+          "name": "ConfigManager",
+          "responsibility": "Configuration management and validation",
+          "apis": ["loadConfig", "validateConfig", "updateConfig"]
+        },
+        {
+          "name": "ProfileManager", 
+          "responsibility": "Privacy protection profile management",
+          "apis": ["createProfile", "loadProfile", "activateProfile"]
+        },
+        {
+          "name": "LoggerSystem",
+          "responsibility": "System-wide logging and monitoring",
+          "apis": ["log", "setLogLevel", "exportLogs"]
+        }
+      ],
+      "security_requirements": ["input_validation", "secure_storage", "audit_logging"],
+      "performance_targets": {
+        "startup_time": "< 1s",
+        "memory_usage": "< 50MB",
+        "cpu_usage": "< 2%"
+      }
+    },
+    "identity_spoofing": {
+      "module_id": "identity_spoofing",
+      "name": "System Identity Spoofing",
+      "description": "Manipulates system identifiers to prevent device fingerprinting",
+      "type": "protection",
+      "language": "Swift/C++",
+      "dependencies": ["core_engine"],
+      "interfaces": ["IdentitySpoofingProtocol"],
+      "components": [
+        {
+          "name": "SystemHook",
+          "responsibility": "System call interception using DYLD injection",
+          "apis": ["interceptSystemCall", "spoofResponse", "restoreOriginal"]
+        },
+        {
+          "name": "IdentityGenerator",
+          "responsibility": "Generate fake but consistent identity data",
+          "apis": ["generateMAC", "generateSerial", "generateHostname"]
+        }
+      ],
+      "target_apis": ["uname", "gethostname", "IOKit", "system_profiler"],
+      "security_requirements": ["kernel_integrity", "code_signing", "rootless_compatibility"],
+      "performance_targets": {
+        "hook_latency": "< 1ms",
+        "memory_overhead": "< 10MB"
+      }
+    },
+    "network_filtering": {
+      "module_id": "network_filtering", 
+      "name": "Network Traffic Filtering",
+      "description": "Blocks tracking and telemetry network traffic",
+      "type": "protection",
+      "language": "Swift",
+      "dependencies": ["core_engine"],
+      "interfaces": ["NetworkFilterProtocol"],
+      "components": [
+        {
+          "name": "PacketFilter",
+          "responsibility": "Network packet filtering using Network Extension API",
+          "apis": ["filterPacket", "blockDomain", "allowDomain"]
+        },
+        {
+          "name": "DNSManager",
+          "responsibility": "DNS query management and DoH integration",
+          "apis": ["resolveDNS", "blockDNS", "configureDNS"]
+        }
+      ],
+      "frameworks": ["NetworkExtension", "Network"],
+      "security_requirements": ["network_extension_entitlements", "dns_security"],
+      "performance_targets": {
+        "filtering_latency": "< 5ms",
+        "throughput_impact": "< 5%"
+      }
+    },
+    "sandbox_manager": {
+      "module_id": "sandbox_manager",
+      "name": "Application Sandbox Manager", 
+      "description": "Launches applications in restricted sandbox environments",
+      "type": "isolation",
+      "language": "Swift",
+      "dependencies": ["core_engine"],
+      "interfaces": ["SandboxManagerProtocol"],
+      "components": [
+        {
+          "name": "SandboxProfileManager",
+          "responsibility": "Manage sandbox profiles and configurations",
+          "apis": ["loadProfile", "createProfile", "applyProfile"]
+        },
+        {
+          "name": "AppLauncher",
+          "responsibility": "Launch applications within sandbox constraints",
+          "apis": ["launchApp", "monitorApp", "terminateApp"]
+        }
+      ],
+      "frameworks": ["AppSandbox", "Security"],
+      "security_requirements": ["sandbox_profiles", "resource_limitations"],
+      "performance_targets": {
+        "launch_overhead": "< 500ms",
+        "resource_isolation": "100%"
+      }
+    },
+    "snapshot_manager": {
+      "module_id": "snapshot_manager",
+      "name": "File System Snapshot Manager",
+      "description": "Creates and manages APFS snapshots for privacy restoration", 
+      "type": "restoration",
+      "language": "Swift/C++",
+      "dependencies": ["core_engine"],
+      "interfaces": ["SnapshotManagerProtocol"],
+      "components": [
+        {
+          "name": "APFSManager",
+          "responsibility": "APFS snapshot creation and restoration",
+          "apis": ["createSnapshot", "restoreSnapshot", "listSnapshots"]
+        },
+        {
+          "name": "FileMonitor",
+          "responsibility": "Monitor file system changes for privacy leaks",
+          "apis": ["monitorChanges", "detectLeaks", "alertChanges"]
+        }
+      ],
+      "frameworks": ["IOKit", "Foundation"],
+      "security_requirements": ["full_disk_access", "system_integrity"],
+      "performance_targets": {
+        "snapshot_time": "< 5s",
+        "restore_time": "< 10s"
+      }
+    },
+    "syscall_hook": {
+      "module_id": "syscall_hook",
+      "name": "System Call Monitoring",
+      "description": "Monitors and logs system calls for privacy violations",
+      "type": "monitoring",
+      "language": "C++/Swift",
+      "dependencies": ["core_engine"],
+      "interfaces": ["SyscallMonitorProtocol"],
+      "components": [
+        {
+          "name": "EndpointSecurity",
+          "responsibility": "System call monitoring using Endpoint Security Framework",
+          "apis": ["monitorSyscalls", "filterEvents", "logViolations"]
+        },
+        {
+          "name": "ThreatDetector",
+          "responsibility": "Detect privacy-threatening system behaviors",
+          "apis": ["analyzePattern", "detectThreat", "alertUser"]
+        }
+      ],
+      "frameworks": ["EndpointSecurity"],
+      "security_requirements": ["system_extension_entitlements", "real_time_monitoring"],
+      "performance_targets": {
+        "monitoring_overhead": "< 3%",
+        "event_processing": "< 1ms"
+      }
+    }
+  },
+  "user_interfaces": {
+    "cli_interface": {
+      "module_id": "cli_interface",
+      "name": "Command Line Interface",
+      "description": "Command line tool for system management and configuration",
+      "type": "interface",
+      "language": "Swift",
+      "dependencies": ["core_engine"],
+      "frameworks": ["ArgumentParser"],
+      "commands": ["run", "config", "profile", "monitor", "snapshot", "status"],
+      "performance_targets": {
+        "startup_time": "< 200ms",
+        "command_response": "< 100ms"
+      }
+    },
+    "gui_interface": {
+      "module_id": "gui_interface", 
+      "name": "SwiftUI Graphical Interface",
+      "description": "Native macOS GUI for user-friendly system management",
+      "type": "interface",
+      "language": "Swift",
+      "dependencies": ["core_engine"],
+      "frameworks": ["SwiftUI", "AppKit"],
+      "features": ["module_management", "profile_editor", "real_time_monitoring", "snapshot_management"],
+      "performance_targets": {
+        "ui_responsiveness": "< 16ms",
+        "memory_usage": "< 100MB"
+      }
+    }
+  },
+  "integration_layer": {
+    "system_frameworks": [
+      "Endpoint Security Framework",
+      "Network Extension API", 
+      "App Sandbox",
+      "IOKit Framework",
+      "Security Framework",
+      "System Configuration Framework"
+    ],
+    "system_requirements": [
+      "Full Disk Access permission",
+      "System Extension approval",
+      "Network Extension entitlements",
+      "Code signing with Apple Developer ID"
+    ]
+  },
+  "data_flow": {
+    "configuration_flow": "CLI/GUI -> ConfigManager -> Module Configuration -> Module Activation",
+    "protection_flow": "App Launch Request -> Module Pipeline -> Protection Applied -> App Execution",
+    "monitoring_flow": "System Events -> Syscall Monitor -> Threat Detection -> Alert/Log",
+    "restoration_flow": "Session End -> Snapshot Restoration -> Privacy Cleanup -> System Reset"
+  },
+  "quality_attributes": {
+    "security": {
+      "priority": "critical",
+      "measures": ["threat_model_compliance", "penetration_testing", "code_signing_verification"]
+    },
+    "performance": {
+      "priority": "high", 
+      "measures": ["latency_benchmarks", "resource_usage_monitoring", "throughput_testing"]
+    },
+    "reliability": {
+      "priority": "high",
+      "measures": ["error_handling", "graceful_degradation", "recovery_procedures"]
+    },
+    "maintainability": {
+      "priority": "medium",
+      "measures": ["modular_design", "code_documentation", "automated_testing"]
+    }
+  }
+}

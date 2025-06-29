@@ -1,0 +1,256 @@
+{
+  "quality_gates": {
+    "version": "3.0",
+    "last_updated": "2025-06-29T00:00:00Z",
+    "enabled": true,
+    "strict_mode": true,
+    "gates": {
+      "story_planning": {
+        "gate_id": "story_planning",
+        "name": "Story Planning Quality Gate",
+        "description": "Ensures stories are properly planned before implementation",
+        "enabled": true,
+        "mandatory": true,
+        "criteria": {
+          "story_complexity_score": {
+            "threshold": "≤ 8/10",
+            "weight": 0.15,
+            "mandatory": true
+          },
+          "acceptance_criteria_clarity": {
+            "threshold": "≥ 8/10", 
+            "weight": 0.20,
+            "mandatory": true
+          },
+          "technical_feasibility": {
+            "threshold": "≥ 7/10",
+            "weight": 0.15,
+            "mandatory": true
+          },
+          "context7_research_completeness": {
+            "threshold": "≥ 9/10",
+            "weight": 0.25,
+            "mandatory": true
+          },
+          "sequential_thinking_completeness": {
+            "threshold": "≥ 9/10", 
+            "weight": 0.25,
+            "mandatory": true
+          },
+          "pattern_consultation_completeness": {
+            "threshold": "≥ 9/10",
+            "weight": 0.20,
+            "mandatory": true
+          }
+        },
+        "minimum_passing_score": 8.5,
+        "validation_steps": [
+          "validate_story_format",
+          "check_acceptance_criteria",
+          "verify_context7_research",
+          "confirm_sequential_thinking",
+          "validate_pattern_consultation",
+          "assess_technical_approach"
+        ]
+      },
+      "implementation": {
+        "gate_id": "implementation",
+        "name": "Implementation Quality Gate", 
+        "description": "Validates code quality and implementation standards",
+        "enabled": true,
+        "mandatory": true,
+        "criteria": {
+          "unit_test_coverage": {
+            "threshold": "≥ 90%",
+            "weight": 0.20,
+            "mandatory": true
+          },
+          "integration_test_coverage": {
+            "threshold": "≥ 80%",
+            "weight": 0.15,
+            "mandatory": true
+          },
+          "code_review_approval": {
+            "threshold": "approved",
+            "weight": 0.15,
+            "mandatory": true
+          },
+          "security_compliance": {
+            "threshold": "≥ 9/10",
+            "weight": 0.25,
+            "mandatory": true
+          },
+          "performance_benchmarks": {
+            "threshold": "met",
+            "weight": 0.15,
+            "mandatory": true
+          },
+          "pattern_implementation_compliance": {
+            "threshold": "≥ 9/10",
+            "weight": 0.20,
+            "mandatory": true
+          }
+        },
+        "minimum_passing_score": 9.0,
+        "validation_steps": [
+          "run_unit_tests",
+          "run_integration_tests", 
+          "check_code_review_status",
+          "validate_security_compliance",
+          "verify_performance_benchmarks",
+          "confirm_pattern_compliance"
+        ]
+      },
+      "integration": {
+        "gate_id": "integration",
+        "name": "Integration Quality Gate",
+        "description": "Ensures proper integration and system-wide compatibility",
+        "enabled": true,
+        "mandatory": true,
+        "criteria": {
+          "integration_tests_pass": {
+            "threshold": "100%",
+            "weight": 0.30,
+            "mandatory": true
+          },
+          "end_to_end_tests_pass": {
+            "threshold": "≥ 95%",
+            "weight": 0.25,
+            "mandatory": true
+          },
+          "cross_module_compatibility": {
+            "threshold": "verified",
+            "weight": 0.20,
+            "mandatory": true
+          },
+          "performance_impact": {
+            "threshold": "acceptable",
+            "weight": 0.25,
+            "mandatory": true
+          }
+        },
+        "minimum_passing_score": 9.5,
+        "validation_steps": [
+          "run_integration_tests",
+          "run_end_to_end_tests",
+          "verify_module_compatibility",
+          "measure_performance_impact",
+          "validate_system_stability"
+        ]
+      },
+      "release": {
+        "gate_id": "release",
+        "name": "Release Quality Gate",
+        "description": "Final validation before production release",
+        "enabled": true,
+        "mandatory": true,
+        "criteria": {
+          "all_previous_gates_passed": {
+            "threshold": "100%",
+            "weight": 0.30,
+            "mandatory": true
+          },
+          "security_audit_passed": {
+            "threshold": "passed",
+            "weight": 0.25,
+            "mandatory": true
+          },
+          "performance_targets_met": {
+            "threshold": "met",
+            "weight": 0.20,
+            "mandatory": true
+          },
+          "documentation_complete": {
+            "threshold": "complete",
+            "weight": 0.15,
+            "mandatory": true
+          },
+          "user_acceptance_criteria": {
+            "threshold": "100%",
+            "weight": 0.10,
+            "mandatory": true
+          }
+        },
+        "minimum_passing_score": 9.8,
+        "validation_steps": [
+          "verify_all_gates_passed",
+          "conduct_security_audit",
+          "validate_performance_targets",
+          "check_documentation_completeness",
+          "confirm_user_acceptance"
+        ]
+      }
+    },
+    "performance_benchmarks": {
+      "cpu_usage": {
+        "normal_operation": "< 5%",
+        "peak_operation": "< 15%",
+        "measurement_duration": "5 minutes"
+      },
+      "memory_usage": {
+        "core_engine": "< 50MB",
+        "per_module": "< 100MB",
+        "total_system": "< 500MB"
+      },
+      "response_times": {
+        "ui_interactions": "< 100ms",
+        "cli_commands": "< 200ms",
+        "module_activation": "< 2s"
+      },
+      "startup_times": {
+        "core_engine": "< 1s",
+        "full_system": "< 5s",
+        "module_loading": "< 500ms"
+      },
+      "network_performance": {
+        "filtering_latency": "< 10ms",
+        "throughput_impact": "< 5%",
+        "dns_resolution": "< 50ms"
+      }
+    },
+    "security_checklist": {
+      "code_security": [
+        "input_validation_implemented",
+        "output_encoding_applied", 
+        "sql_injection_prevention",
+        "secure_coding_guidelines_followed",
+        "crypto_standards_compliance"
+      ],
+      "system_security": [
+        "privilege_escalation_prevention",
+        "secure_ipc_implementation",
+        "memory_protection_enabled",
+        "code_signing_verified",
+        "entitlements_minimal"
+      ],
+      "data_security": [
+        "sensitive_data_encrypted",
+        "secure_storage_implemented",
+        "data_transmission_secured",
+        "privacy_compliance_verified",
+        "data_retention_policies_followed"
+      ]
+    },
+    "automation": {
+      "automated_gates": ["implementation", "integration"],
+      "manual_gates": ["story_planning", "release"],
+      "gate_runner_script": ".automation/scripts/quality_gate_runner.js",
+      "notification_channels": ["console", "log_file"],
+      "failure_actions": ["block_progression", "alert_team", "log_incident"]
+    },
+    "reporting": {
+      "gate_pass_rates": {},
+      "average_gate_times": {},
+      "failure_analysis": {},
+      "trend_analysis": {
+        "enabled": true,
+        "retention_period": "90 days"
+      }
+    }
+  },
+  "metadata": {
+    "schema_version": "3.0",
+    "codeflow_version": "3.0",
+    "created_at": "2025-06-29T00:00:00Z"
+  }
+}
