@@ -19,20 +19,38 @@ public class ConfigurationManager {
     /// File system monitor for configuration changes
     private var fileMonitor: FileMonitor?
     
-    /// Initialization
-    private init() {
-        // Setup configuration directory
-        let homeDirectory = FileManager.default.homeDirectoryForCurrentUser
-        let privarionDirectory = homeDirectory.appendingPathComponent(".privarion")
-        
-        // Create directory if it doesn't exist
-        try? FileManager.default.createDirectory(
-            at: privarionDirectory,
-            withIntermediateDirectories: true,
-            attributes: [.posixPermissions: 0o700]
-        )
-        
-        self.configPath = privarionDirectory.appendingPathComponent("config.json")
+    /// Internal initialization with custom path (for testing)
+    internal init(customConfigPath: URL? = nil) {
+        if let customPath = customConfigPath {
+            // Use provided path (for testing)
+            self.configPath = customPath
+            let privarionDirectory = customPath.deletingLastPathComponent()
+            
+            // Create directory if it doesn't exist
+            try? FileManager.default.createDirectory(
+                at: privarionDirectory,
+                withIntermediateDirectories: true,
+                attributes: [.posixPermissions: 0o700]
+            )
+        } else {
+            // Setup configuration directory using current HOME
+            let homeDirectory: URL
+            if let homeEnv = ProcessInfo.processInfo.environment["HOME"] {
+                homeDirectory = URL(fileURLWithPath: homeEnv)
+            } else {
+                homeDirectory = FileManager.default.homeDirectoryForCurrentUser
+            }
+            let privarionDirectory = homeDirectory.appendingPathComponent(".privarion")
+            
+            // Create directory if it doesn't exist
+            try? FileManager.default.createDirectory(
+                at: privarionDirectory,
+                withIntermediateDirectories: true,
+                attributes: [.posixPermissions: 0o700]
+            )
+            
+            self.configPath = privarionDirectory.appendingPathComponent("config.json")
+        }
         
         // Load or create configuration
         if FileManager.default.fileExists(atPath: configPath.path) {
@@ -58,6 +76,11 @@ public class ConfigurationManager {
         
         // Start monitoring configuration file changes
         startFileMonitoring()
+    }
+    
+    /// Convenience initializer for default behavior
+    private convenience init() {
+        self.init(customConfigPath: nil)
     }
     
     deinit {
@@ -150,6 +173,11 @@ public class ConfigurationManager {
     /// List all profiles
     public func listProfiles() -> [String] {
         return Array(config.profiles.keys)
+    }
+    
+    /// Create test instance with custom configuration path (for testing)
+    public static func createTestInstance(configPath: URL) -> ConfigurationManager {
+        return ConfigurationManager(customConfigPath: configPath)
     }
     
     // MARK: - Private Methods

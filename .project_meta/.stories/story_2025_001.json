@@ -6,7 +6,10 @@
     "priority": "high",
     "status": "completed",
     "created_date": "2025-06-29T00:00:00Z",
+    "updated_date": "2025-06-29T14:00:00Z",
+    "completed_date": "2025-06-29T14:00:00Z",
     "estimated_effort": 20,
+    "actual_effort": 20,
     "assigned_to": "development_team",
     "epic": "foundation",
     "sprint": "sprint_001"
