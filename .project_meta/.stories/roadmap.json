@@ -1,11 +1,11 @@
 {
   "roadmap": {
-    "version": "1.1.0",
-    "last_updated": "2025-06-30T00:10:00Z",
+    "version": "1.2.0",
+    "last_updated": "2025-06-30T03:45:00Z",
     "project_name": "Privarion Privacy Protection System",
     "roadmap_status": "active",
-    "total_stories": 6,
-    "completed_stories": 3,
+    "total_stories": 7,
+    "completed_stories": 4,
     "in_progress_stories": 0,
     "planned_stories": 3,
     "pattern_enhanced": true,
@@ -60,17 +60,24 @@
     "phase_3_advanced_features": {
       "phase_id": "advanced_features",
       "name": "Advanced Features and GUI",
-      "description": "Add advanced features and user-friendly interfaces",
+      "description": "Add advanced features and user-friendly interfaces with SwiftUI GUI foundation",
       "target_completion": "2025-12-29",
-      "status": "planned", 
-      "stories": [],
+      "status": "next_planned", 
+      "stories": ["STORY-2025-005"],
       "dependencies": ["security_modules"],
       "success_criteria": [
-        "SwiftUI GUI application completed",
-        "Snapshot management system working",
-        "Advanced threat detection implemented",
-        "Performance optimization completed",
-        "User documentation finalized"
+        "SwiftUI GUI application foundation completed",
+        "Professional macOS application with Clean Architecture",
+        "Real-time module status monitoring implemented",
+        "Configuration management through GUI operational",
+        "Profile management system functional",
+        "CLI-GUI integration seamless",
+        "Native macOS design patterns applied"
+      ],
+      "enhanced_patterns_planned": [
+        "PATTERN-2025-018: GUI-CLI Integration Pattern (candidate)",
+        "PATTERN-2025-019: Real-time State Synchronization Pattern (candidate)",
+        "PATTERN-2025-020: Native macOS UI Pattern (candidate)"
       ]
     },
     "phase_4_production": {
