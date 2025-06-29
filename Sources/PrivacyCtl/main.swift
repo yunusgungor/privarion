@@ -22,7 +22,9 @@ struct PrivacyCtl: ParsableCommand {
             StatusCommand.self,
             ConfigCommand.self,
             ProfileCommand.self,
-            LogsCommand.self
+            LogsCommand.self,
+            InjectCommand.self,
+            HookCommand.self
         ]
     )
 }
@@ -566,6 +568,222 @@ struct LogsCommand: ParsableCommand {
         task.arguments = ["-f", logFile.path]
         try task.run()
         task.waitUntilExit()
+    }
+}
+
+/// Inject syscall hooks into target application via DYLD
+/// This implements STORY-2025-002 AC001 requirement
+struct InjectCommand: ParsableCommand {
+    static let configuration = CommandConfiguration(
+        commandName: "inject",
+        abstract: "Launch application with syscall hooks via DYLD injection"
+    )
+    
+    @Argument(help: "Path to target application")
+    var applicationPath: String
+    
+    @Option(parsing: .remaining, help: "Arguments to pass to the application")
+    var arguments: [String] = []
+    
+    @Flag(name: .shortAndLong, help: "Show injection command without executing")
+    var dryRun = false
+    
+    @Flag(name: .shortAndLong, help: "Enable verbose output and debug logging")
+    var verbose = false
+    
+    func run() throws {
+        let logger = PrivarionLogger.shared.logger(for: "cli.inject")
+        
+        print("🎯 DYLD Injection for: \(applicationPath)")
+        
+        let injectionManager = SyscallHookWithInjection(configuration: ConfigurationManager.shared)
+        
+        if dryRun {
+            let command = injectionManager.getInjectionCommand(
+                applicationPath: applicationPath,
+                arguments: arguments
+            )
+            print("📋 Injection Command:")
+            print("   \(command)")
+            return
+        }
+        
+        if verbose {
+            let status = injectionManager.getSystemStatus()
+            print("🔍 System Status:")
+            for (key, value) in status {
+                print("   - \(key): \(value)")
+            }
+            print("")
+        }
+        
+        print("🚀 Launching application with hooks...")
+        
+        let result = injectionManager.launchApplicationWithHooks(
+            applicationPath: applicationPath,
+            arguments: arguments,
+            environment: verbose ? ["PRIVARION_DEBUG": "1"] : [:]
+        )
+        
+        switch result {
+        case .success:
+            print("✅ Application launched successfully with syscall hooks")
+            logger.info("DYLD injection successful", metadata: [
+                "application": .string(applicationPath),
+                "arguments": .array(arguments.map { .string($0) })
+            ])
+            
+        case .sipEnabled:
+            print("⚠️  System Integrity Protection (SIP) is enabled")
+            print("   Hooks may not work with system applications")
+            print("   Consider disabling SIP for testing: csrutil disable")
+            
+        case .targetNotFound:
+            print("❌ Target application not found: \(applicationPath)")
+            throw ExitCode.failure
+            
+        case .hookLibraryNotFound:
+            print("❌ Privarion hook library not found")
+            print("   Make sure the system is properly installed")
+            throw ExitCode.failure
+            
+        default:
+            print("❌ DYLD injection failed: \(result.description)")
+            logger.error("DYLD injection failed", metadata: [
+                "application": .string(applicationPath),
+                "error": .string(result.description)
+            ])
+            throw ExitCode.failure
+        }
+    }
+}
+
+/// Manage syscall hooks directly
+struct HookCommand: ParsableCommand {
+    static let configuration = CommandConfiguration(
+        commandName: "hook",
+        abstract: "Manage syscall hooks",
+        subcommands: [
+            HookListCommand.self,
+            HookTestCommand.self,
+            HookStatusCommand.self
+        ]
+    )
+}
+
+/// List available and active hooks
+struct HookListCommand: ParsableCommand {
+    static let configuration = CommandConfiguration(
+        commandName: "list",
+        abstract: "List available and active syscall hooks"
+    )
+    
+    func run() throws {
+        let hookManager = SyscallHookManager.shared
+        
+        print("🔗 Syscall Hook Status:")
+        print("")
+        
+        let functions = SyscallHookManager.SyscallFunction.allCases
+        
+        for function in functions {
+            let isHooked = hookManager.isHooked(function)
+            let status = isHooked ? "✓ ACTIVE" : "○ Available"
+            print("   \(status) \(function.rawValue) - \(function.description)")
+        }
+        
+        print("")
+        print("📊 Summary:")
+        print("   - Total hooks available: \(functions.count)")
+        print("   - Active hooks: \(hookManager.activeHookCount)")
+        print("   - Platform supported: \(hookManager.isPlatformSupported ? "Yes" : "No")")
+        print("   - Version: \(hookManager.version)")
+    }
+}
+
+/// Test syscall hook functionality
+struct HookTestCommand: ParsableCommand {
+    static let configuration = CommandConfiguration(
+        commandName: "test",
+        abstract: "Test syscall hook functionality"
+    )
+    
+    @Flag(name: .shortAndLong, help: "Enable verbose output")
+    var verbose = false
+    
+    func run() throws {
+        let hookManager = SyscallHookManager.shared
+        
+        print("🧪 Testing Syscall Hook System...")
+        
+        do {
+            // Initialize hook system
+            try hookManager.initialize()
+            print("✅ Hook system initialized")
+            
+            // Install configured hooks
+            let installedHooks = try hookManager.installConfiguredHooks()
+            print("✅ Hooks installed: \(installedHooks.keys.joined(separator: ", "))")
+            
+            if verbose {
+                print("\n🔍 Hook Details:")
+                for (name, handle) in installedHooks {
+                    print("   - \(name): ID=\(handle.id), Valid=\(handle.isValid)")
+                }
+            }
+            
+            print("\n📋 System Test Completed Successfully")
+            print("   Active hooks: \(hookManager.activeHookCount)")
+            
+        } catch {
+            print("❌ Hook system test failed: \(error.localizedDescription)")
+            throw ExitCode.failure
+        }
+    }
+}
+
+/// Show hook system status
+struct HookStatusCommand: ParsableCommand {
+    static let configuration = CommandConfiguration(
+        commandName: "status",
+        abstract: "Show detailed hook system status"
+    )
+    
+    func run() throws {
+        let hookManager = SyscallHookManager.shared
+        let injectionManager = SyscallHookWithInjection(configuration: ConfigurationManager.shared)
+        
+        print("🔍 Hook System Status:")
+        print("")
+        
+        let status = injectionManager.getSystemStatus()
+        
+        print("📊 System Information:")
+        for (key, value) in status {
+            print("   - \(key): \(value)")
+        }
+        
+        print("")
+        print("🔗 Active Hooks:")
+        let activeHooks = hookManager.activeHooks
+        if activeHooks.isEmpty {
+            print("   No active hooks")
+        } else {
+            for hook in activeHooks {
+                print("   ✓ \(hook)")
+            }
+        }
+        
+        print("")
+        print("⚙️  Configuration:")
+        if let config = hookManager.hookConfiguration {
+            print("   - getuid hook: \(config.hooks.getuid ? "enabled" : "disabled")")
+            print("   - getgid hook: \(config.hooks.getgid ? "enabled" : "disabled")")
+            print("   - gethostname hook: \(config.hooks.gethostname ? "enabled" : "disabled")")
+            print("   - uname hook: \(config.hooks.uname ? "enabled" : "disabled")")
+        } else {
+            print("   No hook configuration loaded")
+        }
     }
 }
 

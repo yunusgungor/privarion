@@ -604,3 +604,80 @@ private extension SyscallHookManager.HookError {
         }
     }
 }
+
+// MARK: - DYLD Injection Support
+
+/// DYLD Injection Manager Integration
+/// Provides complete syscall hook functionality with DYLD injection
+public class SyscallHookWithInjection {
+    private let hookManager: SyscallHookManager
+    private let dyldManager: DYLDInjectionManager
+    private let logger = Logger(label: "SyscallHookWithInjection")
+    
+    public init(configuration: ConfigurationManager) {
+        self.hookManager = SyscallHookManager.shared // Use singleton instance
+        self.dyldManager = DYLDInjectionManager(configuration: configuration)
+    }
+    
+    /// Launch application with syscall hooks injected via DYLD
+    /// This is the main entry point for STORY-2025-002 AC001
+    public func launchApplicationWithHooks(
+        applicationPath: String,
+        arguments: [String] = [],
+        environment: [String: String] = [:]
+    ) -> DYLDInjectionResult {
+        
+        logger.info("Launching application with syscall hooks: \(applicationPath)")
+        
+        // First initialize the hook system
+        do {
+            try hookManager.initialize()
+            
+            // Apply configured hooks based on current profile
+            _ = try hookManager.installConfiguredHooks()
+            
+            logger.debug("Hook system initialized and configured")
+            
+        } catch {
+            logger.error("Failed to initialize hook system: \(error)")
+            return .injectionFailed
+        }
+        
+        // Launch with DYLD injection
+        let result = dyldManager.launchWithInjection(
+            applicationPath: applicationPath,
+            arguments: arguments,
+            environment: environment
+        )
+        
+        switch result {
+        case .success:
+            logger.info("Successfully launched \(applicationPath) with syscall hooks")
+        case .sipEnabled:
+            logger.warning("SIP enabled - hooks may not work with system applications")
+        default:
+            logger.error("DYLD injection failed: \(result.description)")
+        }
+        
+        return result
+    }
+    
+    /// Get injection command for manual testing (useful for AC001 validation)
+    public func getInjectionCommand(
+        applicationPath: String,
+        arguments: [String] = []
+    ) -> String {
+        return dyldManager.generateInjectionCommand(
+            applicationPath: applicationPath,
+            arguments: arguments
+        )
+    }
+    
+    /// Check injection capabilities and system status
+    public func getSystemStatus() -> [String: Any] {
+        var status = dyldManager.getInjectionInfo()
+        status["hook_manager_initialized"] = true // hookManager singleton is always available
+        status["active_hooks"] = hookManager.activeHookCount
+        return status
+    }
+}
