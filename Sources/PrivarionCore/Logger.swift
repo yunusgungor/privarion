@@ -115,23 +115,46 @@ public class PrivarionLogger {
         return Logger(label: "privarion.\(component)")
     }
     
-    /// Update log level
-    public func updateLogLevel(_ level: LogLevel) {
-        logger.logLevel = level.swiftLogLevel
+    // MARK: - Convenience Logging Methods
+    
+    /// Log debug message
+    public func debug(_ message: String, metadata: [String: String]? = nil) {
+        let loggerMetadata = metadata?.reduce(into: Logger.Metadata()) { result, pair in
+            result[pair.key] = .string(pair.value)
+        }
+        logger.debug(Logger.Message(stringLiteral: message), metadata: loggerMetadata)
     }
     
-    /// Force log rotation
-    public func rotateLog() {
-        logFileHandler?.rotateLog()
+    /// Log info message
+    public func info(_ message: String, metadata: [String: String]? = nil) {
+        let loggerMetadata = metadata?.reduce(into: Logger.Metadata()) { result, pair in
+            result[pair.key] = .string(pair.value)
+        }
+        logger.info(Logger.Message(stringLiteral: message), metadata: loggerMetadata)
     }
     
-    /// Get log statistics
-    public func getLogStatistics() -> LogStatistics {
-        return LogStatistics(
-            currentLogSize: logFileHandler?.getCurrentLogSize() ?? 0,
-            totalLogFiles: logFileHandler?.getLogFileCount() ?? 0,
-            lastRotationDate: logFileHandler?.getLastRotationDate()
-        )
+    /// Log warning message
+    public func warning(_ message: String, metadata: [String: String]? = nil) {
+        let loggerMetadata = metadata?.reduce(into: Logger.Metadata()) { result, pair in
+            result[pair.key] = .string(pair.value)
+        }
+        logger.warning(Logger.Message(stringLiteral: message), metadata: loggerMetadata)
+    }
+    
+    /// Log error message
+    public func error(_ message: String, metadata: [String: String]? = nil) {
+        let loggerMetadata = metadata?.reduce(into: Logger.Metadata()) { result, pair in
+            result[pair.key] = .string(pair.value)
+        }
+        logger.error(Logger.Message(stringLiteral: message), metadata: loggerMetadata)
+    }
+    
+    /// Log critical message
+    public func critical(_ message: String, metadata: [String: String]? = nil) {
+        let loggerMetadata = metadata?.reduce(into: Logger.Metadata()) { result, pair in
+            result[pair.key] = .string(pair.value)
+        }
+        logger.critical(Logger.Message(stringLiteral: message), metadata: loggerMetadata)
     }
 }
 
