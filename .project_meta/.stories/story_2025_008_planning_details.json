@@ -1,0 +1,296 @@
+{
+  "story_id": "STORY-2025-008",
+  "story_title": "MAC Address Spoofing Implementation",
+  "phase": "Phase 2 - MAC Address Spoofing",
+  "planning_session": {
+    "session_id": "PS-2025-008",
+    "timestamp": "2025-06-30T21:00:00Z",
+    "sequential_thinking_session": "ST-2025-008-PLANNING",
+    "context7_consultation": "completed_with_best_practices",
+    "pattern_consultation": "PATTERN-2025-029_validated",
+    "planning_completeness_score": 9.4
+  },
+  "technical_architecture": {
+    "core_components": [
+      {
+        "name": "MacAddressSpoofingManager",
+        "file": "Sources/PrivarionCore/MacAddressSpoofingManager.swift",
+        "responsibilities": [
+          "Interface enumeration and validation",
+          "MAC address generation and validation", 
+          "Safe MAC address modification operations",
+          "Automatic rollback on failure"
+        ],
+        "dependencies": ["SystemCommandExecutor", "Logger", "NetworkInterfaceManager"]
+      },
+      {
+        "name": "NetworkInterfaceManager", 
+        "file": "Sources/PrivarionCore/NetworkInterfaceManager.swift",
+        "responsibilities": [
+          "ifconfig/networksetup command wrappers",
+          "Interface status monitoring",
+          "Permission validation",
+          "Network connectivity preservation"
+        ],
+        "dependencies": ["SystemCommandExecutor", "Logger"]
+      },
+      {
+        "name": "MacAddressRepository",
+        "file": "Sources/PrivarionCore/MacAddressRepository.swift", 
+        "responsibilities": [
+          "Original MAC address storage",
+          "State persistence management",
+          "Recovery mechanisms",
+          "Data integrity validation"
+        ],
+        "dependencies": ["Logger", "Configuration"]
+      }
+    ],
+    "integration_points": [
+      {
+        "component": "CLI",
+        "file": "Sources/PrivacyCtl/main.swift",
+        "integration_type": "command_extension",
+        "new_commands": ["list-interfaces", "spoof-mac", "restore-mac", "mac-status"]
+      },
+      {
+        "component": "GUI",
+        "files": [
+          "Sources/PrivarionGUI/Presentation/Views/MacSpoofingView.swift",
+          "Sources/PrivarionGUI/Presentation/Views/NetworkInterfaceView.swift"
+        ],
+        "integration_type": "view_extension",
+        "features": ["interface_list", "spoofing_controls", "status_indicators"]
+      }
+    ]
+  },
+  "implementation_phases": [
+    {
+      "phase": "2a",
+      "title": "Core Infrastructure",
+      "duration_hours": "6-8",
+      "deliverables": [
+        "MacAddressSpoofingManager.swift",
+        "NetworkInterfaceManager.swift", 
+        "Basic CLI integration",
+        "Core unit tests"
+      ],
+      "completion_criteria": [
+        "Interface enumeration functional",
+        "MAC address modification working",
+        "CLI commands operational",
+        "Core tests passing"
+      ]
+    },
+    {
+      "phase": "2b", 
+      "title": "Data Persistence",
+      "duration_hours": "4-5",
+      "deliverables": [
+        "MacAddressRepository.swift",
+        "State persistence mechanisms",
+        "Recovery functionality",
+        "Data integrity tests"
+      ],
+      "completion_criteria": [
+        "State persistence working",
+        "Rollback mechanisms functional",
+        "Data integrity validated",
+        "Recovery tests passing"
+      ]
+    },
+    {
+      "phase": "2c",
+      "title": "GUI Integration", 
+      "duration_hours": "4-5",
+      "deliverables": [
+        "MacSpoofingView.swift",
+        "NetworkInterfaceView.swift",
+        "User controls",
+        "Status indicators"
+      ],
+      "completion_criteria": [
+        "GUI views functional",
+        "User interactions working",
+        "Status feedback accurate",
+        "GUI tests passing"
+      ]
+    },
+    {
+      "phase": "2d",
+      "title": "Testing & Validation",
+      "duration_hours": "2-3", 
+      "deliverables": [
+        "Comprehensive test suite",
+        "Security validation",
+        "Performance benchmarks",
+        "Documentation"
+      ],
+      "completion_criteria": [
+        "95%+ code coverage",
+        "Security audit passed",
+        "Performance targets met",
+        "Documentation complete"
+      ]
+    }
+  ],
+  "acceptance_criteria": [
+    {
+      "id": "AC-1",
+      "title": "Interface Discovery",
+      "description": "CLI can list all available network interfaces",
+      "validation_method": "automated_test",
+      "priority": "high"
+    },
+    {
+      "id": "AC-2", 
+      "title": "MAC Address Modification",
+      "description": "Can change MAC address of specified interface",
+      "validation_method": "integration_test",
+      "priority": "critical"
+    },
+    {
+      "id": "AC-3",
+      "title": "State Management", 
+      "description": "Original MAC addresses are stored securely",
+      "validation_method": "unit_test",
+      "priority": "high"
+    },
+    {
+      "id": "AC-4",
+      "title": "Rollback Functionality",
+      "description": "Can restore original MAC address",
+      "validation_method": "integration_test", 
+      "priority": "critical"
+    },
+    {
+      "id": "AC-5",
+      "title": "GUI Integration",
+      "description": "MAC spoofing manageable through GUI",
+      "validation_method": "manual_test",
+      "priority": "high"
+    },
+    {
+      "id": "AC-6",
+      "title": "Error Handling",
+      "description": "Graceful handling of all failure scenarios",
+      "validation_method": "error_simulation_test",
+      "priority": "high"
+    },
+    {
+      "id": "AC-7",
+      "title": "Security & Permissions", 
+      "description": "Sudo requirements handled safely",
+      "validation_method": "security_audit",
+      "priority": "critical"
+    },
+    {
+      "id": "AC-8",
+      "title": "Performance & Reliability",
+      "description": "Operations complete within 2 seconds",
+      "validation_method": "performance_test",
+      "priority": "medium"
+    }
+  ],
+  "quality_gates": [
+    {
+      "gate": "code_coverage",
+      "requirement": ">=95%",
+      "validation": "automated_coverage_report"
+    },
+    {
+      "gate": "security_audit",
+      "requirement": "zero_critical_issues", 
+      "validation": "security_scanner_and_manual_review"
+    },
+    {
+      "gate": "performance_benchmarks",
+      "requirement": "interface_ops_under_2s",
+      "validation": "automated_performance_tests"
+    },
+    {
+      "gate": "integration_testing",
+      "requirement": "all_scenarios_pass",
+      "validation": "comprehensive_integration_test_suite"
+    }
+  ],
+  "risk_assessment": {
+    "high_risks": [
+      {
+        "risk": "network_connectivity_loss",
+        "probability": "medium",
+        "impact": "high", 
+        "mitigation": "pre_operation_validation_and_automatic_rollback"
+      },
+      {
+        "risk": "sudo_permission_denial",
+        "probability": "high",
+        "impact": "medium",
+        "mitigation": "clear_user_communication_and_graceful_degradation"
+      }
+    ],
+    "medium_risks": [
+      {
+        "risk": "invalid_mac_generation",
+        "probability": "low",
+        "impact": "medium",
+        "mitigation": "comprehensive_validation_and_multiple_attempts"
+      },
+      {
+        "risk": "state_corruption",
+        "probability": "low", 
+        "impact": "medium",
+        "mitigation": "atomic_operations_and_integrity_checks"
+      }
+    ]
+  },
+  "pattern_applications": [
+    {
+      "pattern_id": "PATTERN-2025-029",
+      "pattern_name": "CLI-System Bridge",
+      "application": "network_command_execution_via_systemcommandexecutor",
+      "confidence": "high"
+    },
+    {
+      "pattern_type": "command_pattern",
+      "application": "mac_spoofing_operation_encapsulation",
+      "confidence": "high"
+    },
+    {
+      "pattern_type": "repository_pattern", 
+      "application": "mac_address_state_management",
+      "confidence": "high"
+    }
+  ],
+  "dependencies": {
+    "internal": [
+      "SystemCommandExecutor.swift",
+      "Logger.swift",
+      "PrivarionError.swift", 
+      "CommandManager.swift"
+    ],
+    "external": [
+      "macOS_ifconfig_utility",
+      "macOS_networksetup_utility"
+    ],
+    "status": "all_dependencies_available"
+  },
+  "success_metrics": {
+    "acceptance_criteria_completion": "100%",
+    "code_coverage_target": "95%",
+    "security_issues_target": "0_critical",
+    "performance_target": "ops_under_2s",
+    "user_acceptance": "positive_feedback"
+  },
+  "planning_status": {
+    "technical_requirements": "complete",
+    "acceptance_criteria": "complete", 
+    "implementation_plan": "complete",
+    "risk_assessment": "complete",
+    "quality_gates": "complete",
+    "pattern_consultation": "complete",
+    "context7_research": "completed_with_best_practices",
+    "sequential_thinking_analysis": "comprehensive",
+    "ready_for_implementation": true
+  }
+}

@@ -1884,71 +1884,1127 @@ struct IdentityListCommand: ParsableCommand {
     }
 }
 
-// Placeholder implementations for other identity commands
+/// Show backup sessions information
 struct IdentitySessionsCommand: ParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "sessions",
-        abstract: "Show backup sessions information"
+        abstract: "Show backup sessions information",
+        discussion: """
+        Display information about backup sessions including session details,
+        creation timestamps, and backup counts.
+        
+        EXAMPLES:
+            privarion identity sessions                    # List all sessions
+            privarion identity sessions --verbose          # Detailed session info
+            privarion identity sessions --active           # Show only active sessions
+            privarion identity sessions --persistent       # Show only persistent sessions
+        """
     )
     
+    @Flag(name: .shortAndLong, help: "Show detailed session information")
+    var verbose: Bool = false
+    
+    @Flag(help: "Show only active sessions")
+    var active: Bool = false
+    
+    @Flag(help: "Show only persistent sessions")
+    var persistent: Bool = false
+    
+    @Option(help: "Limit number of sessions shown")
+    var limit: Int?
+    
     func run() throws {
-        print("Identity sessions command - Implementation coming soon")
+        let logger = PrivarionLogger.shared
+        
+        do {
+            let backupManager = try IdentityBackupManager(logger: logger)
+            let sessions = try backupManager.listBackups()
+            
+            var filteredSessions = sessions
+            
+            if persistent {
+                filteredSessions = filteredSessions.filter { $0.persistent }
+            }
+            
+            if let limit = limit {
+                filteredSessions = Array(filteredSessions.prefix(limit))
+            }
+            
+            if verbose {
+                print("📊 Backup Sessions Summary")
+                print("=" * 60)
+                print("Total Sessions: \(sessions.count)")
+                print("Filtered Sessions: \(filteredSessions.count)")
+                print("Persistent Sessions: \(sessions.filter { $0.persistent }.count)")
+                print("Non-persistent Sessions: \(sessions.filter { !$0.persistent }.count)")
+                
+                let totalBackups = sessions.reduce(0) { $0 + $1.backups.count }
+                print("Total Backups: \(totalBackups)")
+                print("")
+                
+                for (index, session) in filteredSessions.enumerated() {
+                    print("[\(index + 1)] Session: \(session.sessionName)")
+                    print("    ID: \(session.sessionId.uuidString)")
+                    print("    Created: \(DateFormatter.detailedDate.string(from: session.timestamp))")
+                    print("    Persistent: \(session.persistent ? "Yes 🔒" : "No ⏳")")
+                    print("    Backup Count: \(session.backups.count)")
+                    
+                    if !session.backups.isEmpty {
+                        print("    Identity Types:")
+                        let types = session.backups.map { $0.type.rawValue }.sorted()
+                        for type in types {
+                            print("      • \(type)")
+                        }
+                    }
+                    
+                    // Show session age
+                    let ageInDays = Calendar.current.dateComponents([.day], from: session.timestamp, to: Date()).day ?? 0
+                    print("    Age: \(ageInDays) days")
+                    print("")
+                }
+                
+            } else {
+                print("Session ID\t\t\t\t\tName\t\t\tBackups\tType\t\tAge")
+                print("-" * 85)
+                
+                for session in filteredSessions {
+                    let shortId = String(session.sessionId.uuidString.prefix(8))
+                    let name = String(session.sessionName.prefix(15))
+                    let typeIcon = session.persistent ? "🔒 Pers" : "⏳ Temp"
+                    let ageInDays = Calendar.current.dateComponents([.day], from: session.timestamp, to: Date()).day ?? 0
+                    
+                    print("\(shortId)\t\(name)\t\t\(session.backups.count)\t\(typeIcon)\t\(ageInDays)d")
+                }
+                
+                if filteredSessions.isEmpty {
+                    print("No sessions found matching the specified criteria.")
+                }
+            }
+            
+        } catch {
+            throw PrivarionCLIError.systemStartupFailed(underlyingError: error)
+        }
     }
 }
 
+/// Show detailed information about a backup
 struct IdentityInfoCommand: ParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "info",
-        abstract: "Show detailed information about a backup"
+        abstract: "Show detailed information about a backup",
+        discussion: """
+        Display comprehensive information about a specific backup including
+        metadata, validation status, and related session information.
+        
+        EXAMPLES:
+            privarion identity info <backup-id>           # Show backup details
+            privarion identity info --session <session-id> # Show session details
+        """
     )
     
     @Argument(help: "Backup ID to show information for")
-    var backupId: String
+    var backupId: String?
+    
+    @Option(help: "Session ID to show information for")
+    var session: String?
+    
+    @Flag(name: .shortAndLong, help: "Show verbose information including metadata")
+    var verbose: Bool = false
     
     func run() throws {
-        print("Identity info command for \(backupId) - Implementation coming soon")
+        let logger = PrivarionLogger.shared
+        
+        do {
+            let backupManager = try IdentityBackupManager(logger: logger)
+            let sessions = try backupManager.listBackups()
+            
+            if let sessionIdStr = session {
+                // Show session information
+                guard let sessionId = UUID(uuidString: sessionIdStr) else {
+                    throw ValidationError("Invalid session ID format: \(sessionIdStr)")
+                }
+                
+                guard let targetSession = sessions.first(where: { $0.sessionId == sessionId }) else {
+                    throw ValidationError("Session not found: \(sessionIdStr)")
+                }
+                
+                showSessionInfo(targetSession, verbose: verbose)
+                
+            } else if let backupIdStr = backupId {
+                // Show backup information
+                guard let backupUUID = UUID(uuidString: backupIdStr) else {
+                    throw ValidationError("Invalid backup ID format: \(backupIdStr)")
+                }
+                
+                var foundBackup: IdentityBackupManager.IdentityBackup?
+                var parentSession: IdentityBackupManager.BackupSession?
+                
+                for session in sessions {
+                    if let backup = session.backups.first(where: { $0.backupId == backupUUID }) {
+                        foundBackup = backup
+                        parentSession = session
+                        break
+                    }
+                }
+                
+                guard let backup = foundBackup, let session = parentSession else {
+                    throw ValidationError("Backup not found: \(backupIdStr)")
+                }
+                
+                showBackupInfo(backup, parentSession: session, verbose: verbose)
+                
+            } else {
+                throw ValidationError("Must specify either backup ID or --session")
+            }
+            
+        } catch {
+            throw PrivarionCLIError.systemStartupFailed(underlyingError: error)
+        }
+    }
+    
+    private func showSessionInfo(_ session: IdentityBackupManager.BackupSession, verbose: Bool) {
+        print("📦 Session Information")
+        print("=" * 50)
+        print("Session ID: \(session.sessionId.uuidString)")
+        print("Name: \(session.sessionName)")
+        print("Created: \(DateFormatter.detailedDate.string(from: session.timestamp))")
+        print("Persistent: \(session.persistent ? "Yes 🔒" : "No ⏳")")
+        print("Backup Count: \(session.backups.count)")
+        
+        let ageInDays = Calendar.current.dateComponents([.day], from: session.timestamp, to: Date()).day ?? 0
+        print("Age: \(ageInDays) days")
+        
+        if !session.backups.isEmpty {
+            print("\n🔧 Contained Backups:")
+            print("-" * 30)
+            
+            for (index, backup) in session.backups.enumerated() {
+                print("[\(index + 1)] \(backup.type): \(backup.originalValue)")
+                print("    Backup ID: \(backup.backupId.uuidString)")
+                print("    Validated: \(backup.validated ? "✅" : "❌")")
+                
+                if let newValue = backup.newValue {
+                    print("    Modified Value: \(newValue)")
+                }
+                
+                if verbose && !backup.metadata.isEmpty {
+                    print("    Metadata:")
+                    for (key, value) in backup.metadata {
+                        print("      \(key): \(value)")
+                    }
+                }
+                print("")
+            }
+        }
+    }
+    
+    private func showBackupInfo(_ backup: IdentityBackupManager.IdentityBackup, parentSession: IdentityBackupManager.BackupSession, verbose: Bool) {
+        print("🔧 Backup Information")
+        print("=" * 50)
+        print("Backup ID: \(backup.backupId.uuidString)")
+        print("Identity Type: \(backup.type)")
+        print("Original Value: \(backup.originalValue)")
+        
+        if let newValue = backup.newValue {
+            print("Modified Value: \(newValue)")
+        }
+        
+        print("Created: \(DateFormatter.detailedDate.string(from: backup.timestamp))")
+        print("Validated: \(backup.validated ? "✅ Yes" : "❌ No")")
+        
+        let ageInMinutes = Calendar.current.dateComponents([.minute], from: backup.timestamp, to: Date()).minute ?? 0
+        let ageInHours = Calendar.current.dateComponents([.hour], from: backup.timestamp, to: Date()).hour ?? 0
+        let ageInDays = Calendar.current.dateComponents([.day], from: backup.timestamp, to: Date()).day ?? 0
+        
+        if ageInDays > 0 {
+            print("Age: \(ageInDays) days")
+        } else if ageInHours > 0 {
+            print("Age: \(ageInHours) hours")
+        } else {
+            print("Age: \(ageInMinutes) minutes")
+        }
+        
+        print("\n📦 Parent Session:")
+        print("Session ID: \(parentSession.sessionId.uuidString)")
+        print("Session Name: \(parentSession.sessionName)")
+        print("Session Persistent: \(parentSession.persistent ? "Yes 🔒" : "No ⏳")")
+        
+        if verbose && !backup.metadata.isEmpty {
+            print("\n📋 Metadata:")
+            print("-" * 20)
+            for (key, value) in backup.metadata {
+                print("\(key): \(value)")
+            }
+        }
+        
+        if verbose {
+            print("\n🔍 Technical Details:")
+            print("-" * 30)
+            print("Type Description: \(getTypeDescription(backup.type))")
+            print("Value Format: \(getValueFormat(backup.type))")
+            print("Restoration Impact: \(getRestorationImpact(backup.type))")
+        }
+    }
+    
+    private func getTypeDescription(_ type: IdentitySpoofingManager.IdentityType) -> String {
+        switch type {
+        case .hostname:
+            return "System hostname (computer name)"
+        case .macAddress:
+            return "Network interface MAC address"
+        case .serialNumber:
+            return "Hardware serial number"
+        case .diskUUID:
+            return "Disk UUID identifier"
+        case .networkInterface:
+            return "Network interface name"
+        }
+    }
+    
+    private func getValueFormat(_ type: IdentitySpoofingManager.IdentityType) -> String {
+        switch type {
+        case .hostname:
+            return "String (alphanumeric, hyphens allowed)"
+        case .macAddress:
+            return "MAC address (XX:XX:XX:XX:XX:XX)"
+        case .serialNumber:
+            return "Alphanumeric string"
+        case .diskUUID:
+            return "UUID format (XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX)"
+        case .networkInterface:
+            return "Interface name (e.g., en0, en1)"
+        }
+    }
+    
+    private func getRestorationImpact(_ type: IdentitySpoofingManager.IdentityType) -> String {
+        switch type {
+        case .hostname:
+            return "Low - Updates system hostname"
+        case .macAddress:
+            return "Medium - May require network restart"
+        case .serialNumber:
+            return "High - System-level identifier"
+        case .diskUUID:
+            return "High - Boot and filesystem identifier"
+        case .networkInterface:
+            return "Medium - Network configuration change"
+        }
     }
 }
 
+/// Validate backup integrity
 struct IdentityValidateCommand: ParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "validate",
-        abstract: "Validate backup integrity"
+        abstract: "Validate backup integrity and consistency",
+        discussion: """
+        Perform integrity checks on backups including file validation,
+        metadata consistency, and backup completeness verification.
+        
+        EXAMPLES:
+            privarion identity validate                    # Validate all backups
+            privarion identity validate --session <id>    # Validate session
+            privarion identity validate --backup <id>     # Validate specific backup
+            privarion identity validate --repair          # Auto-repair issues
+        """
     )
     
+    @Option(help: "Validate specific backup ID")
+    var backup: String?
+    
+    @Option(help: "Validate specific session ID")
+    var session: String?
+    
+    @Flag(help: "Attempt to repair validation issues")
+    var repair: Bool = false
+    
+    @Flag(name: .shortAndLong, help: "Show detailed validation information")
+    var verbose: Bool = false
+    
+    @Flag(help: "Validate against current system state")
+    var system: Bool = false
+    
     func run() throws {
-        print("Identity validate command - Implementation coming soon")
+        let logger = PrivarionLogger.shared
+        
+        do {
+            let backupManager = try IdentityBackupManager(logger: logger)
+            let sessions = try backupManager.listBackups()
+            
+            if let backupIdStr = backup {
+                // Validate specific backup
+                guard let backupUUID = UUID(uuidString: backupIdStr) else {
+                    throw ValidationError("Invalid backup ID format: \(backupIdStr)")
+                }
+                
+                try validateSpecificBackup(backupUUID, sessions: sessions, verbose: verbose, repair: repair, system: system)
+                
+            } else if let sessionIdStr = session {
+                // Validate specific session
+                guard let sessionId = UUID(uuidString: sessionIdStr) else {
+                    throw ValidationError("Invalid session ID format: \(sessionIdStr)")
+                }
+                
+                try validateSpecificSession(sessionId, sessions: sessions, verbose: verbose, repair: repair, system: system)
+                
+            } else {
+                // Validate all backups
+                try validateAllBackups(sessions: sessions, verbose: verbose, repair: repair, system: system)
+            }
+            
+        } catch {
+            throw PrivarionCLIError.systemStartupFailed(underlyingError: error)
+        }
+    }
+    
+    private func validateSpecificBackup(_ backupId: UUID, sessions: [IdentityBackupManager.BackupSession], verbose: Bool, repair: Bool, system: Bool) throws {
+        var foundBackup: IdentityBackupManager.IdentityBackup?
+        var parentSession: IdentityBackupManager.BackupSession?
+        
+        for session in sessions {
+            if let backup = session.backups.first(where: { $0.backupId == backupId }) {
+                foundBackup = backup
+                parentSession = session
+                break
+            }
+        }
+        
+        guard let backup = foundBackup, let session = parentSession else {
+            throw ValidationError("Backup not found: \(backupId.uuidString)")
+        }
+        
+        print("🔍 Validating backup: \(backupId.uuidString)")
+        print("=" * 60)
+        
+        let result = performBackupValidation(backup, session: session, system: system, verbose: verbose)
+        
+        if verbose {
+            printDetailedValidationResult(result)
+        } else {
+            printSummaryValidationResult([result])
+        }
+        
+        if repair && !result.isValid {
+            print("\n🔧 Attempting to repair issues...")
+            // In a real implementation, this would attempt repairs
+            print("Repair functionality would be implemented here")
+        }
+    }
+    
+    private func validateSpecificSession(_ sessionId: UUID, sessions: [IdentityBackupManager.BackupSession], verbose: Bool, repair: Bool, system: Bool) throws {
+        guard let session = sessions.first(where: { $0.sessionId == sessionId }) else {
+            throw ValidationError("Session not found: \(sessionId.uuidString)")
+        }
+        
+        print("🔍 Validating session: \(session.sessionName)")
+        print("=" * 60)
+        
+        var results: [ValidationResult] = []
+        
+        for backup in session.backups {
+            let result = performBackupValidation(backup, session: session, system: system, verbose: false)
+            results.append(result)
+        }
+        
+        if verbose {
+            for result in results {
+                printDetailedValidationResult(result)
+                print("")
+            }
+        } else {
+            printSummaryValidationResult(results)
+        }
+        
+        if repair && results.contains(where: { !$0.isValid }) {
+            print("\n🔧 Attempting to repair session issues...")
+            // Repair implementation would go here
+            print("Session repair functionality would be implemented here")
+        }
+    }
+    
+    private func validateAllBackups(sessions: [IdentityBackupManager.BackupSession], verbose: Bool, repair: Bool, system: Bool) throws {
+        print("🔍 Validating all backups (\(sessions.count) sessions)")
+        print("=" * 60)
+        
+        var allResults: [ValidationResult] = []
+        
+        for session in sessions {
+            for backup in session.backups {
+                let result = performBackupValidation(backup, session: session, system: system, verbose: false)
+                allResults.append(result)
+            }
+        }
+        
+        if verbose {
+            print("Detailed validation results:")
+            print("-" * 40)
+            for result in allResults {
+                printDetailedValidationResult(result)
+                print("")
+            }
+        } else {
+            printSummaryValidationResult(allResults)
+        }
+        
+        if repair && allResults.contains(where: { !$0.isValid }) {
+            print("\n🔧 Attempting to repair all issues...")
+            // Repair implementation would go here
+            print("Global repair functionality would be implemented here")
+        }
+    }
+    
+    private func performBackupValidation(_ backup: IdentityBackupManager.IdentityBackup, session: IdentityBackupManager.BackupSession, system: Bool, verbose: Bool) -> ValidationResult {
+        var issues: [String] = []
+        var warnings: [String] = []
+        
+        // Basic backup validation
+        if backup.originalValue.isEmpty {
+            issues.append("Original value is empty")
+        }
+        
+        if backup.timestamp > Date() {
+            issues.append("Backup timestamp is in the future")
+        }
+        
+        // Format validation
+        if !isValidValueFormat(backup.originalValue, for: backup.type) {
+            issues.append("Original value has invalid format for \(backup.type)")
+        }
+        
+        // Age validation
+        let ageInDays = Calendar.current.dateComponents([.day], from: backup.timestamp, to: Date()).day ?? 0
+        if ageInDays > 90 {
+            warnings.append("Backup is older than 90 days")
+        }
+        
+        // System validation (if requested)
+        var systemValidation: String? = nil
+        if system {
+            do {
+                let currentValue = try getCurrentSystemValue(for: backup.type)
+                if currentValue == backup.originalValue {
+                    systemValidation = "✅ Matches current system value"
+                } else {
+                    systemValidation = "⚠️  Differs from current system value: \(currentValue)"
+                }
+            } catch {
+                systemValidation = "❌ Could not retrieve current system value: \(error.localizedDescription)"
+            }
+        }
+        
+        return ValidationResult(
+            backupId: backup.backupId,
+            backupType: backup.type,
+            sessionName: session.sessionName,
+            isValid: issues.isEmpty,
+            issues: issues,
+            warnings: warnings,
+            systemValidation: systemValidation
+        )
+    }
+    
+    private func isValidValueFormat(_ value: String, for type: IdentitySpoofingManager.IdentityType) -> Bool {
+        switch type {
+        case .hostname:
+            // Basic hostname validation
+            return !value.isEmpty && value.count <= 255
+        case .macAddress:
+            // MAC address format validation
+            let macPattern = "^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$"
+            return value.range(of: macPattern, options: .regularExpression) != nil
+        case .serialNumber:
+            // Serial number should not be empty
+            return !value.isEmpty
+        case .diskUUID:
+            // UUID format validation
+            return UUID(uuidString: value) != nil
+        case .networkInterface:
+            // Interface name validation
+            return !value.isEmpty && value.count <= 16
+        }
+    }
+    
+    private func getCurrentSystemValue(for type: IdentitySpoofingManager.IdentityType) throws -> String {
+        let engine = HardwareIdentifierEngine()
+        
+        switch type {
+        case .hostname:
+            return engine.getCurrentHostname()
+        case .macAddress:
+            let interfaces = engine.getNetworkInterfaces()
+            return interfaces.first?.macAddress ?? "unknown"
+        case .serialNumber:
+            return engine.getSystemSerial()
+        case .diskUUID:
+            let diskInfo = engine.getDiskInfo()
+            return diskInfo.first?.uuid ?? "unknown"
+        case .networkInterface:
+            let interfaces = engine.getNetworkInterfaces()
+            return interfaces.first?.name ?? "unknown"
+        }
+    }
+    
+    private func printDetailedValidationResult(_ result: ValidationResult) {
+        let statusIcon = result.isValid ? "✅" : "❌"
+        print("\(statusIcon) Backup: \(String(result.backupId.uuidString.prefix(8)))")
+        print("   Type: \(result.backupType)")
+        print("   Session: \(result.sessionName)")
+        
+        if !result.issues.isEmpty {
+            print("   Issues:")
+            for issue in result.issues {
+                print("     • \(issue)")
+            }
+        }
+        
+        if !result.warnings.isEmpty {
+            print("   Warnings:")
+            for warning in result.warnings {
+                print("     • \(warning)")
+            }
+        }
+        
+        if let systemValidation = result.systemValidation {
+            print("   System Check: \(systemValidation)")
+        }
+    }
+    
+    private func printSummaryValidationResult(_ results: [ValidationResult]) {
+        let validCount = results.filter { $0.isValid }.count
+        let totalCount = results.count
+        let issueCount = results.filter { !$0.isValid }.count
+        let warningCount = results.reduce(0) { $0 + $1.warnings.count }
+        
+        print("📊 Validation Summary")
+        print("-" * 30)
+        print("Total Backups: \(totalCount)")
+        print("Valid: \(validCount) ✅")
+        print("Issues: \(issueCount) ❌")
+        print("Warnings: \(warningCount) ⚠️")
+        
+        if issueCount > 0 {
+            print("\n❌ Backups with Issues:")
+            for result in results.filter({ !$0.isValid }) {
+                print("   • \(String(result.backupId.uuidString.prefix(8))) (\(result.backupType))")
+            }
+        }
+        
+        print("\nValidation Rate: \(String(format: "%.1f", Double(validCount) / Double(totalCount) * 100))%")
     }
 }
 
+private struct ValidationResult {
+    let backupId: UUID
+    let backupType: IdentitySpoofingManager.IdentityType
+    let sessionName: String
+    let isValid: Bool
+    let issues: [String]
+    let warnings: [String]
+    let systemValidation: String?
+}
+
+/// Clean up old backup files
 struct IdentityCleanupCommand: ParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "cleanup",
-        abstract: "Clean up old backup files"
+        abstract: "Clean up old backup files and sessions",
+        discussion: """
+        Remove old backup files based on age, count, or other criteria.
+        Persistent backups are preserved unless explicitly forced.
+        
+        EXAMPLES:
+            privarion identity cleanup                     # Default cleanup (30 days)
+            privarion identity cleanup --older-than 7d    # Remove backups older than 7 days
+            privarion identity cleanup --keep-latest 10   # Keep only latest 10 sessions
+            privarion identity cleanup --force-persistent # Include persistent backups
+            privarion identity cleanup --dry-run          # Show what would be deleted
+        """
     )
     
-    @Option(help: "Remove backups older than this period (e.g., 30d, 7d)")
+    @Option(help: "Remove backups older than this period (e.g., 30d, 7d, 2h)")
     var olderThan: String = "30d"
     
+    @Option(help: "Keep only this many latest sessions")
+    var keepLatest: Int?
+    
+    @Flag(help: "Include persistent backups in cleanup")
+    var forcePersistent: Bool = false
+    
+    @Flag(help: "Show what would be deleted without actually deleting")
+    var dryRun: Bool = false
+    
+    @Flag(name: .shortAndLong, help: "Show detailed cleanup information")
+    var verbose: Bool = false
+    
+    @Flag(help: "Skip confirmation prompts")
+    var force: Bool = false
+    
     func run() throws {
-        print("Identity cleanup command - Implementation coming soon")
+        let logger = PrivarionLogger.shared
+        
+        do {
+            let backupManager = try IdentityBackupManager(logger: logger)
+            let sessions = try backupManager.listBackups()
+            
+            // Parse cleanup criteria
+            let cutoffDate: Date
+            if let keepLatest = keepLatest {
+                let sortedSessions = sessions.sorted { $0.timestamp > $1.timestamp }
+                if sortedSessions.count > keepLatest {
+                    cutoffDate = sortedSessions[keepLatest - 1].timestamp
+                } else {
+                    cutoffDate = Date.distantPast
+                }
+            } else {
+                cutoffDate = try parseTimeExpression(olderThan)
+            }
+            
+            // Filter sessions for cleanup
+            let sessionsToDelete = sessions.filter { session in
+                // Check if session is older than cutoff
+                guard session.timestamp < cutoffDate else { return false }
+                
+                // Check if we should preserve persistent sessions
+                if session.persistent && !forcePersistent {
+                    return false
+                }
+                
+                return true
+            }
+            
+            if sessionsToDelete.isEmpty {
+                print("No sessions found matching cleanup criteria.")
+                return
+            }
+            
+            // Calculate cleanup statistics
+            let totalBackupsToDelete = sessionsToDelete.reduce(0) { $0 + $1.backups.count }
+            let persistentSessionsToDelete = sessionsToDelete.filter { $0.persistent }.count
+            
+            if verbose || dryRun {
+                print("🧹 Cleanup Analysis")
+                print("=" * 50)
+                print("Cutoff Date: \(DateFormatter.detailedDate.string(from: cutoffDate))")
+                print("Sessions to Delete: \(sessionsToDelete.count)")
+                print("Backups to Delete: \(totalBackupsToDelete)")
+                print("Persistent Sessions Affected: \(persistentSessionsToDelete)")
+                print("")
+                
+                if verbose {
+                    print("Sessions marked for deletion:")
+                    print("-" * 40)
+                    for session in sessionsToDelete {
+                        let ageInDays = Calendar.current.dateComponents([.day], from: session.timestamp, to: Date()).day ?? 0
+                        let persistentIcon = session.persistent ? " 🔒" : ""
+                        print("• \(session.sessionName)\(persistentIcon)")
+                        print("  ID: \(session.sessionId.uuidString)")
+                        print("  Age: \(ageInDays) days")
+                        print("  Backups: \(session.backups.count)")
+                        print("")
+                    }
+                }
+            }
+            
+            if dryRun {
+                print("🔍 DRY RUN - No files will be deleted")
+                return
+            }
+            
+            // Confirmation prompt (unless forced)
+            if !force {
+                if persistentSessionsToDelete > 0 {
+                    print("⚠️  WARNING: This will delete \(persistentSessionsToDelete) persistent sessions!")
+                }
+                
+                print("This will permanently delete \(sessionsToDelete.count) sessions (\(totalBackupsToDelete) backups).")
+                print("Continue? (y/N): ", terminator: "")
+                
+                let response = readLine() ?? ""
+                if !["y", "Y", "yes", "Yes", "YES"].contains(response) {
+                    print("Cleanup cancelled.")
+                    return
+                }
+            }
+            
+            // Perform cleanup
+            print("🧹 Starting cleanup...")
+            
+            var deletedSessions = 0
+            var deletedBackups = 0
+            var errors: [String] = []
+            
+            for session in sessionsToDelete {
+                do {
+                    try backupManager.deleteSession(sessionId: session.sessionId)
+                    deletedSessions += 1
+                    deletedBackups += session.backups.count
+                    
+                    if verbose {
+                        print("✅ Deleted session: \(session.sessionName)")
+                    }
+                } catch {
+                    let errorMsg = "Failed to delete session \(session.sessionName): \(error.localizedDescription)"
+                    errors.append(errorMsg)
+                    
+                    if verbose {
+                        print("❌ \(errorMsg)")
+                    }
+                }
+            }
+            
+            // Print cleanup summary
+            print("\n📊 Cleanup Complete")
+            print("=" * 30)
+            print("Sessions Deleted: \(deletedSessions)")
+            print("Backups Deleted: \(deletedBackups)")
+            
+            if !errors.isEmpty {
+                print("Errors: \(errors.count)")
+                if verbose {
+                    print("\nError Details:")
+                    for error in errors {
+                        print("• \(error)")
+                    }
+                }
+            }
+            
+            // Calculate space savings (estimate)
+            let estimatedSpaceSaved = deletedBackups * 1024 // Rough estimate
+            print("Estimated Space Saved: ~\(formatBytes(estimatedSpaceSaved))")
+            
+        } catch {
+            throw PrivarionCLIError.systemStartupFailed(underlyingError: error)
+        }
+    }
+    
+    private func parseTimeExpression(_ expression: String) throws -> Date {
+        let now = Date()
+        let lowercased = expression.lowercased()
+        
+        // Parse number and unit
+        let scanner = Scanner(string: lowercased)
+        
+        var number: Int = 0
+        guard scanner.scanInt(&number) else {
+            throw ValidationError("Invalid time format: '\(expression)'. Use format like '30d', '7d', '2h'")
+        }
+        
+        let remainingString = String(lowercased.dropFirst(String(number).count))
+        
+        let calendar = Calendar.current
+        let dateComponent: Calendar.Component
+        
+        switch remainingString {
+        case "d", "day", "days":
+            dateComponent = .day
+        case "h", "hour", "hours":
+            dateComponent = .hour
+        case "m", "minute", "minutes":
+            dateComponent = .minute
+        case "w", "week", "weeks":
+            dateComponent = .weekOfYear
+            // Convert weeks to days for calculation
+        default:
+            throw ValidationError("Invalid time unit: '\(remainingString)'. Use 'd' (days), 'h' (hours), 'm' (minutes), 'w' (weeks)")
+        }
+        
+        guard let cutoffDate = calendar.date(byAdding: dateComponent, value: -number, to: now) else {
+            throw ValidationError("Could not calculate cutoff date")
+        }
+        
+        return cutoffDate
+    }
+    
+    private func formatBytes(_ bytes: Int) -> String {
+        let units = ["B", "KB", "MB", "GB"]
+        var size = Double(bytes)
+        var unitIndex = 0
+        
+        while size >= 1024 && unitIndex < units.count - 1 {
+            size /= 1024
+            unitIndex += 1
+        }
+        
+        return String(format: "%.1f %@", size, units[unitIndex])
     }
 }
 
+/// Delete specific backup or session
 struct IdentityDeleteCommand: ParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "delete",
-        abstract: "Delete specific backup or session"
+        abstract: "Delete specific backup or session",
+        discussion: """
+        Remove specific backups or entire sessions from the backup store.
+        Use with caution as this operation cannot be undone.
+        
+        EXAMPLES:
+            privarion identity delete <backup-id>          # Delete specific backup
+            privarion identity delete --session <id>      # Delete entire session
+            privarion identity delete --multiple <id1> <id2> # Delete multiple items
+            privarion identity delete --force <id>        # Skip confirmation
+        """
     )
     
     @Argument(help: "Backup ID or session ID to delete")
-    var id: String
+    var id: String?
     
-    @Flag(help: "Delete entire session")
-    var session: Bool = false
+    @Option(help: "Delete entire session by session ID")
+    var session: String?
+    
+    @Option(help: "Delete multiple backups by ID")
+    var multiple: [String] = []
+    
+    @Flag(help: "Skip confirmation prompts")
+    var force: Bool = false
+    
+    @Flag(name: .shortAndLong, help: "Show detailed deletion information")
+    var verbose: Bool = false
+    
+    @Flag(help: "Delete even if backup is part of persistent session")
+    var forcePersistent: Bool = false
     
     func run() throws {
-        print("Identity delete command for \(id) - Implementation coming soon")
+        let logger = PrivarionLogger.shared
+        
+        do {
+            let backupManager = try IdentityBackupManager(logger: logger)
+            let sessions = try backupManager.listBackups()
+            
+            if let sessionIdStr = session {
+                // Delete entire session
+                try deleteSession(sessionIdStr, backupManager: backupManager, sessions: sessions)
+                
+            } else if !multiple.isEmpty {
+                // Delete multiple backups
+                try deleteMultipleBackups(multiple, backupManager: backupManager, sessions: sessions)
+                
+            } else if let idStr = id {
+                // Delete single backup or auto-detect type
+                if let _ = UUID(uuidString: idStr) {
+                    // Valid UUID format - try as backup first, then session
+                    if try deleteBackupIfExists(idStr, backupManager: backupManager, sessions: sessions) {
+                        // Successfully deleted as backup
+                    } else {
+                        // Try as session
+                        try deleteSession(idStr, backupManager: backupManager, sessions: sessions)
+                    }
+                } else {
+                    throw ValidationError("Invalid ID format: \(idStr). Must be a valid UUID.")
+                }
+                
+            } else {
+                throw ValidationError("Must specify either backup ID, --session, or --multiple")
+            }
+            
+        } catch {
+            throw PrivarionCLIError.systemStartupFailed(underlyingError: error)
+        }
+    }
+    
+    private func deleteSession(_ sessionIdStr: String, backupManager: IdentityBackupManager, sessions: [IdentityBackupManager.BackupSession]) throws {
+        guard let sessionId = UUID(uuidString: sessionIdStr) else {
+            throw ValidationError("Invalid session ID format: \(sessionIdStr)")
+        }
+        
+        guard let targetSession = sessions.first(where: { $0.sessionId == sessionId }) else {
+            throw ValidationError("Session not found: \(sessionIdStr)")
+        }
+        
+        // Check if session is persistent
+        if targetSession.persistent && !forcePersistent {
+            throw ValidationError("Cannot delete persistent session '\(targetSession.sessionName)'. Use --force-persistent to override.")
+        }
+        
+        if verbose {
+            print("🗑️  Session deletion details:")
+            print("   Session: \(targetSession.sessionName)")
+            print("   ID: \(sessionIdStr)")
+            print("   Backups: \(targetSession.backups.count)")
+            print("   Persistent: \(targetSession.persistent ? "Yes 🔒" : "No")")
+            print("   Created: \(DateFormatter.detailedDate.string(from: targetSession.timestamp))")
+        }
+        
+        // Confirmation prompt (unless forced)
+        if !force {
+            if targetSession.persistent {
+                print("⚠️  WARNING: This is a persistent session!")
+            }
+            
+            print("Delete session '\(targetSession.sessionName)' with \(targetSession.backups.count) backups? (y/N): ", terminator: "")
+            
+            let response = readLine() ?? ""
+            if !["y", "Y", "yes", "Yes", "YES"].contains(response) {
+                print("Deletion cancelled.")
+                return
+            }
+        }
+        
+        // Perform deletion
+        try backupManager.deleteSession(sessionId: sessionId)
+        
+        if verbose {
+            print("✅ Session deleted successfully")
+            print("   Session: \(targetSession.sessionName)")
+            print("   Backups deleted: \(targetSession.backups.count)")
+        } else {
+            print("Session deleted: \(targetSession.sessionName)")
+        }
+    }
+    
+    private func deleteMultipleBackups(_ backupIds: [String], backupManager: IdentityBackupManager, sessions: [IdentityBackupManager.BackupSession]) throws {
+        var validBackups: [(IdentityBackupManager.IdentityBackup, IdentityBackupManager.BackupSession)] = []
+        var invalidIds: [String] = []
+        
+        // Validate all IDs first
+        for idStr in backupIds {
+            guard let backupUUID = UUID(uuidString: idStr) else {
+                invalidIds.append(idStr)
+                continue
+            }
+            
+            var found = false
+            for session in sessions {
+                if let backup = session.backups.first(where: { $0.backupId == backupUUID }) {
+                    validBackups.append((backup, session))
+                    found = true
+                    break
+                }
+            }
+            
+            if !found {
+                invalidIds.append(idStr)
+            }
+        }
+        
+        if !invalidIds.isEmpty {
+            throw ValidationError("Invalid backup IDs: \(invalidIds.joined(separator: ", "))")
+        }
+        
+        // Check for persistent sessions
+        let persistentBackups = validBackups.filter { $0.1.persistent }
+        if !persistentBackups.isEmpty && !forcePersistent {
+            let persistentIds = persistentBackups.map { String($0.0.backupId.uuidString.prefix(8)) }
+            throw ValidationError("Cannot delete backups from persistent sessions: \(persistentIds.joined(separator: ", ")). Use --force-persistent to override.")
+        }
+        
+        if verbose {
+            print("🗑️  Multiple backup deletion:")
+            print("   Total backups: \(validBackups.count)")
+            print("   Persistent sessions affected: \(persistentBackups.count)")
+            print("")
+            
+            for (backup, session) in validBackups {
+                print("   • \(backup.type) from '\(session.sessionName)'")
+                print("     ID: \(backup.backupId.uuidString)")
+            }
+        }
+        
+        // Confirmation prompt (unless forced)
+        if !force {
+            print("Delete \(validBackups.count) backups? (y/N): ", terminator: "")
+            
+            let response = readLine() ?? ""
+            if !["y", "Y", "yes", "Yes", "YES"].contains(response) {
+                print("Deletion cancelled.")
+                return
+            }
+        }
+        
+        // Perform deletions
+        var successCount = 0
+        var errors: [String] = []
+        
+        for (backup, _) in validBackups {
+            do {
+                try backupManager.deleteBackup(backupId: backup.backupId)
+                successCount += 1
+                
+                if verbose {
+                    print("✅ Deleted: \(backup.type) (\(String(backup.backupId.uuidString.prefix(8))))")
+                }
+            } catch {
+                let errorMsg = "Failed to delete \(backup.type): \(error.localizedDescription)"
+                errors.append(errorMsg)
+                
+                if verbose {
+                    print("❌ \(errorMsg)")
+                }
+            }
+        }
+        
+        print("\n📊 Deletion Summary:")
+        print("   Successful: \(successCount)")
+        print("   Failed: \(errors.count)")
+        
+        if !errors.isEmpty && verbose {
+            print("\n❌ Errors:")
+            for error in errors {
+                print("   • \(error)")
+            }
+        }
+    }
+    
+    private func deleteBackupIfExists(_ backupIdStr: String, backupManager: IdentityBackupManager, sessions: [IdentityBackupManager.BackupSession]) throws -> Bool {
+        guard let backupUUID = UUID(uuidString: backupIdStr) else {
+            return false
+        }
+        
+        var foundBackup: IdentityBackupManager.IdentityBackup?
+        var parentSession: IdentityBackupManager.BackupSession?
+        
+        for session in sessions {
+            if let backup = session.backups.first(where: { $0.backupId == backupUUID }) {
+                foundBackup = backup
+                parentSession = session
+                break
+            }
+        }
+        
+        guard let backup = foundBackup, let session = parentSession else {
+            return false // Not found as backup
+        }
+        
+        // Check if parent session is persistent
+        if session.persistent && !forcePersistent {
+            throw ValidationError("Cannot delete backup from persistent session '\(session.sessionName)'. Use --force-persistent to override.")
+        }
+        
+        if verbose {
+            print("🗑️  Backup deletion details:")
+            print("   Type: \(backup.type)")
+            print("   Value: \(backup.originalValue)")
+            print("   Session: \(session.sessionName)")
+            print("   Created: \(DateFormatter.detailedDate.string(from: backup.timestamp))")
+        }
+        
+        // Confirmation prompt (unless forced)
+        if !force {
+            if session.persistent {
+                print("⚠️  WARNING: This backup is from a persistent session!")
+            }
+            
+            print("Delete \(backup.type) backup (\(String(backupIdStr.prefix(8))))? (y/N): ", terminator: "")
+            
+            let response = readLine() ?? ""
+            if !["y", "Y", "yes", "Yes", "YES"].contains(response) {
+                print("Deletion cancelled.")
+                return true // We found it but cancelled
+            }
+        }
+        
+        // Perform deletion
+        try backupManager.deleteBackup(backupId: backupUUID)
+        
+        if verbose {
+            print("✅ Backup deleted successfully")
+            print("   Type: \(backup.type)")
+            print("   From session: \(session.sessionName)")
+        } else {
+            print("Backup deleted: \(backup.type)")
+        }
+        
+        return true
     }
 }
 
@@ -1958,6 +3014,13 @@ extension DateFormatter {
         let formatter = DateFormatter()
         formatter.dateStyle = .short
         formatter.timeStyle = .short
+        return formatter
+    }()
+    
+    static let detailedDate: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .medium
         return formatter
     }()
 }

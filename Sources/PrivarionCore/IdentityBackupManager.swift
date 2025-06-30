@@ -354,6 +354,93 @@ public class IdentityBackupManager {
         
         return true
     }
+    
+    // MARK: - Deletion Operations
+    
+    /// Delete a specific backup by ID
+    public func deleteBackup(backupId: UUID) throws {
+        var sessions = try loadAllSessions()
+        var found = false
+        
+        for (sessionIndex, session) in sessions.enumerated() {
+            if let backupIndex = session.backups.firstIndex(where: { $0.backupId == backupId }) {
+                sessions[sessionIndex].backups.remove(at: backupIndex)
+                found = true
+                
+                // If session is now empty, delete the session file entirely
+                if sessions[sessionIndex].backups.isEmpty {
+                    let sessionFile = backupDirectory
+                        .appendingPathComponent(session.sessionId.uuidString)
+                        .appendingPathExtension("json")
+                    
+                    try fileManager.removeItem(at: sessionFile)
+                    
+                    logger.info("Deleted empty session after backup removal",
+                               metadata: ["session_id": session.sessionId.uuidString,
+                                        "deleted_backup_id": backupId.uuidString])
+                } else {
+                    // Save the updated session
+                    try persistSession(sessions[sessionIndex])
+                    
+                    logger.info("Deleted backup from session",
+                               metadata: ["backup_id": backupId.uuidString,
+                                        "session_id": session.sessionId.uuidString,
+                                        "remaining_backups": "\(sessions[sessionIndex].backups.count)"])
+                }
+                break
+            }
+        }
+        
+        if !found {
+            throw BackupError.backupNotFound(backupId)
+        }
+    }
+    
+    /// Delete an entire session and all its backups
+    public func deleteSession(sessionId: UUID) throws {
+        let sessionFile = backupDirectory
+            .appendingPathComponent(sessionId.uuidString)
+            .appendingPathExtension("json")
+        
+        // Check if session exists
+        guard fileManager.fileExists(atPath: sessionFile.path) else {
+            throw BackupError.sessionNotFound(sessionId)
+        }
+        
+        // Load session to get metadata for logging
+        let sessionData = try Data(contentsOf: sessionFile)
+        let session = try JSONDecoder().decode(BackupSession.self, from: sessionData)
+        
+        // Remove session file
+        try fileManager.removeItem(at: sessionFile)
+        
+        logger.info("Deleted backup session",
+                   metadata: ["session_id": sessionId.uuidString,
+                            "session_name": session.sessionName,
+                            "deleted_backups": "\(session.backups.count)",
+                            "was_persistent": "\(session.persistent)"])
+    }
+    
+    /// Delete multiple backups by their IDs
+    public func deleteBackups(backupIds: [UUID]) throws {
+        for backupId in backupIds {
+            try deleteBackup(backupId: backupId)
+        }
+    }
+    
+    /// Delete all sessions matching criteria
+    public func deleteSessions(where predicate: (BackupSession) -> Bool) throws {
+        let sessions = try loadAllSessions()
+        let sessionsToDelete = sessions.filter(predicate)
+        
+        for session in sessionsToDelete {
+            try deleteSession(sessionId: session.sessionId)
+        }
+        
+        logger.info("Deleted multiple sessions",
+                   metadata: ["deleted_count": "\(sessionsToDelete.count)",
+                            "total_sessions": "\(sessions.count)"])
+    }
 }
 
 // MARK: - Extensions
