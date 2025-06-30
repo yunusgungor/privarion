@@ -21,10 +21,10 @@ final class AppState: ObservableObject {
     @Published var modules: [PrivacyModule] = []
     
     /// Current configuration profiles
-    @Published var profiles: [ConfigurationProfile] = []
+    @Published var profiles: [PrivarionGUI.ConfigurationProfile] = []
     
     /// Active configuration profile
-    @Published var activeProfile: ConfigurationProfile?
+    @Published var activeProfile: PrivarionGUI.ConfigurationProfile?
     
     /// Recent activity log entries
     @Published var recentActivity: [ActivityLogEntry] = []
@@ -36,6 +36,11 @@ final class AppState: ObservableObject {
     
     private let logger = Logger(label: "AppState")
     private var cancellables = Set<AnyCancellable>()
+    
+    /// Indicates if we're running in test environment
+    private var isTestEnvironment: Bool {
+        return ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
+    }
     
     // MARK: - Dependencies (Interactors)
     
@@ -91,6 +96,7 @@ final class AppState: ObservableObject {
         setupKeyboardShortcuts()
         setupCommandManager()
         setupNavigationManager()
+        
         logger.info("AppState initialized with Clean Architecture pattern, ErrorManager, UserSettings, SearchManager, KeyboardShortcutManager, CommandManager, and NavigationManager")
     }
     
@@ -115,8 +121,7 @@ final class AppState: ObservableObject {
         logger.debug("Navigating to view: \\(view)")
         currentView = view
     }
-    
-    /// Toggle module enable/disable state
+     /// Toggle module enable/disable state
     func toggleModule(_ moduleId: String) async {
         logger.info("Toggling module: \\(moduleId)")
         
@@ -125,7 +130,7 @@ final class AppState: ObservableObject {
             handleError(error, context: "AppState.toggleModule", operation: "module toggle")
             return
         }
-        
+
         do {
             setLoading("modules", true)
             let currentModule = modules[moduleIndex]

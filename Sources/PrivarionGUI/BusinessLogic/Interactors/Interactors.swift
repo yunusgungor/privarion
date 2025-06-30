@@ -50,14 +50,14 @@ protocol ModuleInteractor {
 
 /// Business logic for configuration profile management
 protocol ProfileInteractor {
-    func getProfiles() async throws -> [ConfigurationProfile]
-    func getActiveProfile() async throws -> ConfigurationProfile?
-    func createProfile(_ profile: ConfigurationProfile) async throws
-    func updateProfile(_ profile: ConfigurationProfile) async throws
+    func getProfiles() async throws -> [PrivarionGUI.ConfigurationProfile]
+    func getActiveProfile() async throws -> PrivarionGUI.ConfigurationProfile?
+    func createProfile(_ profile: PrivarionGUI.ConfigurationProfile) async throws
+    func updateProfile(_ profile: PrivarionGUI.ConfigurationProfile) async throws
     func deleteProfile(_ profileId: String) async throws
     func activateProfile(_ profileId: String) async throws
     func exportProfile(_ profileId: String) async throws -> Data
-    func importProfile(_ data: Data) async throws -> ConfigurationProfile
+    func importProfile(_ data: Data) async throws -> PrivarionGUI.ConfigurationProfile
 }
 
 // MARK: - Default Implementations
@@ -168,14 +168,14 @@ final class DefaultProfileInteractor: ProfileInteractor {
         self.profileRepository = profileRepository
     }
     
-    func getProfiles() async throws -> [ConfigurationProfile] {
+    func getProfiles() async throws -> [PrivarionGUI.ConfigurationProfile] {
         logger.debug("Getting configuration profiles")
         let profiles = try await profileRepository.getProfiles()
         logger.info("Retrieved \\(profiles.count) profiles")
         return profiles
     }
     
-    func getActiveProfile() async throws -> ConfigurationProfile? {
+    func getActiveProfile() async throws -> PrivarionGUI.ConfigurationProfile? {
         logger.debug("Getting active profile")
         let profile = try await profileRepository.getActiveProfile()
         if let profile = profile {
@@ -186,13 +186,13 @@ final class DefaultProfileInteractor: ProfileInteractor {
         return profile
     }
     
-    func createProfile(_ profile: ConfigurationProfile) async throws {
+    func createProfile(_ profile: PrivarionGUI.ConfigurationProfile) async throws {
         logger.info("Creating profile: \\(profile.name)")
         try await profileRepository.createProfile(profile)
         logger.info("Profile created successfully: \\(profile.name)")
     }
     
-    func updateProfile(_ profile: ConfigurationProfile) async throws {
+    func updateProfile(_ profile: PrivarionGUI.ConfigurationProfile) async throws {
         logger.info("Updating profile: \\(profile.name)")
         try await profileRepository.updateProfile(profile)
         logger.info("Profile updated successfully: \\(profile.name)")
@@ -217,7 +217,7 @@ final class DefaultProfileInteractor: ProfileInteractor {
         return data
     }
     
-    func importProfile(_ data: Data) async throws -> ConfigurationProfile {
+    func importProfile(_ data: Data) async throws -> PrivarionGUI.ConfigurationProfile {
         logger.debug("Importing profile from data")
         let profile = try await profileRepository.importProfile(data)
         logger.info("Profile imported successfully: \(profile.name)")

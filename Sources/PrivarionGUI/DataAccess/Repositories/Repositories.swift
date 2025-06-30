@@ -26,14 +26,14 @@ protocol ModuleRepository {
 /// Data access abstraction for profile operations
 /// NOW INTEGRATES DIRECTLY WITH PRIVARIONCORE - NO MORE CLI BACKEND
 protocol ProfileRepository {
-    func getProfiles() async throws -> [ConfigurationProfile]
-    func getActiveProfile() async throws -> ConfigurationProfile?
-    func createProfile(_ profile: ConfigurationProfile) async throws
-    func updateProfile(_ profile: ConfigurationProfile) async throws
+    func getProfiles() async throws -> [PrivarionGUI.ConfigurationProfile]
+    func getActiveProfile() async throws -> PrivarionGUI.ConfigurationProfile?
+    func createProfile(_ profile: PrivarionGUI.ConfigurationProfile) async throws
+    func updateProfile(_ profile: PrivarionGUI.ConfigurationProfile) async throws
     func deleteProfile(_ profileId: String) async throws
     func activateProfile(_ profileId: String) async throws
     func exportProfile(_ profileId: String) async throws -> Data
-    func importProfile(_ data: Data) async throws -> ConfigurationProfile
+    func importProfile(_ data: Data) async throws -> PrivarionGUI.ConfigurationProfile
 }
 
 // MARK: - PrivarionCore Direct Integration Implementation
@@ -339,7 +339,7 @@ final class DefaultProfileRepository: ProfileRepository {
     private let configurationManager = ConfigurationManager.shared
     private let profileManager = ConfigurationProfileManager()
     
-    func getProfiles() async throws -> [ConfigurationProfile] {
+    func getProfiles() async throws -> [PrivarionGUI.ConfigurationProfile] {
         logger.debug("Getting configuration profiles from PrivarionCore")
         
         // Get the current config to access profiles
@@ -350,7 +350,7 @@ final class DefaultProfileRepository: ProfileRepository {
             // Convert ModuleConfigs to settings dictionary
             let settings = convertModuleConfigsToSettings(coreProfile.modules)
             
-            return ConfigurationProfile(
+            return PrivarionGUI.ConfigurationProfile(
                 id: key,
                 name: coreProfile.name,
                 description: coreProfile.description,
@@ -365,7 +365,7 @@ final class DefaultProfileRepository: ProfileRepository {
         return Array(profiles)
     }
     
-    func getActiveProfile() async throws -> ConfigurationProfile? {
+    func getActiveProfile() async throws -> PrivarionGUI.ConfigurationProfile? {
         logger.debug("Getting active profile from PrivarionCore")
         
         let config = configurationManager.getCurrentConfiguration()
@@ -373,7 +373,7 @@ final class DefaultProfileRepository: ProfileRepository {
         if let activeProfile = config.profiles[config.activeProfile] {
             let settings = convertModuleConfigsToSettings(activeProfile.modules)
             
-            let profile = ConfigurationProfile(
+            let profile = PrivarionGUI.ConfigurationProfile(
                 id: config.activeProfile,
                 name: activeProfile.name,
                 description: activeProfile.description,
@@ -391,7 +391,7 @@ final class DefaultProfileRepository: ProfileRepository {
         return nil
     }
     
-    func createProfile(_ profile: ConfigurationProfile) async throws {
+    func createProfile(_ profile: PrivarionGUI.ConfigurationProfile) async throws {
         logger.info("Creating profile via PrivarionCore: \(profile.name)")
         
         do {
@@ -416,7 +416,7 @@ final class DefaultProfileRepository: ProfileRepository {
         }
     }
     
-    func updateProfile(_ profile: ConfigurationProfile) async throws {
+    func updateProfile(_ profile: PrivarionGUI.ConfigurationProfile) async throws {
         logger.info("Updating profile via PrivarionCore: \(profile.name)")
         
         do {
@@ -509,7 +509,7 @@ final class DefaultProfileRepository: ProfileRepository {
         }
     }
     
-    func importProfile(_ data: Data) async throws -> ConfigurationProfile {
+    func importProfile(_ data: Data) async throws -> PrivarionGUI.ConfigurationProfile {
         logger.debug("Importing profile via PrivarionCore")
         
         do {
@@ -528,7 +528,7 @@ final class DefaultProfileRepository: ProfileRepository {
             
             let settings = convertModuleConfigsToSettings(coreProfile.modules)
             
-            let profile = ConfigurationProfile(
+            let profile = PrivarionGUI.ConfigurationProfile(
                 id: profileId,
                 name: coreProfile.name,
                 description: coreProfile.description,
