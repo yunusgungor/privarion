@@ -337,4 +337,187 @@ public class HardwareIdentifierEngine {
         
         return Array(macs)
     }
+    
+    // MARK: - System Information Methods (for CLI)
+    
+    /// Get current system hostname
+    public func getCurrentHostname() -> String {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/sbin/scutil")
+        process.arguments = ["--get", "ComputerName"]
+        
+        let pipe = Pipe()
+        process.standardOutput = pipe
+        
+        do {
+            try process.run()
+            process.waitUntilExit()
+            
+            let data = pipe.fileHandleForReading.readDataToEndOfFile()
+            return String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? "unknown"
+        } catch {
+            return "unknown"
+        }
+    }
+    
+    /// Get current system serial number
+    public func getSystemSerial() -> String {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/sbin/system_profiler")
+        process.arguments = ["SPHardwareDataType"]
+        
+        let pipe = Pipe()
+        process.standardOutput = pipe
+        
+        do {
+            try process.run()
+            process.waitUntilExit()
+            
+            let data = pipe.fileHandleForReading.readDataToEndOfFile()
+            let output = String(data: data, encoding: .utf8) ?? ""
+            
+            // Parse serial number from system_profiler output
+            let lines = output.components(separatedBy: .newlines)
+            for line in lines {
+                if line.contains("Serial Number") {
+                    let components = line.components(separatedBy: ":")
+                    if components.count > 1 {
+                        return components[1].trimmingCharacters(in: .whitespacesAndNewlines)
+                    }
+                }
+            }
+            return "unknown"
+        } catch {
+            return "unknown"
+        }
+    }
+    
+    /// Get network interface information
+    public struct NetworkInterface {
+        public let name: String
+        public let macAddress: String
+        
+        public init(name: String, macAddress: String) {
+            self.name = name
+            self.macAddress = macAddress
+        }
+    }
+    
+    /// Get current network interfaces with MAC addresses
+    public func getNetworkInterfaces() -> [NetworkInterface] {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/sbin/ifconfig")
+        process.arguments = ["-a"]
+        
+        let pipe = Pipe()
+        process.standardOutput = pipe
+        
+        do {
+            try process.run()
+            process.waitUntilExit()
+            
+            let data = pipe.fileHandleForReading.readDataToEndOfFile()
+            let output = String(data: data, encoding: .utf8) ?? ""
+            
+            return parseNetworkInterfaces(from: output)
+        } catch {
+            return []
+        }
+    }
+    
+    /// Get disk information
+    public struct DiskInfo {
+        public let device: String
+        public let uuid: String
+        public let mountPoint: String
+        
+        public init(device: String, uuid: String, mountPoint: String) {
+            self.device = device
+            self.uuid = uuid
+            self.mountPoint = mountPoint
+        }
+    }
+    
+    /// Get current disk information
+    public func getDiskInfo() -> [DiskInfo] {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/sbin/diskutil")
+        process.arguments = ["list", "-plist"]
+        
+        let pipe = Pipe()
+        process.standardOutput = pipe
+        
+        do {
+            try process.run()
+            process.waitUntilExit()
+            
+            _ = pipe.fileHandleForReading.readDataToEndOfFile()
+            
+            // For simplicity, just get the root disk UUID
+            let rootProcess = Process()
+            rootProcess.executableURL = URL(fileURLWithPath: "/usr/sbin/diskutil")
+            rootProcess.arguments = ["info", "/"]
+            
+            let rootPipe = Pipe()
+            rootProcess.standardOutput = rootPipe
+            
+            try rootProcess.run()
+            rootProcess.waitUntilExit()
+            
+            let rootData = rootPipe.fileHandleForReading.readDataToEndOfFile()
+            let rootOutput = String(data: rootData, encoding: .utf8) ?? ""
+            
+            let uuid = parseUUIDFromDiskutil(rootOutput)
+            return [DiskInfo(device: "disk1", uuid: uuid, mountPoint: "/")]
+            
+        } catch {
+            return []
+        }
+    }
+    
+    // MARK: - Private Parsing Helpers
+    
+    private func parseNetworkInterfaces(from output: String) -> [NetworkInterface] {
+        var interfaces: [NetworkInterface] = []
+        let lines = output.components(separatedBy: .newlines)
+        
+        var currentInterface: String?
+        
+        for line in lines {
+            // Interface name line (starts at beginning of line)
+            if !line.starts(with: "\t") && line.contains(":") {
+                let components = line.components(separatedBy: ":")
+                currentInterface = components.first?.trimmingCharacters(in: .whitespaces)
+            }
+            
+            // MAC address line (indented with tabs)
+            if line.contains("ether") && line.contains(":") {
+                let components = line.components(separatedBy: .whitespaces)
+                for (index, component) in components.enumerated() {
+                    if component == "ether" && index + 1 < components.count {
+                        let macAddress = components[index + 1]
+                        if let interfaceName = currentInterface, interfaceName != "lo0" {
+                            interfaces.append(NetworkInterface(name: interfaceName, macAddress: macAddress))
+                        }
+                        break
+                    }
+                }
+            }
+        }
+        
+        return interfaces
+    }
+    
+    private func parseUUIDFromDiskutil(_ output: String) -> String {
+        let lines = output.components(separatedBy: .newlines)
+        for line in lines {
+            if line.contains("Volume UUID") || line.contains("Disk / Partition UUID") {
+                let components = line.components(separatedBy: ":")
+                if components.count > 1 {
+                    return components[1].trimmingCharacters(in: .whitespacesAndNewlines)
+                }
+            }
+        }
+        return "unknown"
+    }
 }

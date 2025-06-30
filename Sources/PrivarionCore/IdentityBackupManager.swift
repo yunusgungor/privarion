@@ -9,15 +9,15 @@ public class IdentityBackupManager {
     
     /// Backup entry for a system identity
     public struct IdentityBackup: Codable {
-        let type: IdentitySpoofingManager.IdentityType
-        let originalValue: String
-        let newValue: String?
-        let timestamp: Date
-        let backupId: UUID
-        var validated: Bool
+        public let type: IdentitySpoofingManager.IdentityType
+        public let originalValue: String
+        public let newValue: String?
+        public let timestamp: Date
+        public let backupId: UUID
+        public var validated: Bool
         
         /// Additional metadata for advanced backup scenarios
-        let metadata: [String: String]
+        public let metadata: [String: String]
         
         init(type: IdentitySpoofingManager.IdentityType, 
              originalValue: String, 
@@ -35,14 +35,14 @@ public class IdentityBackupManager {
     
     /// Backup session containing multiple identity changes
     public struct BackupSession: Codable {
-        let sessionId: UUID
-        let timestamp: Date
-        var backups: [IdentityBackup] // Changed to var for mutation
-        let sessionName: String
-        let persistent: Bool
+        public let sessionId: UUID
+        public let timestamp: Date
+        public var backups: [IdentityBackup] // Changed to var for mutation
+        public let sessionName: String
+        public let persistent: Bool
         
         /// Session validation status
-        var isComplete: Bool {
+        public var isComplete: Bool {
             return !backups.isEmpty && backups.allSatisfy { $0.validated }
         }
         

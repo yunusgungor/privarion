@@ -237,7 +237,9 @@ public class IdentitySpoofingManager {
     
     /// Get available network interfaces 
     /// Internal for testing purposes
-    internal func getNetworkInterfaces() async throws -> [String] {
+    /// Get available network interfaces
+    /// Public for CLI access
+    public func getNetworkInterfaces() async throws -> [String] {
         let result = try await systemCommandExecutor.executeCommand("ifconfig", arguments: ["-l"])
         guard let output = result.standardOutput else {
             throw SpoofingError.networkInterfaceNotFound
@@ -249,8 +251,8 @@ public class IdentitySpoofingManager {
     }
     
     /// Get current identity value for given type
-    /// Internal for testing purposes
-    internal func getCurrentIdentity(type: IdentityType) async throws -> String {
+    /// Public for CLI access
+    public func getCurrentIdentity(type: IdentityType) async throws -> String {
         switch type {
         case .macAddress:
             // Get primary interface MAC

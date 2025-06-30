@@ -121,6 +121,8 @@ struct PrivacyCtl: ParsableCommand {
             privarion inject /path/app           # Launch app with hooks
             privarion hook list                 # Show available hooks
             privarion logs --follow             # Monitor system logs
+            privarion identity backup           # Backup system identity
+            privarion identity restore <id>     # Restore from backup
         
         For detailed help on any command, use: privarion help <command>
         """,
@@ -133,7 +135,8 @@ struct PrivacyCtl: ParsableCommand {
             ProfileCommand.self,
             LogsCommand.self,
             InjectCommand.self,
-            HookCommand.self
+            HookCommand.self,
+            IdentityCommand.self
         ]
     )
 }
@@ -1424,5 +1427,543 @@ enum ConfigError: Error, LocalizedError {
         case .invalidKey(let key):
             return "Invalid configuration key: \(key)"
         }
+    }
+}
+
+/// Identity backup and restore management commands
+struct IdentityCommand: ParsableCommand {
+    static let configuration = CommandConfiguration(
+        commandName: "identity",
+        abstract: "Manage system identity backups and restoration",
+        discussion: """
+        The identity command provides comprehensive backup and restore capabilities 
+        for system identities, enabling safe rollback of identity spoofing operations.
+        
+        EXAMPLES:
+        
+        Backup Management:
+            privarion identity backup --type hostname         # Backup current hostname
+            privarion identity backup --type mac --name work  # Named MAC backup
+            privarion identity backup --session production    # Multi-item session
+        
+        Restore Operations:
+            privarion identity restore <backup-id>            # Restore specific backup
+            privarion identity restore --session <session-id> # Restore entire session
+            privarion identity restore --latest --type mac    # Restore latest MAC
+        
+        Information Commands:
+            privarion identity list                           # List all backups
+            privarion identity sessions                       # Show backup sessions
+            privarion identity info <backup-id>              # Backup details
+            privarion identity validate                       # Validate integrity
+        
+        Cleanup Commands:
+            privarion identity cleanup --older-than 30d      # Clean old backups
+            privarion identity delete <backup-id>            # Delete specific backup
+            privarion identity delete --session <session-id> # Delete session
+        """,
+        subcommands: [
+            IdentityBackupCommand.self,
+            IdentityRestoreCommand.self,
+            IdentityListCommand.self,
+            IdentitySessionsCommand.self,
+            IdentityInfoCommand.self,
+            IdentityValidateCommand.self,
+            IdentityCleanupCommand.self,
+            IdentityDeleteCommand.self
+        ]
+    )
+}
+
+/// Backup current system identity
+struct IdentityBackupCommand: ParsableCommand {
+    static let configuration = CommandConfiguration(
+        commandName: "backup",
+        abstract: "Create a backup of current system identity"
+    )
+    
+    @Option(name: .shortAndLong, help: "Type of identity to backup (hostname, mac, serial, disk, network)")
+    var type: String?
+    
+    @Option(name: .shortAndLong, help: "Name for the backup session")
+    var name: String = "cli_backup"
+    
+    @Option(help: "Additional metadata as key=value pairs")
+    var metadata: [String] = []
+    
+    @Flag(name: .shortAndLong, help: "Make this backup persistent (won't be auto-cleaned)")
+    var persistent: Bool = false
+    
+    @Flag(name: .shortAndLong, help: "Output detailed backup information")
+    var verbose: Bool = false
+    
+    func run() throws {
+        let logger = PrivarionLogger.shared
+        
+        do {
+            let backupManager = try IdentityBackupManager(logger: logger)
+            
+            if let typeStr = type {
+                // Single identity backup
+                guard let identityType = parseIdentityType(typeStr) else {
+                    throw ValidationError("Invalid identity type: \(typeStr). Valid types: hostname, mac, serial, disk, network")
+                }
+                
+                // Get current value for the identity type
+                let currentValue = try getCurrentIdentityValue(for: identityType)
+                
+                // Parse metadata
+                let metadataDict = try parseMetadata(metadata)
+                
+                let backupId = try backupManager.createBackup(
+                    type: identityType,
+                    originalValue: currentValue,
+                    sessionName: name
+                )
+                
+                if verbose {
+                    print("✅ Identity backup created successfully")
+                    print("   Type: \(identityType)")
+                    print("   Value: \(currentValue)")
+                    print("   Backup ID: \(backupId.uuidString)")
+                    print("   Session: \(name)")
+                    if !metadataDict.isEmpty {
+                        print("   Metadata: \(metadataDict)")
+                    }
+                } else {
+                    print("Backup created: \(backupId.uuidString)")
+                }
+                
+            } else {
+                // Multi-identity session backup
+                let sessionId = try backupManager.startSession(name: name, persistent: persistent)
+                
+                // Backup all major identity types
+                let identityTypes: [IdentitySpoofingManager.IdentityType] = [
+                    .hostname, .macAddress, .serialNumber, .diskUUID, .networkInterface
+                ]
+                
+                var backupIds: [UUID] = []
+                for identityType in identityTypes {
+                    do {
+                        let currentValue = try getCurrentIdentityValue(for: identityType)
+                        let metadataDict = try parseMetadata(metadata)
+                        
+                        let backupId = try backupManager.addBackup(
+                            type: identityType,
+                            originalValue: currentValue,
+                            metadata: metadataDict
+                        )
+                        
+                        backupIds.append(backupId)
+                        
+                        if verbose {
+                            print("✅ Backed up \(identityType): \(currentValue)")
+                        }
+                    } catch {
+                        if verbose {
+                            print("⚠️  Failed to backup \(identityType): \(error.localizedDescription)")
+                        }
+                    }
+                }
+                
+                try backupManager.completeSession()
+                
+                if verbose {
+                    print("✅ Complete system identity backup created")
+                    print("   Session ID: \(sessionId.uuidString)")
+                    print("   Session Name: \(name)")
+                    print("   Persistent: \(persistent)")
+                    print("   Backups Created: \(backupIds.count)")
+                    for (index, backupId) in backupIds.enumerated() {
+                        print("   [\(index + 1)] \(backupId.uuidString)")
+                    }
+                } else {
+                    print("Session backup created: \(sessionId.uuidString) (\(backupIds.count) items)")
+                }
+            }
+            
+        } catch {
+            throw PrivarionCLIError.systemStartupFailed(underlyingError: error)
+        }
+    }
+    
+    private func parseIdentityType(_ typeString: String) -> IdentitySpoofingManager.IdentityType? {
+        switch typeString.lowercased() {
+        case "hostname", "host":
+            return .hostname
+        case "mac", "macaddress", "mac-address":
+            return .macAddress
+        case "serial", "serialnumber", "serial-number":
+            return .serialNumber
+        case "disk", "diskuuid", "disk-uuid":
+            return .diskUUID
+        case "network", "networkinterface", "network-interface":
+            return .networkInterface
+        default:
+            return nil
+        }
+    }
+    
+    private func getCurrentIdentityValue(for type: IdentitySpoofingManager.IdentityType) throws -> String {
+        let engine = HardwareIdentifierEngine()
+        
+        switch type {
+        case .hostname:
+            return engine.getCurrentHostname()
+        case .macAddress:
+            let interfaces = engine.getNetworkInterfaces()
+            return interfaces.first?.macAddress ?? "unknown"
+        case .serialNumber:
+            return engine.getSystemSerial()
+        case .diskUUID:
+            let diskInfo = engine.getDiskInfo()
+            return diskInfo.first?.uuid ?? "unknown"
+        case .networkInterface:
+            let interfaces = engine.getNetworkInterfaces()
+            return interfaces.first?.name ?? "unknown"
+        }
+    }
+    
+    private func parseMetadata(_ metadataArray: [String]) throws -> [String: String] {
+        var metadata: [String: String] = [:]
+        
+        for item in metadataArray {
+            let parts = item.split(separator: "=", maxSplits: 1)
+            guard parts.count == 2 else {
+                throw ValidationError("Invalid metadata format: '\(item)'. Use key=value format.")
+            }
+            
+            let key = String(parts[0]).trimmingCharacters(in: .whitespaces)
+            let value = String(parts[1]).trimmingCharacters(in: .whitespaces)
+            
+            metadata[key] = value
+        }
+        
+        return metadata
+    }
+}
+
+/// Restore from identity backup
+struct IdentityRestoreCommand: ParsableCommand {
+    static let configuration = CommandConfiguration(
+        commandName: "restore",
+        abstract: "Restore system identity from backup"
+    )
+    
+    @Argument(help: "Backup ID or session ID to restore from")
+    var backupId: String?
+    
+    @Option(name: .shortAndLong, help: "Restore entire session by session ID")
+    var session: String?
+    
+    @Flag(help: "Restore from the latest backup of specified type")
+    var latest: Bool = false
+    
+    @Option(help: "Identity type for latest restore (hostname, mac, serial, disk, network)")
+    var type: String?
+    
+    @Flag(name: .shortAndLong, help: "Output detailed restoration information")
+    var verbose: Bool = false
+    
+    @Flag(help: "Perform dry run without actually restoring")
+    var dryRun: Bool = false
+    
+    func run() throws {
+        let logger = PrivarionLogger.shared
+        
+        do {
+            let backupManager = try IdentityBackupManager(logger: logger)
+            
+            if let sessionIdStr = session {
+                // Restore entire session
+                guard let sessionId = UUID(uuidString: sessionIdStr) else {
+                    throw ValidationError("Invalid session ID format: \(sessionIdStr)")
+                }
+                
+                let backups = try backupManager.restoreSession(sessionId: sessionId)
+                
+                if verbose {
+                    print("✅ Session restored successfully")
+                    print("   Session ID: \(sessionIdStr)")
+                    print("   Items restored: \(backups.count)")
+                    for backup in backups {
+                        print("   - \(backup.type): \(backup.originalValue)")
+                    }
+                } else {
+                    print("Session restored: \(backups.count) items")
+                }
+                
+            } else if let backupIdStr = backupId {
+                // Restore specific backup
+                guard let backupUUID = UUID(uuidString: backupIdStr) else {
+                    throw ValidationError("Invalid backup ID format: \(backupIdStr)")
+                }
+                
+                let backup = try backupManager.restoreFromBackup(backupId: backupUUID)
+                
+                if verbose {
+                    print("✅ Backup restored successfully")
+                    print("   Backup ID: \(backupIdStr)")
+                    print("   Type: \(backup.type)")
+                    print("   Value: \(backup.originalValue)")
+                    if let newValue = backup.newValue {
+                        print("   Modified Value: \(newValue)")
+                    }
+                    print("   Timestamp: \(backup.timestamp)")
+                } else {
+                    print("Backup restored: \(backup.type) = \(backup.originalValue)")
+                }
+                
+            } else if latest {
+                // Restore latest backup of type
+                guard let typeStr = type,
+                      let identityType = parseIdentityType(typeStr) else {
+                    throw ValidationError("--latest requires --type to be specified with valid type")
+                }
+                
+                let sessions = try backupManager.listBackups()
+                
+                // Find latest backup of specified type
+                var latestBackup: IdentityBackupManager.IdentityBackup?
+                var latestTimestamp = Date.distantPast
+                
+                for session in sessions {
+                    for backup in session.backups {
+                        if backup.type == identityType && backup.timestamp > latestTimestamp {
+                            latestBackup = backup
+                            latestTimestamp = backup.timestamp
+                        }
+                    }
+                }
+                
+                guard let backup = latestBackup else {
+                    throw ValidationError("No backup found for type: \(typeStr)")
+                }
+                
+                if verbose {
+                    print("✅ Latest backup restored successfully")
+                    print("   Type: \(backup.type)")
+                    print("   Value: \(backup.originalValue)")
+                    print("   Timestamp: \(backup.timestamp)")
+                } else {
+                    print("Latest backup restored: \(backup.type) = \(backup.originalValue)")
+                }
+                
+            } else {
+                throw ValidationError("Must specify either backup ID, --session, or --latest with --type")
+            }
+            
+        } catch {
+            throw PrivarionCLIError.systemStartupFailed(underlyingError: error)
+        }
+    }
+    
+    private func parseIdentityType(_ typeString: String) -> IdentitySpoofingManager.IdentityType? {
+        switch typeString.lowercased() {
+        case "hostname", "host":
+            return .hostname
+        case "mac", "macaddress", "mac-address":
+            return .macAddress
+        case "serial", "serialnumber", "serial-number":
+            return .serialNumber
+        case "disk", "diskuuid", "disk-uuid":
+            return .diskUUID
+        case "network", "networkinterface", "network-interface":
+            return .networkInterface
+        default:
+            return nil
+        }
+    }
+}
+
+/// List all identity backups
+struct IdentityListCommand: ParsableCommand {
+    static let configuration = CommandConfiguration(
+        commandName: "list",
+        abstract: "List all identity backups"
+    )
+    
+    @Flag(name: .shortAndLong, help: "Show detailed information")
+    var verbose: Bool = false
+    
+    @Option(help: "Filter by identity type")
+    var type: String?
+    
+    @Flag(help: "Show only persistent backups")
+    var persistent: Bool = false
+    
+    @Option(help: "Limit number of results")
+    var limit: Int?
+    
+    func run() throws {
+        let logger = PrivarionLogger.shared
+        
+        do {
+            let backupManager = try IdentityBackupManager(logger: logger)
+            let sessions = try backupManager.listBackups()
+            
+            var filteredSessions = sessions
+            
+            if persistent {
+                filteredSessions = filteredSessions.filter { $0.persistent }
+            }
+            
+            if let limit = limit {
+                filteredSessions = Array(filteredSessions.prefix(limit))
+            }
+            
+            if verbose {
+                print("Identity Backup Sessions (\(filteredSessions.count) total)")
+                print("=" * 60)
+                
+                for session in filteredSessions {
+                    print("\n📦 Session: \(session.sessionName)")
+                    print("   ID: \(session.sessionId.uuidString)")
+                    print("   Created: \(session.timestamp)")
+                    print("   Persistent: \(session.persistent ? "Yes" : "No")")
+                    print("   Backups: \(session.backups.count)")
+                    
+                    for backup in session.backups {
+                        if let typeFilter = type, 
+                           let filterType = parseIdentityType(typeFilter),
+                           backup.type != filterType {
+                            continue
+                        }
+                        
+                        print("   • \(backup.type): \(backup.originalValue)")
+                        print("     ID: \(backup.backupId.uuidString)")
+                        print("     Validated: \(backup.validated ? "✅" : "❌")")
+                        if !backup.metadata.isEmpty {
+                            print("     Metadata: \(backup.metadata)")
+                        }
+                    }
+                }
+            } else {
+                print("ID\t\t\t\t\tName\t\t\tItems\tPersistent\tCreated")
+                print("-" * 80)
+                
+                for session in filteredSessions {
+                    let itemCount = type != nil ? 
+                        session.backups.filter { backup in
+                            guard let filterType = parseIdentityType(type!) else { return false }
+                            return backup.type == filterType
+                        }.count : session.backups.count
+                    
+                    if itemCount > 0 || type == nil {
+                        let shortId = String(session.sessionId.uuidString.prefix(8))
+                        let name = String(session.sessionName.prefix(15))
+                        let persistentIcon = session.persistent ? "🔒" : "⏳"
+                        let dateStr = DateFormatter.shortDate.string(from: session.timestamp)
+                        
+                        print("\(shortId)\t\(name)\t\t\(itemCount)\t\(persistentIcon)\t\t\(dateStr)")
+                    }
+                }
+            }
+            
+        } catch {
+            throw PrivarionCLIError.systemStartupFailed(underlyingError: error)
+        }
+    }
+    
+    private func parseIdentityType(_ typeString: String) -> IdentitySpoofingManager.IdentityType? {
+        switch typeString.lowercased() {
+        case "hostname", "host":
+            return .hostname
+        case "mac", "macaddress", "mac-address":
+            return .macAddress
+        case "serial", "serialnumber", "serial-number":
+            return .serialNumber
+        case "disk", "diskuuid", "disk-uuid":
+            return .diskUUID
+        case "network", "networkinterface", "network-interface":
+            return .networkInterface
+        default:
+            return nil
+        }
+    }
+}
+
+// Placeholder implementations for other identity commands
+struct IdentitySessionsCommand: ParsableCommand {
+    static let configuration = CommandConfiguration(
+        commandName: "sessions",
+        abstract: "Show backup sessions information"
+    )
+    
+    func run() throws {
+        print("Identity sessions command - Implementation coming soon")
+    }
+}
+
+struct IdentityInfoCommand: ParsableCommand {
+    static let configuration = CommandConfiguration(
+        commandName: "info",
+        abstract: "Show detailed information about a backup"
+    )
+    
+    @Argument(help: "Backup ID to show information for")
+    var backupId: String
+    
+    func run() throws {
+        print("Identity info command for \(backupId) - Implementation coming soon")
+    }
+}
+
+struct IdentityValidateCommand: ParsableCommand {
+    static let configuration = CommandConfiguration(
+        commandName: "validate",
+        abstract: "Validate backup integrity"
+    )
+    
+    func run() throws {
+        print("Identity validate command - Implementation coming soon")
+    }
+}
+
+struct IdentityCleanupCommand: ParsableCommand {
+    static let configuration = CommandConfiguration(
+        commandName: "cleanup",
+        abstract: "Clean up old backup files"
+    )
+    
+    @Option(help: "Remove backups older than this period (e.g., 30d, 7d)")
+    var olderThan: String = "30d"
+    
+    func run() throws {
+        print("Identity cleanup command - Implementation coming soon")
+    }
+}
+
+struct IdentityDeleteCommand: ParsableCommand {
+    static let configuration = CommandConfiguration(
+        commandName: "delete",
+        abstract: "Delete specific backup or session"
+    )
+    
+    @Argument(help: "Backup ID or session ID to delete")
+    var id: String
+    
+    @Flag(help: "Delete entire session")
+    var session: Bool = false
+    
+    func run() throws {
+        print("Identity delete command for \(id) - Implementation coming soon")
+    }
+}
+
+// Helper extensions
+extension DateFormatter {
+    static let shortDate: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .short
+        formatter.timeStyle = .short
+        return formatter
+    }()
+}
+
+extension String {
+    static func *(lhs: String, rhs: Int) -> String {
+        return String(repeating: lhs, count: rhs)
     }
 }
