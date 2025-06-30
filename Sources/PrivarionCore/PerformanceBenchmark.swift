@@ -313,9 +313,28 @@ public class BenchmarkFramework {
     
     public func exportResults() -> Data? {
         let reportData = reportQueue.sync {
-            [
+            let resultsArray = results.map { result -> [String: Any] in
+                return [
+                    "testName": result.testName,
+                    "duration": result.duration,
+                    "status": result.status.rawValue,
+                    "iterations": result.iterations,
+                    "metrics": [
+                        "reportId": result.metrics.reportId.uuidString,
+                        "timestamp": result.metrics.timestamp,
+                        "cpuUsage": result.metrics.cpuUsage,
+                        "memoryUsageMB": result.metrics.memoryUsageMB,
+                        "startupTimeMs": result.metrics.startupTimeMs as Any,
+                        "renderTimeMs": result.metrics.renderTimeMs as Any,
+                        "operationName": result.metrics.operationName,
+                        "interactive": result.metrics.interactive
+                    ]
+                ]
+            }
+            
+            return [
                 "timestamp": Date().timeIntervalSince1970,
-                "results": results,
+                "results": resultsArray,
                 "summary": generateSummary()
             ] as [String: Any]
         }
