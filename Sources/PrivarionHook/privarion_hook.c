@@ -38,10 +38,13 @@ static gid_t hooked_getgid(void) {
 
 static int hooked_gethostname(char* name, size_t len) {
     ph_log_debug("gethostname() called, returning fake hostname: %s", g_config_data.hostname);
-    if (len <= strlen(g_config_data.hostname)) {
+    size_t hostname_len = strlen(g_config_data.hostname);
+    if (len <= hostname_len) {
         return -1; // ENAMETOOLONG
     }
-    strcpy(name, g_config_data.hostname);
+    // Use strncpy with explicit null termination to prevent buffer overflow
+    strncpy(name, g_config_data.hostname, len - 1);
+    name[len - 1] = '\0';
     return 0;
 }
 
@@ -74,8 +77,11 @@ PHResult ph_install_getuid_hook(const PHookConfigData* config_data, PHookHandle*
         return PH_ERROR_INVALID_PARAM;
     }
     
-    // Update global configuration
+    // Thread-safe update of global configuration
+    pthread_mutex_lock(&g_hook_mutex);
     g_config_data.user_id = config_data->user_id;
+    pthread_mutex_unlock(&g_hook_mutex);
+    
     ph_log_debug("Installing getuid hook with fake user ID: %d", config_data->user_id);
     
     return ph_install_hook("getuid", (void*)hooked_getuid, handle);
@@ -86,8 +92,11 @@ PHResult ph_install_getgid_hook(const PHookConfigData* config_data, PHookHandle*
         return PH_ERROR_INVALID_PARAM;
     }
     
-    // Update global configuration
+    // Thread-safe update of global configuration
+    pthread_mutex_lock(&g_hook_mutex);
     g_config_data.group_id = config_data->group_id;
+    pthread_mutex_unlock(&g_hook_mutex);
+    
     ph_log_debug("Installing getgid hook with fake group ID: %d", config_data->group_id);
     
     return ph_install_hook("getgid", (void*)hooked_getgid, handle);

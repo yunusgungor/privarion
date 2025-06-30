@@ -53,11 +53,11 @@ public class SystemCommandExecutor {
         self.timeoutInterval = timeoutInterval
         
         // Whitelist of allowed system commands for security
+        // NOTE: Removed sudo and launchctl due to security risks (privilege escalation)
         self.allowedCommands = Set([
             "ifconfig", "scutil", "system_profiler", "diskutil",
             "id", "whoami", "uname", "sysctl", "networksetup",
-            "sudo", "launchctl", "systemsetup", "pmset",
-            "dscacheutil", "mdfind", "mdutil"
+            "systemsetup", "pmset", "dscacheutil", "mdfind", "mdutil"
         ])
     }
     
@@ -75,14 +75,17 @@ public class SystemCommandExecutor {
             throw ExecutorError.unauthorizedCommand
         }
         
+        // Validate and sanitize arguments to prevent command injection
+        let sanitizedArguments = try validateAndSanitizeArguments(arguments)
+        
         // Validate command exists
         let commandPath = try await findCommandPath(command)
         
-        logger.debug("Executing command: \(command) \(arguments.joined(separator: " "))")
+        logger.debug("Executing command: \(command) \(sanitizedArguments.joined(separator: " "))")
         
         let process = Process()
         process.executableURL = URL(fileURLWithPath: commandPath)
-        process.arguments = arguments
+        process.arguments = sanitizedArguments
         
         // Setup pipes for output capture
         let outputPipe = Pipe()
@@ -150,14 +153,11 @@ public class SystemCommandExecutor {
         return result
     }
     
-    /// Execute command with elevated privileges (sudo)
+    /// Execute command with elevated privileges (DISABLED FOR SECURITY)
     @MainActor
     public func executeElevatedCommand(_ command: String, arguments: [String] = []) async throws -> CommandResult {
-        // Prepend sudo to the command
-        var sudoArguments = [command]
-        sudoArguments.append(contentsOf: arguments)
-        
-        return try await executeCommand("sudo", arguments: sudoArguments)
+        logger.error("Elevated command execution disabled for security reasons: \(command)")
+        throw ExecutorError.unauthorizedCommand
     }
     
     /// Execute multiple commands in sequence
@@ -191,6 +191,7 @@ public class SystemCommandExecutor {
     
     // MARK: - Private Methods
     
+    /// Find the full path of a command
     private func findCommandPath(_ command: String) async throws -> String {
         // Try common system paths
         let systemPaths = [
@@ -234,6 +235,31 @@ public class SystemCommandExecutor {
         }
         
         throw ExecutorError.commandNotFound
+    }
+    
+    /// Validate and sanitize command arguments to prevent injection attacks
+    private func validateAndSanitizeArguments(_ arguments: [String]) throws -> [String] {
+        let dangerousChars = CharacterSet(charactersIn: ";|&$`()<>\"'\\")
+        let maxArgumentLength = 1024
+        
+        return try arguments.map { arg in
+            // Check for dangerous characters
+            if arg.rangeOfCharacter(from: dangerousChars) != nil {
+                logger.error("Dangerous characters detected in argument: \(arg)")
+                throw ExecutorError.invalidArguments
+            }
+            
+            // Check argument length
+            if arg.count > maxArgumentLength {
+                logger.error("Argument too long: \(arg.count) characters")
+                throw ExecutorError.invalidArguments
+            }
+            
+            // Remove any null bytes
+            let sanitized = arg.replacingOccurrences(of: "\0", with: "")
+            
+            return sanitized
+        }
     }
 }
 

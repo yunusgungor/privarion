@@ -24,8 +24,24 @@ public class DYLDInjectionManager {
     
     /// Path to the Privarion hook dynamic library
     private var hookLibraryPath: String {
-        // This should point to the compiled .dylib file
-        return "/usr/local/lib/libprivarion_hook.dylib"
+        // Use configurable path from configuration, with secure fallback
+        if let configPath = configuration.hookLibraryPath,
+           FileManager.default.fileExists(atPath: configPath) {
+            return configPath
+        }
+        
+        // Secure fallback: Check bundle resources first
+        if let bundlePath = Bundle.main.path(forResource: "libprivarion_hook", ofType: "dylib") {
+            return bundlePath
+        }
+        
+        // Last resort: system library path (validate existence)
+        let systemPath = "/usr/local/lib/libprivarion_hook.dylib"
+        guard FileManager.default.fileExists(atPath: systemPath) else {
+            logger.error("Hook library not found at any expected location")
+            return ""
+        }
+        return systemPath
     }
     
     public init(configuration: ConfigurationManager) {

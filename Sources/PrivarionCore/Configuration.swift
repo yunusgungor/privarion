@@ -48,12 +48,16 @@ public struct GlobalConfig: Codable {
     /// Number of log files to keep
     public var logRotationCount: Int
     
+    /// Secure path to hook library (prevents hardcoded paths)
+    public var hookLibraryPath: String?
+    
     public init() {
         self.enabled = true
         self.logLevel = .info
         self.logDirectory = "~/.privarion/logs"
         self.maxLogSizeMB = 10
         self.logRotationCount = 5
+        self.hookLibraryPath = nil
     }
 }
 

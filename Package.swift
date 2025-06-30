@@ -81,6 +81,16 @@ let package = Package(
         .testTarget(
             name: "PrivarionHookTests",
             dependencies: ["PrivarionHook", "PrivarionCore"]
+        ),
+        // Tests for CLI tool
+        .testTarget(
+            name: "PrivacyCtlTests",
+            dependencies: ["PrivacyCtl", "PrivarionCore"]
+        ),
+        // Tests for GUI application
+        .testTarget(
+            name: "PrivarionGUITests",
+            dependencies: ["PrivarionGUI", "PrivarionCore"]
         )
     ]
 )

@@ -92,6 +92,11 @@ public class ConfigurationManager {
         return config
     }
     
+    /// Get secure hook library path from configuration
+    public var hookLibraryPath: String? {
+        return config.global.hookLibraryPath
+    }
+    
     /// Update configuration
     public func updateConfiguration(_ newConfig: PrivarionConfig) throws {
         // Validate configuration
