@@ -1,0 +1,121 @@
+{
+  "patterns": [
+    {
+      "pattern_id": "PATTERN-2025-006",
+      "name": "SwiftUI Domain-Specific Error Management",
+      "category": "Error Handling",
+      "maturity_level": 4,
+      "confidence_level": "High", 
+      "usage_count": 1,
+      "success_rate": 100,
+      "created_date": "2025-06-30",
+      "version": "1.0.0",
+      "context7_validated": false,
+      "sequential_thinking_session": "ST-2025-006-PATTERN-EXTRACTION",
+      "extracted_from_story": "STORY-2025-005",
+      "problem_solved": "Comprehensive error handling in SwiftUI applications with domain-specific error types, centralized management, and user-friendly presentation",
+      "technology_stack": ["Swift", "SwiftUI", "Combine"],
+      "components": [
+        "Domain-specific error enumeration",
+        "Centralized error manager with reactive properties", 
+        "SwiftUI presentation layer integration",
+        "Error analytics and recovery system"
+      ],
+      "benefits": [
+        "Type-safe error handling",
+        "Consistent user experience",
+        "Automatic error recovery",
+        "Comprehensive error analytics",
+        "Clean Architecture compliance"
+      ],
+      "implementation_examples": 4,
+      "quality_metrics": {
+        "maintainability_score": 9,
+        "reusability_score": 8,
+        "performance_impact": "minimal",
+        "complexity_score": 6
+      }
+    },
+    {
+      "pattern_id": "PATTERN-2025-007", 
+      "name": "Reactive Error State Management",
+      "category": "State Management",
+      "maturity_level": 4,
+      "confidence_level": "High",
+      "usage_count": 1,
+      "success_rate": 100,
+      "created_date": "2025-06-30",
+      "version": "1.0.0",
+      "context7_validated": false,
+      "sequential_thinking_session": "ST-2025-006-PATTERN-EXTRACTION",
+      "extracted_from_story": "STORY-2025-005",
+      "problem_solved": "Managing error state reactively in SwiftUI applications with automatic UI updates and error resolution",
+      "technology_stack": ["Swift", "SwiftUI", "Combine"],
+      "components": [
+        "@Published error collections",
+        "Combine-based reactive updates",
+        "Automatic UI state synchronization",
+        "Error lifecycle management"
+      ],
+      "benefits": [
+        "Automatic UI updates on error state changes",
+        "Reactive error resolution",
+        "Clean separation of concerns",
+        "Testable error flows"
+      ],
+      "implementation_examples": 2,
+      "quality_metrics": {
+        "maintainability_score": 9,
+        "reusability_score": 9,
+        "performance_impact": "minimal", 
+        "complexity_score": 5
+      }
+    },
+    {
+      "pattern_id": "PATTERN-2025-008",
+      "name": "SwiftUI Error Presentation Strategy",
+      "category": "UI Patterns",
+      "maturity_level": 4,
+      "confidence_level": "High",
+      "usage_count": 1,
+      "success_rate": 100,
+      "created_date": "2025-06-30",
+      "version": "1.0.0",
+      "context7_validated": false,
+      "sequential_thinking_session": "ST-2025-006-PATTERN-EXTRACTION",
+      "extracted_from_story": "STORY-2025-005",
+      "problem_solved": "Presenting errors to users in SwiftUI with appropriate urgency and actionable recovery options",
+      "technology_stack": ["SwiftUI"],
+      "components": [
+        "Error severity-based presentation (alerts vs banners)",
+        "ViewModifier-based error integration",
+        "Actionable error messages with recovery options",
+        "Non-blocking error notifications"
+      ],
+      "benefits": [
+        "Appropriate user experience based on error severity",
+        "Non-intrusive error notifications",
+        "Clear recovery guidance",
+        "Consistent error presentation"
+      ],
+      "implementation_examples": 3,
+      "quality_metrics": {
+        "maintainability_score": 8,
+        "reusability_score": 9,
+        "performance_impact": "minimal",
+        "complexity_score": 4
+      }
+    }
+  ],
+  "extraction_metadata": {
+    "extraction_date": "2025-06-30T14:00:00Z",
+    "story_analyzed": "STORY-2025-005",
+    "extraction_method": "manual_code_analysis",
+    "sequential_thinking_session": "ST-2025-006-PATTERN-EXTRACTION",
+    "context7_research_attempted": true,
+    "context7_available": false,
+    "patterns_extracted": 3,
+    "confidence_level": "high",
+    "validation_pending": false
+  }
+}

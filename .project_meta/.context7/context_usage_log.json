@@ -1,6 +1,43 @@
 {
   "context7_usage_log": [
     {
+      "session_id": "session_20250630_001",
+      "timestamp": "2025-06-30T14:00:00Z",
+      "library_id": "/apple/swift-argument-parser",
+      "topic": "Command line interface and process management",
+      "tokens_retrieved": 3000,
+      "purpose": "STORY-2025-006 GUI-Backend Integration planning",
+      "findings_summary": "Retrieved comprehensive ArgumentParser documentation covering AsyncParsableCommand, error handling, validation, and process management patterns essential for CLI-GUI integration",
+      "cache_status": "cached",
+      "usage_type": "story_planning",
+      "story_id": "STORY-2025-006",
+      "key_patterns_identified": [
+        "AsyncParsableCommand for async CLI operations",
+        "Error handling and validation patterns",
+        "Process management with Foundation",
+        "Testing patterns for CLI commands"
+      ]
+    },
+    {
+      "session_id": "session_20250630_002", 
+      "timestamp": "2025-06-30T14:30:00Z",
+      "library_id": "/pointfreeco/swift-composable-architecture",
+      "topic": "State management backend integration",
+      "tokens_retrieved": 4000,
+      "purpose": "STORY-2025-006 GUI state management architecture research",
+      "findings_summary": "Retrieved extensive TCA documentation covering @ObservableState, Store patterns, @Shared property wrapper, NavigationStack integration, and TestStore for comprehensive GUI-backend state management",
+      "cache_status": "cached",
+      "usage_type": "story_planning",
+      "story_id": "STORY-2025-006",
+      "key_patterns_identified": [
+        "@ObservableState for reactive SwiftUI integration",
+        "Store-based centralized state management",
+        "@Shared property wrapper for real-time state sync",
+        "NavigationStack integration patterns",
+        "TestStore for async operation testing"
+      ]
+    },
+    {
       "session_id": "session_20250629_001",
       "timestamp": "2025-06-29T00:00:00Z",
       "library_id": "/swiftlang/swift",

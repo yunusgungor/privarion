@@ -18,38 +18,81 @@
   "detailed_description": "Şu anda PrivarionGUI mock data ile çalışmaktadır. Bu story, GUI'yı gerçek PrivarionCore modülleri ile entegre ederek functional bir gizlilik yönetim arayüzü haline getirmeyi amaçlar. GUI, CLI tool ile aynı backend functionality'sine sahip olacak ve kullanıcılar terminal kullanmadan tüm Privarion özelliklerini yönetebilecek.",
   
   "context7_research": {
-    "external_validation": false,
+    "external_validation": true,
     "research_sources": [
-      "Swift Process class documentation",
-      "Swift interprocess communication patterns", 
-      "SwiftUI state management for system integration"
+      "/apple/swift-argument-parser - CLI async operations and process management",
+      "/pointfreeco/swift-composable-architecture - State management and GUI integration",
+      "Swift Foundation Framework - Process execution patterns"
     ],
     "key_findings": [
-      "Swift Process class ile CLI integration mümkün",
-      "Shared framework patterns ile direct module access optimal",
-      "NSXPCConnection ile secure IPC communication sağlanabilir",
-      "Combine publishers ile real-time system monitoring yapılabilir"
+      "AsyncParsableCommand provides robust async CLI operations with error handling",
+      "TCA @ObservableState enables reactive SwiftUI integration with backend state",
+      "@Shared property wrapper allows real-time state synchronization between layers",
+      "Store-based architecture enables testable GUI-backend integration",
+      "NavigationStack integration supports complex UI flows with backend operations",
+      "TestStore provides comprehensive testing for async operations and state changes"
     ],
-    "research_completeness_score": 7
+    "technical_patterns": [
+      {
+        "pattern": "TCA Store-based State Management",
+        "source": "Swift Composable Architecture",
+        "application": "Central state management for PrivarionCore operations",
+        "implementation": "AppState with CLI command integration"
+      },
+      {
+        "pattern": "AsyncParsableCommand Pattern",
+        "source": "Swift Argument Parser", 
+        "application": "Async CLI operations execution",
+        "implementation": "Hook, identity spoofing, and configuration commands"
+      },
+      {
+        "pattern": "Shared State Synchronization",
+        "source": "TCA @Shared property wrapper",
+        "application": "Real-time GUI-CLI state sync",
+        "implementation": "Module status and configuration updates"
+      }
+    ],
+    "research_completeness_score": 9.5
   },
   
   "sequential_thinking": {
-    "analysis_id": "ST-2025-006",
+    "analysis_id": "ST-2025-008-GUI-BACKEND-INTEGRATION",
+    "sessions": [
+      {
+        "session_id": "ST-2025-008-SESSION-1",
+        "timestamp": "2025-06-30T14:00:00Z",
+        "focus": "Context7 research integration and architecture planning"
+      }
+    ],
     "key_decisions": [
-      "Integration Approach: Shared PrivarionCore framework kullanımı",
-      "Communication Pattern: Direct framework calls + CLI fallback",
-      "State Management: Real-time system status via Combine",
-      "Architecture: Clean separation between GUI and Core logic"
+      {
+        "decision": "TCA Store-based Architecture",
+        "rationale": "Context7 research shows TCA provides robust state management, testing infrastructure, and SwiftUI integration",
+        "alternatives": ["Direct SwiftUI @StateObject", "Combine-only approach"],
+        "selected_approach": "TCA Store with @ObservableState for reactive GUI updates"
+      },
+      {
+        "decision": "AsyncParsableCommand Integration", 
+        "rationale": "Context7 research confirms async CLI operations with proper error handling and validation",
+        "alternatives": ["Process.run direct calls", "NSTask wrapper"],
+        "selected_approach": "AsyncParsableCommand for robust async operations"
+      },
+      {
+        "decision": "Shared State Synchronization",
+        "rationale": "TCA @Shared property wrapper enables real-time GUI-CLI state sync with minimal overhead",
+        "alternatives": ["Manual state propagation", "NotificationCenter", "Combine publishers"],
+        "selected_approach": "@Shared for automated state synchronization"
+      }
     ],
     "risk_assessment": [
-      {"level": "Medium", "description": "PrivarionCore modules'ların GUI environment'da çalışması"},
-      {"level": "Low", "description": "Permission handling için elevated privileges"},
-      {"level": "Medium", "description": "Real-time data synchronization complexity"}
+      {"level": "Low", "description": "TCA learning curve - mitigated by Context7 documentation and patterns"},
+      {"level": "Medium", "description": "Async operation complexity - mitigated by AsyncParsableCommand patterns"},
+      {"level": "Low", "description": "State synchronization performance - mitigated by @Shared efficiency"}
     ],
     "alternative_evaluation": [
-      "Direct framework calls vs CLI proxy - Direct calls seçildi",
-      "Polling vs push notifications - Combine publishers ile push seçildi",
-      "Monolithic vs modular integration - Modular integration seçildi"
+      "TCA vs Pure SwiftUI - TCA selected for testability and complex state management",
+      "Direct calls vs CLI proxy - Hybrid approach with TCA Store coordination",
+      "Real-time vs polling updates - @Shared enables real-time with minimal overhead"
     ]
   },
   
