@@ -65,7 +65,6 @@ public class SystemCommandExecutor {
     
     /// Execute a system command with arguments
     /// Uses Swift Foundation Process for secure subprocess management
-    @MainActor
     public func executeCommand(_ command: String, arguments: [String] = []) async throws -> CommandResult {
         let startTime = Date()
         
@@ -102,50 +101,58 @@ public class SystemCommandExecutor {
             throw ExecutorError.processLaunchFailed
         }
         
-        // Wait for completion with timeout
-        let timeoutTask = Task {
-            try await Task.sleep(nanoseconds: UInt64(timeoutInterval * 1_000_000_000))
-            if process.isRunning {
-                process.terminate()
+        // Wait for completion with timeout using Task cancellation
+        let result = try await withThrowingTaskGroup(of: CommandResult.self) { group in
+            // Add timeout task
+            group.addTask {
+                try await Task.sleep(nanoseconds: UInt64(self.timeoutInterval * 1_000_000_000))
                 throw ExecutorError.executionTimeout
             }
-        }
-        
-        // Wait for process completion
-        let completionTask = Task {
-            process.waitUntilExit()
-        }
-        
-        try await withThrowingTaskGroup(of: Void.self) { group in
-            group.addTask { try await timeoutTask.value }
-            group.addTask { await completionTask.value }
             
-            // Wait for first completion (either timeout or normal completion)
-            try await group.next()
+            // Add process execution task
+            group.addTask {
+                return try await withCheckedThrowingContinuation { continuation in
+                    DispatchQueue.global(qos: .userInitiated).async {
+                        process.waitUntilExit()
+                        
+                        // Read output
+                        let outputData = outputPipe.fileHandleForReading.readDataToEndOfFile()
+                        let errorData = errorPipe.fileHandleForReading.readDataToEndOfFile()
+                        
+                        let standardOutput = outputData.isEmpty ? nil : String(data: outputData, encoding: .utf8)
+                        let standardError = errorData.isEmpty ? nil : String(data: errorData, encoding: .utf8)
+                        
+                        let executionTime = Date().timeIntervalSince(startTime)
+                        let result = CommandResult(
+                            standardOutput: standardOutput,
+                            standardError: standardError,
+                            exitCode: process.terminationStatus,
+                            executionTime: executionTime
+                        )
+                        
+                        continuation.resume(returning: result)
+                    }
+                }
+            }
+            
+            // Wait for first completion and cancel others
+            let result = try await group.next()!
             group.cancelAll()
+            
+            // Terminate process if it's still running
+            if process.isRunning {
+                process.terminate()
+            }
+            
+            return result
         }
-        
-        // Read output
-        let outputData = outputPipe.fileHandleForReading.readDataToEndOfFile()
-        let errorData = errorPipe.fileHandleForReading.readDataToEndOfFile()
-        
-        let standardOutput = outputData.isEmpty ? nil : String(data: outputData, encoding: .utf8)
-        let standardError = errorData.isEmpty ? nil : String(data: errorData, encoding: .utf8)
-        
-        let executionTime = Date().timeIntervalSince(startTime)
-        let result = CommandResult(
-            standardOutput: standardOutput,
-            standardError: standardError,
-            exitCode: process.terminationStatus,
-            executionTime: executionTime
-        )
         
         // Log result
         if result.isSuccess {
-            logger.debug("Command completed successfully in \(String(format: "%.3f", executionTime))s")
+            logger.debug("Command completed successfully in \(String(format: "%.3f", result.executionTime))s")
         } else {
             logger.warning("Command failed with exit code \(result.exitCode)")
-            if let stderr = standardError {
+            if let stderr = result.standardError {
                 logger.warning("Error output: \(stderr)")
             }
         }
@@ -154,14 +161,12 @@ public class SystemCommandExecutor {
     }
     
     /// Execute command with elevated privileges (DISABLED FOR SECURITY)
-    @MainActor
     public func executeElevatedCommand(_ command: String, arguments: [String] = []) async throws -> CommandResult {
         logger.error("Elevated command execution disabled for security reasons: \(command)")
         throw ExecutorError.unauthorizedCommand
     }
     
     /// Execute multiple commands in sequence
-    @MainActor
     public func executeCommandSequence(_ commands: [(command: String, arguments: [String])]) async throws -> [CommandResult] {
         var results: [CommandResult] = []
         
@@ -193,10 +198,10 @@ public class SystemCommandExecutor {
     
     /// Find the full path of a command
     private func findCommandPath(_ command: String) async throws -> String {
-        // Try common system paths
+        // Try common system paths first - this is much faster than using 'which'
         let systemPaths = [
             "/usr/bin/\(command)",
-            "/bin/\(command)",
+            "/bin/\(command)", 
             "/usr/sbin/\(command)",
             "/sbin/\(command)",
             "/usr/local/bin/\(command)"
@@ -208,30 +213,15 @@ public class SystemCommandExecutor {
             }
         }
         
-        // Use 'which' command as fallback
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/which")
-        process.arguments = [command]
-        
-        let pipe = Pipe()
-        process.standardOutput = pipe
-        process.standardError = Pipe()
-        
-        do {
-            try process.run()
-            process.waitUntilExit()
-            
-            if process.terminationStatus == 0 {
-                let data = pipe.fileHandleForReading.readDataToEndOfFile()
-                if let output = String(data: data, encoding: .utf8) {
-                    let path = output.trimmingCharacters(in: .whitespacesAndNewlines)
-                    if !path.isEmpty {
-                        return path
-                    }
+        // If not found in standard paths, use PATH environment variable
+        if let pathEnv = ProcessInfo.processInfo.environment["PATH"] {
+            let paths = pathEnv.components(separatedBy: ":")
+            for pathDir in paths {
+                let fullPath = "\(pathDir)/\(command)"
+                if FileManager.default.isExecutableFile(atPath: fullPath) {
+                    return fullPath
                 }
             }
-        } catch {
-            logger.debug("Failed to find command \(command) using 'which': \(error)")
         }
         
         throw ExecutorError.commandNotFound
@@ -268,7 +258,6 @@ public class SystemCommandExecutor {
 extension SystemCommandExecutor {
     
     /// Convenience method for network-related commands
-    @MainActor
     public func executeNetworkCommand(_ command: String, arguments: [String] = []) async throws -> CommandResult {
         let networkCommands = ["ifconfig", "networksetup", "scutil", "dscacheutil"]
         
@@ -280,7 +269,6 @@ extension SystemCommandExecutor {
     }
     
     /// Convenience method for system information commands
-    @MainActor
     public func executeSystemInfoCommand(_ command: String, arguments: [String] = []) async throws -> CommandResult {
         let systemInfoCommands = ["system_profiler", "diskutil", "sysctl", "uname"]
         
