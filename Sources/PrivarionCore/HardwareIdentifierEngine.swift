@@ -134,7 +134,7 @@ public class HardwareIdentifierEngine {
     
     /// Validate generated MAC address
     public func validateMACAddress(_ mac: String) -> Bool {
-        let macRegex = #"^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$"#
+        let macRegex = #"^([0-9A-Fa-f]{2}:){5}([0-9A-Fa-f]{2})$"#
         return mac.range(of: macRegex, options: .regularExpression) != nil
     }
     
@@ -199,16 +199,22 @@ public class HardwareIdentifierEngine {
     }
     
     private func generateCustomMAC(pattern: String) -> String {
-        // Pattern example: "XX:XX:XX:??:??:??" where X = specific hex, ? = random
-        var result = pattern
+        let patternComponents = pattern.components(separatedBy: ":")
+        let requiredComponents = 6
         
-        while result.contains("?") {
-            let hexDigit = String(format: "%X", Int.random(in: 0...15))
-            if let range = result.range(of: "?") {
-                result.replaceSubrange(range, with: hexDigit)
-            }
+        guard !patternComponents.isEmpty, patternComponents.count <= requiredComponents else {
+            return generateRealisticMAC() // Invalid pattern
         }
-        
+
+        var bytes = patternComponents.compactMap { UInt8($0, radix: 16) }
+
+        // Fill remaining bytes with random values
+        while bytes.count < requiredComponents {
+            bytes.append(UInt8.random(in: 0...255))
+        }
+
+        let result = bytes.map { String(format: "%02X", $0) }.joined(separator: ":")
+
         // Validate the result
         if validateMACAddress(result) {
             return result
@@ -236,13 +242,19 @@ public class HardwareIdentifierEngine {
     
     private func generateRealisticHostname() -> String {
         let prefix = realisticHostnamePrefixes.randomElement()!
-        let number = Int.random(in: 1...999)
+        let separator = ["-", ""].randomElement()!
+        let number = Int.random(in: 1...9999)
+        let suffix = realisticHostnameSuffixes.randomElement() ?? ""
         
-        if Bool.random() {
-            return "\(prefix)-\(number)"
-        } else {
-            return "\(prefix)"
-        }
+        // Add more variations
+        let formatOptions = [
+            "\(prefix)\(separator)\(number)",
+            "\(prefix)",
+            "\(prefix)\(separator)\(suffix)",
+            "\(prefix)\(number)"
+        ]
+        
+        return formatOptions.randomElement()!
     }
     
     private func generateStealthHostname() -> String {

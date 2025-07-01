@@ -82,9 +82,13 @@ final class PrivacyCtlCommandTests: XCTestCase {
     func testInvalidCommandParsing() {
         // Test invalid command handling
         XCTAssertThrowsError(try PrivacyCtl.parseAsRoot(["invalid-command"])) { error in
-            // ArgumentParser throws different types of errors for invalid commands
-            // Check that an error occurred (any error indicates proper invalid command handling)
-            XCTAssertNotNil(error)
+            guard let validationError = error as? ArgumentParser.ValidationError else {
+                XCTFail("Expected a ValidationError, but got \(type(of: error))")
+                return
+            }
+            // We can be more specific about the error if needed, but for now,
+            // just ensuring it's a validation error is sufficient.
+            XCTAssertNotNil(validationError)
         }
     }
     
