@@ -5,9 +5,9 @@
     "project_name": "Privarion Privacy Protection System",
     "roadmap_status": "active",
     "total_stories": 9,
-    "completed_stories": 4,
-    "in_progress_stories": 0,
-    "planned_stories": 5,
+    "completed_stories": 5,
+    "in_progress_stories": 1,
+    "planned_stories": 4,
     "pattern_enhanced": true,
     "enhanced_capabilities": [
       "Secure subprocess execution",
