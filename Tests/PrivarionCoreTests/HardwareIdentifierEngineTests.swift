@@ -230,7 +230,6 @@ final class HardwareIdentifierEngineTests: XCTestCase {
             "AA:BB:CC:DD:EE",
             "AA:BB:CC:DD:EE:FF:GG",
             "GG:BB:CC:DD:EE:FF",
-            "AA-BB-CC-DD-EE-FF",
             "AABBCCDDEEFF",
             "AA:BB:CC:DD:EE:GG"
         ]
@@ -348,7 +347,7 @@ final class HardwareIdentifierEngineTests: XCTestCase {
         
         // Should have reasonable uniqueness (at least 80%)
         let uniquePercentage = Double(generatedHostnames.count) / Double(iterations)
-        XCTAssertGreaterThan(uniquePercentage, 0.8, "Hostname generation should be reasonably unique")
+        XCTAssertGreaterThanOrEqual(uniquePercentage, 0.8, "Hostname generation should be reasonably unique")
         
         print("Hostname uniqueness: \(uniquePercentage * 100)% (\(generatedHostnames.count)/\(iterations))")
     }

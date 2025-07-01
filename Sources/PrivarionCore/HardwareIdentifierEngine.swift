@@ -134,8 +134,12 @@ public class HardwareIdentifierEngine {
     
     /// Validate generated MAC address
     public func validateMACAddress(_ mac: String) -> Bool {
-        let macRegex = #"^([0-9A-Fa-f]{2}:){5}([0-9A-Fa-f]{2})$"#
-        return mac.range(of: macRegex, options: .regularExpression) != nil
+        // Support both colon (:) and dash (-) separated MAC address formats
+        let colonFormat = #"^([0-9A-Fa-f]{2}:){5}([0-9A-Fa-f]{2})$"#
+        let dashFormat = #"^([0-9A-Fa-f]{2}-){5}([0-9A-Fa-f]{2})$"#
+        
+        return mac.range(of: colonFormat, options: .regularExpression) != nil ||
+               mac.range(of: dashFormat, options: .regularExpression) != nil
     }
     
     /// Validate generated hostname
