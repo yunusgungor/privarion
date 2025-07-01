@@ -4,10 +4,10 @@
     "last_updated": "2025-06-30T03:45:00Z",
     "project_name": "Privarion Privacy Protection System",
     "roadmap_status": "active",
-    "total_stories": 9,
+    "total_stories": 10,
     "completed_stories": 5,
-    "in_progress_stories": 1,
-    "planned_stories": 4,
+    "in_progress_stories": 0,
+    "planned_stories": 5,
     "pattern_enhanced": true,
     "enhanced_capabilities": [
       "Secure subprocess execution",
@@ -57,6 +57,31 @@
         "PATTERN-2025-015: Swift-C Interop Bridge",
         "PATTERN-2025-016: Hardware Identity Generation Engine",
         "PATTERN-2025-029: CLI-System Bridge (Network Commands)"
+      ]
+    },
+    "phase_2_core_modules": {
+      "phase_id": "core_modules",
+      "name": "Phase 2: Core Privacy Modules",
+      "description": "Implement core privacy protection modules including network filtering, sandbox management, and syscall monitoring",
+      "target_completion": "2025-12-31",
+      "status": "active",
+      "stories": ["STORY-2025-009", "STORY-2025-010", "STORY-2025-011", "STORY-2025-012"],
+      "dependencies": ["security_modules"],
+      "success_criteria": [
+        "Network filtering module operational with DNS-level blocking",
+        "Sandbox manager module implemented and tested",
+        "Snapshot manager module functional with rollback capabilities", 
+        "Syscall monitoring module implemented with audit logging",
+        "Per-application network rules enforced",
+        "Real-time traffic monitoring and analysis",
+        "Configuration-driven module management"
+      ],
+      "enhanced_patterns_planned": [
+        "PATTERN-2025-047: DNS Filtering Engine Pattern",
+        "PATTERN-2025-048: Application Network Rule Pattern",
+        "PATTERN-2025-049: Real-time Network Monitoring Pattern", 
+        "PATTERN-2025-050: Sandbox Configuration Management Pattern",
+        "PATTERN-2025-051: Syscall Hook Integration Pattern"
       ]
     },
     "phase_3_advanced_features": {
