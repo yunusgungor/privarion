@@ -204,7 +204,7 @@ public class MacAddressSpoofingManager {
         
         do {
             // Backup original MAC address
-            try repository.backupOriginalMAC(interface: interface, macAddress: networkInterface.macAddress)
+            try await repository.backupOriginalMAC(interface: interface, macAddress: networkInterface.macAddress)
             
             // Test network connectivity before change
             let connectivityBefore = try await networkManager.testConnectivity(interface: interface)

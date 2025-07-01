@@ -397,7 +397,7 @@ class MockNetworkInterfaceManager: NetworkInterfaceManager {
     }
 }
 
-class MockMacAddressRepository: MacAddressRepository {
+class MockMacAddressRepository: MacAddressRepository, @unchecked Sendable {
     var isSpoofedResult = false
     var getSpoofedInterfacesResult: [String] = []
     var getOriginalMACResult: String?
@@ -420,7 +420,12 @@ class MockMacAddressRepository: MacAddressRepository {
         return getOriginalMACResults[interface] ?? getOriginalMACResult
     }
     
-    override func backupOriginalMAC(interface: String, macAddress: String) throws {
+    override func backupOriginalMAC(interface: String, macAddress: String) async throws {
+        backupOriginalMACCalled = true
+        getOriginalMACResults[interface] = macAddress
+    }
+    
+    override func backupOriginalMACSync(interface: String, macAddress: String) throws {
         backupOriginalMACCalled = true
         getOriginalMACResults[interface] = macAddress
     }

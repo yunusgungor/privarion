@@ -3,31 +3,38 @@ import CryptoKit
 
 /// Repository for managing MAC address backup and recovery data
 /// Provides secure storage and integrity validation for original MAC addresses
-public class MacAddressRepository {
+public class MacAddressRepository: @unchecked Sendable {
     
     // MARK: - Types
     
-    private struct BackupEntry: Codable {
+    public struct BackupEntry: Codable {
         let interface: String
         let originalMAC: String
-        let timestamp: Date
+        let timestamp: Int64  // Unix timestamp in milliseconds for precision
         let checksum: String
+        var currentMAC: String?
         
-        init(interface: String, originalMAC: String, timestamp: Date = Date()) {
+        init(interface: String, originalMAC: String, timestamp: Int64? = nil) {
             self.interface = interface
             self.originalMAC = originalMAC
-            self.timestamp = timestamp
-            self.checksum = Self.calculateChecksum(interface: interface, mac: originalMAC, timestamp: timestamp)
+            self.timestamp = timestamp ?? Int64(Date().timeIntervalSince1970 * 1000)
+            self.checksum = Self.calculateChecksum(interface: interface, mac: originalMAC, timestamp: self.timestamp)
+            self.currentMAC = nil
         }
         
         var isValid: Bool {
             return checksum == Self.calculateChecksum(interface: interface, mac: originalMAC, timestamp: timestamp)
         }
         
-        private static func calculateChecksum(interface: String, mac: String, timestamp: Date) -> String {
-            let data = "\(interface):\(mac):\(timestamp.timeIntervalSince1970)".data(using: .utf8)!
+        private static func calculateChecksum(interface: String, mac: String, timestamp: Int64) -> String {
+            let data = "\(interface):\(mac):\(timestamp)".data(using: .utf8)!
             let hash = SHA256.hash(data: data)
             return hash.compactMap { String(format: "%02x", $0) }.joined()
+        }
+        
+        // Convenience property to get Date from timestamp
+        var date: Date {
+            return Date(timeIntervalSince1970: Double(timestamp) / 1000.0)
         }
     }
     
@@ -56,14 +63,24 @@ public class MacAddressRepository {
     private var repositoryData: RepositoryData
     private let queue = DispatchQueue(label: "com.privarion.mac-repository", qos: .userInitiated)
     
+    // Storage URLs - can be customized for testing
+    private let customStorageURL: URL?
+    private let customBackupURL: URL?
+    
     // File paths
     private var backupFilePath: URL {
+        if let customURL = customStorageURL {
+            return customURL
+        }
         let appSupportDir = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
         let privarionDir = appSupportDir.appendingPathComponent("Privarion")
         return privarionDir.appendingPathComponent("mac_backup.json")
     }
     
     private var legacyBackupFilePath: URL {
+        if let customURL = customBackupURL {
+            return customURL
+        }
         let appSupportDir = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
         let privarionDir = appSupportDir.appendingPathComponent("Privarion")
         return privarionDir.appendingPathComponent("mac_backup_legacy.json")
@@ -75,20 +92,40 @@ public class MacAddressRepository {
         self.logger = logger ?? PrivarionLogger.shared
         self.configurationManager = configurationManager ?? ConfigurationManager.shared
         self.repositoryData = RepositoryData()
+        self.customStorageURL = nil
+        self.customBackupURL = nil
         
         setupDirectory()
         loadRepositoryData()
         performIntegrityCheck()
     }
     
+    /// Initialize repository with custom storage URL (for testing)
+    public init(storageURL: URL, logger: PrivarionLogger? = nil, configurationManager: ConfigurationManager? = nil) throws {
+        // Use provided instances or create default ones
+        self.logger = logger ?? PrivarionLogger.shared
+        self.configurationManager = configurationManager ?? ConfigurationManager.shared
+        self.repositoryData = RepositoryData()
+        self.customStorageURL = storageURL
+        self.customBackupURL = storageURL.appendingPathExtension("backup")
+        
+        // Create parent directory if needed
+        let parentDirectory = storageURL.deletingLastPathComponent()
+        try FileManager.default.createDirectory(at: parentDirectory, withIntermediateDirectories: true)
+        
+        loadRepositoryData()
+        performIntegrityCheck()
+    }
+    
     // MARK: - Public Interface
     
-    /// Backs up the original MAC address for an interface
-    public func backupOriginalMAC(interface: String, macAddress: String) throws {
+    /// Backs up the original MAC address for an interface (synchronous)
+    public func backupOriginalMACSync(interface: String, macAddress: String) throws {
         try queue.sync {
             logger.info("Backing up original MAC address for interface \(interface)")
             
-            // Validate MAC address format
+            // Validate interface and MAC address format
+            try validateInterface(interface)
             try validateMACAddress(macAddress)
             
             // Check if already backed up
@@ -275,6 +312,140 @@ public class MacAddressRepository {
         }
     }
     
+    // MARK: - Async/Await Interface (Phase 2b)
+    
+    /// Async version of backupOriginalMAC for compatibility with modern Swift concurrency
+    public func backupOriginalMAC(interface: String, macAddress: String) async throws {
+        return try await Task.detached { [weak self] in
+            guard let self = self else {
+                throw RepositoryError.interfaceNotBackedUp("Repository deallocated")
+            }
+            try self.backupOriginalMACSync(interface: interface, macAddress: macAddress)
+        }.value
+    }
+    
+    /// Async version of getOriginalMAC
+    public func getOriginalMAC(interface: String) async throws -> String? {
+        return await Task.detached { [weak self] in
+            guard let self = self else {
+                return nil
+            }
+            return self.getOriginalMAC(for: interface)
+        }.value
+    }
+    
+    /// Restore original MAC address and remove backup (async)
+    public func restoreOriginalMAC(interface: String) async throws -> String? {
+        return try await Task.detached { [weak self] in
+            guard let self = self else {
+                throw RepositoryError.interfaceNotBackedUp("Repository deallocated")
+            }
+            return try self.syncRestoreOriginalMAC(interface: interface)
+        }.value
+    }
+    
+    /// Get all current backups (async)
+    public func getAllBackups() async throws -> [String: BackupEntry] {
+        return await Task.detached { [weak self] in
+            guard let self = self else {
+                return [:]
+            }
+            return self.repositoryData.entries
+        }.value
+    }
+    
+    /// Clear backup for specific interface (async)
+    public func clearBackup(interface: String) async throws {
+        return try await Task.detached { [weak self] in
+            guard let self = self else {
+                throw RepositoryError.interfaceNotBackedUp("Repository deallocated")
+            }
+            try self.syncClearBackup(interface: interface)
+        }.value
+    }
+    
+    /// Check if backup exists for interface (async)
+    public func hasBackup(interface: String) async throws -> Bool {
+        return await Task.detached { [weak self] in
+            guard let self = self else {
+                return false
+            }
+            return self.isSpoofed(interface: interface)
+        }.value
+    }
+    
+    /// Updates the current MAC address for an interface (async)
+    public func updateCurrentMAC(interface: String, macAddress: String) async throws {
+        try await Task {
+            try queue.sync {
+                logger.info("Updating current MAC address for interface \(interface)")
+                
+                // Validate interface and MAC address format
+                try validateInterface(interface)
+                try validateMACAddress(macAddress)
+                
+                // Check if interface has backup
+                guard var entry = repositoryData.entries[interface] else {
+                    logger.error("No backup found for interface \(interface)")
+                    throw RepositoryError.interfaceNotBackedUp(interface)
+                }
+                
+                // Update current MAC
+                entry.currentMAC = macAddress
+                repositoryData.entries[interface] = entry
+                repositoryData.updateModified()
+                
+                // Save to disk
+                try saveRepositoryData()
+                
+                logger.info("Successfully updated current MAC address for interface \(interface)")
+            }
+        }.value
+    }
+
+    // MARK: - Private Sync Methods for Async Wrappers
+    
+    private func syncRestoreOriginalMAC(interface: String) throws -> String? {
+        logger.info("Restoring original MAC for interface \(interface)")
+        
+        guard let entry = repositoryData.entries[interface] else {
+            throw RepositoryError.interfaceNotBackedUp(interface)
+        }
+        
+        // Validate entry integrity
+        guard entry.isValid else {
+            logger.error("Backup entry for interface \(interface) failed integrity check")
+            throw RepositoryError.corruptedBackupData(interface)
+        }
+        
+        let originalMAC = entry.originalMAC
+        
+        // Remove backup entry
+        repositoryData.entries.removeValue(forKey: interface)
+        repositoryData.updateModified()
+        
+        // Save changes
+        try saveRepositoryData()
+        
+        logger.info("Successfully restored and cleared backup for interface \(interface)")
+        return originalMAC
+    }
+    
+    private func syncClearBackup(interface: String) throws {
+        logger.info("Clearing backup for interface \(interface)")
+        
+        guard repositoryData.entries[interface] != nil else {
+            throw RepositoryError.interfaceNotBackedUp(interface)
+        }
+        
+        repositoryData.entries.removeValue(forKey: interface)
+        repositoryData.updateModified()
+        
+        try saveRepositoryData()
+        
+        logger.info("Successfully cleared backup for interface \(interface)")
+    }
+    
     // MARK: - Private Implementation
     
     private func setupDirectory() {
@@ -362,6 +533,12 @@ public class MacAddressRepository {
         }
     }
     
+    private func validateInterface(_ interface: String) throws {
+        guard !interface.trimmingCharacters(in: .whitespaces).isEmpty else {
+            throw RepositoryError.invalidMACFormat("Interface name cannot be empty")
+        }
+    }
+    
     private func validateAllEntries() -> IntegrityStatus {
         var validCount = 0
         var invalidCount = 0
@@ -426,5 +603,23 @@ public enum RepositoryError: Error, LocalizedError {
         case .fileSystemError(let error):
             return "File system error: \(error.localizedDescription)"
         }
+    }
+}
+
+/// Alias for backward compatibility with tests
+public typealias MacRepositoryError = RepositoryError
+
+/// Additional MacRepositoryError cases for tests
+public extension RepositoryError {
+    static func backupAlreadyExists(_ interface: String) -> RepositoryError {
+        return .interfaceAlreadyBackedUp(interface)
+    }
+    
+    static func backupNotFound(_ interface: String) -> RepositoryError {
+        return .interfaceNotBackedUp(interface)
+    }
+    
+    static func validationError(_ message: String) -> RepositoryError {
+        return .invalidMACFormat(message)
     }
 }

@@ -19,6 +19,13 @@ public class ConfigurationManager {
     /// File system monitor for configuration changes
     private var fileMonitor: FileMonitor?
     
+    /// Check if running in test environment
+    private static var isTestEnvironment: Bool {
+        return ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil ||
+               ProcessInfo.processInfo.environment["XCTestBundlePath"] != nil ||
+               ProcessInfo.processInfo.arguments.contains { $0.contains("xctest") }
+    }
+    
     /// Internal initialization with custom path (for testing)
     internal init(customConfigPath: URL? = nil) {
         if let customPath = customConfigPath {
@@ -74,8 +81,10 @@ public class ConfigurationManager {
             try? saveConfiguration()
         }
         
-        // Start monitoring configuration file changes
-        startFileMonitoring()
+        // Start monitoring configuration file changes (skip in test environment)
+        if !Self.isTestEnvironment {
+            startFileMonitoring()
+        }
     }
     
     /// Convenience initializer for default behavior

@@ -275,7 +275,7 @@ final class PrivarionGUITests: XCTestCase {
         }
     }
     
-    func testModuleTogglePerformance() {
+    func testModuleTogglePerformance() async throws {
         // Setup mock modules
         mockModuleInteractor.mockModules = (0..<100).map { index in
             PrivacyModule(
@@ -287,14 +287,20 @@ final class PrivarionGUITests: XCTestCase {
                 dependencies: []
             )
         }
-        
-        measure {
+        appState.modules = mockModuleInteractor.mockModules
+
+        // Run the concurrent operations and wait for them to complete
+        await withTaskGroup(of: Void.self) { group in
             for i in 0..<10 {
-                Task {
-                    await appState.toggleModule("module-\(i)")
+                group.addTask {
+                    await self.appState.toggleModule("module-\(i)")
                 }
             }
         }
+
+        // Verify that the first module was toggled successfully
+        let firstModule = appState.modules.first { $0.id == "module-0" }
+        XCTAssertTrue(firstModule?.isEnabled ?? false, "Module-0 should be enabled after toggle.")
     }
 }
 
