@@ -1,5 +1,6 @@
 import SwiftUI
 import Logging
+import PrivarionCore
 
 /// Main SwiftUI application entry point
 /// Following Clean Architecture pattern with centralized state management
@@ -9,17 +10,10 @@ struct PrivarionGUIApp: App {
     /// Central application state following Context7 research pattern
     @StateObject private var appState = AppState()
     
-    /// Application-wide logger
-    private let logger = Logger(label: "PrivarionGUIApp")
+    /// Application-wide logger using centralized logging
+    private let logger = PrivarionLogger.shared
     
     init() {
-        // Initialize logging configuration
-        LoggingSystem.bootstrap { label in
-            var handler = StreamLogHandler.standardOutput(label: label)
-            handler.logLevel = .info
-            return handler
-        }
-        
         logger.info("Privarion GUI Application initializing")
     }
     

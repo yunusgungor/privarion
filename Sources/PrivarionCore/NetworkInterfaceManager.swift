@@ -278,7 +278,7 @@ public class NetworkInterfaceManager {
 // MARK: - Supporting Types
 
 /// Represents a network interface
-public struct NetworkInterface: Codable {
+public struct NetworkInterface: Codable, Hashable {
     public let name: String
     public var macAddress: String
     public let type: NetworkInterfaceType

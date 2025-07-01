@@ -32,6 +32,11 @@ final class AppState: ObservableObject {
     /// Loading states for different operations
     @Published var isLoading: [String: Bool] = [:]
     
+    // MARK: - MAC Address Management
+    
+    /// MAC Address spoofing state management
+    @Published var macAddressState: MacAddressState
+    
     // MARK: - Private Properties
     
     private let logger = Logger(label: "AppState")
@@ -87,6 +92,9 @@ final class AppState: ObservableObject {
         self.searchManager = SearchManager()
         self.keyboardShortcutManager = KeyboardShortcutManager()
         
+        // Initialize MAC Address State
+        self.macAddressState = MacAddressState()
+        
         // Initialize CommandManager and NavigationManager
         self.commandManager = CommandManager()
         self.navigationManager = NavigationManager()
@@ -97,7 +105,7 @@ final class AppState: ObservableObject {
         setupCommandManager()
         setupNavigationManager()
         
-        logger.info("AppState initialized with Clean Architecture pattern, ErrorManager, UserSettings, SearchManager, KeyboardShortcutManager, CommandManager, and NavigationManager")
+        logger.info("AppState initialized with Clean Architecture pattern, ErrorManager, UserSettings, SearchManager, KeyboardShortcutManager, CommandManager, NavigationManager, and MacAddressState")
     }
     
     // MARK: - Public Methods
@@ -527,6 +535,8 @@ final class AppState: ObservableObject {
                 await loadProfiles()
             case .logs:
                 await loadRecentActivity()
+            case .macAddress:
+                await macAddressState.loadInterfaces()
             case .settings:
                 // Settings don't need refreshing typically
                 break
@@ -575,6 +585,7 @@ enum AppView: String, CaseIterable {
     case dashboard = "Dashboard"
     case modules = "Modules"
     case profiles = "Profiles"
+    case macAddress = "MAC Address"
     case settings = "Settings"
     case logs = "Logs"
 }

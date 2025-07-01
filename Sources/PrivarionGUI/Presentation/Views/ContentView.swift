@@ -137,6 +137,23 @@ struct SidebarView: View {
                         }
                     }
                 }
+                
+                NavigationLink(value: AppView.macAddress) {
+                    HStack {
+                        Label("MAC Address", systemImage: "network")
+                        Spacer()
+                        if !appState.macAddressState.interfaces.isEmpty {
+                            Text("\(appState.macAddressState.interfaces.count)")
+                                .font(.caption2)
+                                .fontWeight(.medium)
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(Color.orange)
+                                .clipShape(Capsule())
+                        }
+                    }
+                }
             }
             
             Section("System") {
@@ -160,21 +177,26 @@ struct DetailView: View {
     @EnvironmentObject private var appState: AppState
     
     var body: some View {
-        Group {
-            switch appState.currentView {
-            case .dashboard:
-                DashboardView()
-            case .modules:
-                ModulesView()
-            case .profiles:
-                ProfilesView()
-            case .logs:
-                LogsView()
-            case .settings:
-                SettingsView()
-            }
+        switch appState.currentView {
+        case .dashboard:
+            DashboardView()
+                .frame(minWidth: 600, minHeight: 400)
+        case .modules:
+            ModulesView()
+                .frame(minWidth: 600, minHeight: 400)
+        case .profiles:
+            ProfilesView()
+                .frame(minWidth: 600, minHeight: 400)
+        case .macAddress:
+            MacAddressView()
+                .frame(minWidth: 600, minHeight: 400)
+        case .logs:
+            LogsView()
+                .frame(minWidth: 600, minHeight: 400)
+        case .settings:
+            SettingsView()
+                .frame(minWidth: 600, minHeight: 400)
         }
-        .frame(minWidth: 600, minHeight: 400)
     }
 }
 

@@ -48,6 +48,48 @@ This catalog contains reusable patterns extracted from project implementations. 
 - **Source**: STORY-2025-008 Phase 2b CLI Integration
 - **Extracted**: 2025-01-27
 
+### GUI Integration Patterns
+
+#### PATTERN-2025-033: SwiftUI Clean Architecture Integration
+- **Status**: ✅ Active
+- **Category**: SwiftUI Architecture
+- **Difficulty**: Medium
+- **Reusability**: High
+- **Description**: Clean Architecture principles applied to SwiftUI applications with proper separation of concerns
+- **Location**: `.project_meta/.patterns/PATTERN-2025-033-SwiftUI-Clean-Architecture-Integration.md`
+- **Source**: STORY-2025-008 Phase 2c GUI Integration
+- **Extracted**: 2025-01-27
+
+#### PATTERN-2025-034: Centralized Logging System Bootstrap
+- **Status**: ✅ Active
+- **Category**: System Architecture
+- **Difficulty**: Low
+- **Reusability**: High
+- **Description**: Centralized logging system initialization with conflict resolution and multi-module support
+- **Location**: `.project_meta/.patterns/PATTERN-2025-034-Centralized-Logging-Bootstrap.md`
+- **Source**: STORY-2025-008 Phase 2c GUI Integration
+- **Extracted**: 2025-01-27
+
+#### PATTERN-2025-035: SwiftUI Async State Management
+- **Status**: ✅ Active
+- **Category**: SwiftUI Architecture
+- **Difficulty**: Intermediate
+- **Reusability**: High
+- **Description**: Effective async operation management in SwiftUI with proper loading states and error handling
+- **Location**: `.project_meta/.patterns/PATTERN-2025-035-SwiftUI-Async-State-Management.md`
+- **Source**: STORY-2025-008 Phase 2c GUI Integration
+- **Extracted**: 2025-07-01
+
+#### PATTERN-2025-036: GUI-Core API Bridge Pattern
+- **Status**: ✅ Active
+- **Category**: Architecture Integration
+- **Difficulty**: Advanced
+- **Reusability**: High
+- **Description**: Bridge pattern for integrating GUI applications with core business logic APIs
+- **Location**: `.project_meta/.patterns/PATTERN-2025-036-GUI-Core-API-Bridge.md`
+- **Source**: STORY-2025-008 Phase 2c GUI Integration
+- **Extracted**: 2025-07-01
+
 ## Pattern Categories
 
 ### CLI Development
@@ -61,6 +103,12 @@ This catalog contains reusable patterns extracted from project implementations. 
 - **PATTERN-2025-006**: Legacy pattern
 - **PATTERN-2025-028**: Legacy pattern
 
+### GUI Development
+- **PATTERN-2025-033**: SwiftUI Clean Architecture Integration
+- **PATTERN-2025-034**: Centralized Logging System Bootstrap
+- **PATTERN-2025-035**: SwiftUI Async State Management
+- **PATTERN-2025-036**: GUI-Core API Bridge Pattern
+
 ## Pattern Usage Guidelines
 
 ### High Reusability Patterns
@@ -68,6 +116,10 @@ The following patterns are recommended for widespread use across the project:
 - PATTERN-2025-030: Essential for any CLI command integration
 - PATTERN-2025-031: Standard approach for API evolution
 - PATTERN-2025-032: Required for consistent error handling
+- PATTERN-2025-033: Recommended for SwiftUI integrations
+- PATTERN-2025-034: Standard for multi-module logging
+- PATTERN-2025-035: Essential for SwiftUI async operations
+- PATTERN-2025-036: Required for GUI-Core API integration
 
 ### Pattern Selection Criteria
 1. **Difficulty Level**: Choose patterns matching team expertise
@@ -79,7 +131,7 @@ The following patterns are recommended for widespread use across the project:
 
 ### Active Patterns
 Currently validated and recommended for use:
-- PATTERN-2025-030, PATTERN-2025-031, PATTERN-2025-032
+- PATTERN-2025-030, PATTERN-2025-031, PATTERN-2025-032, PATTERN-2025-033, PATTERN-2025-034, PATTERN-2025-035, PATTERN-2025-036
 
 ### Legacy Patterns
 Historical patterns that may need review:
@@ -87,14 +139,13 @@ Historical patterns that may need review:
 
 ### Future Pattern Extraction
 Planned pattern extraction from ongoing development:
-- GUI Integration patterns (Phase 2c)
 - Data binding patterns
 - SwiftUI async integration patterns
 
 ## Quality Metrics
 
 ### Pattern Validation
-- **Extraction Date**: Recent patterns extracted 2025-01-27
+- **Extraction Date**: Recent patterns extracted 2025-07-01
 - **Source Validation**: All active patterns tested in real implementations
 - **Documentation Quality**: Comprehensive documentation with code examples
 - **Applicability**: Patterns validated across multiple use cases
@@ -103,7 +154,8 @@ Planned pattern extraction from ongoing development:
 - **CLI Development**: 3 patterns covering complete CLI integration workflow
 - **Error Handling**: Standardized approach across application layers
 - **API Evolution**: Consistent compatibility approach
+- **GUI Development**: New patterns addressing modern GUI integration challenges
 
 ---
-*Last updated: 2025-01-27*  
-*Total patterns: 5 (3 active, 2 legacy)*
+*Last updated: 2025-07-01*  
+*Total patterns: 9 (5 active, 3 legacy)*
