@@ -90,7 +90,6 @@ enum PrivarionCLIError: Error, LocalizedError {
 }
 
 /// Main CLI tool for Privarion privacy protection system
-@main
 struct PrivacyCtl: ParsableCommand {
     
     static let configuration = CommandConfiguration(
@@ -136,7 +135,8 @@ struct PrivacyCtl: ParsableCommand {
             LogsCommand.self,
             InjectCommand.self,
             HookCommand.self,
-            IdentityCommand.self
+            IdentityCommand.self,
+            MacAddressCommand.self
         ]
     )
 }
@@ -3030,3 +3030,6 @@ extension String {
         return String(repeating: lhs, count: rhs)
     }
 }
+
+// Run the CLI application
+PrivacyCtl.main()

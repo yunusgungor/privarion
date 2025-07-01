@@ -69,6 +69,12 @@ enum PrivarionError: LocalizedError {
     case securityViolation(details: String)
     case cryptographicError(operation: String)
     
+    // MARK: - System Operation Errors
+    case systemOperation(SystemOperationError)
+    
+    // MARK: - Validation Errors (Extended)
+    case validation(ValidationError)
+    
     // MARK: - Unknown/Unexpected Errors
     case unknown(underlying: Error)
     case internalError(code: String, details: String)
@@ -183,6 +189,14 @@ enum PrivarionError: LocalizedError {
         case .cryptographicError(let operation):
             return "Cryptographic error during \(operation)"
             
+        // System Operation Errors
+        case .systemOperation(let error):
+            return error.errorDescription
+            
+        // Validation Errors (Extended)
+        case .validation(let error):
+            return error.errorDescription
+            
         // Unknown/Unexpected Errors
         case .unknown(let underlying):
             return "Unknown error: \(underlying.localizedDescription)"
@@ -272,12 +286,14 @@ enum PrivarionError: LocalizedError {
             return .network
         case .dataCorruption, .storageError, .migrationFailed, .backupFailed:
             return .data
-        case .invalidInput, .missingRequiredField, .valueTooLarge, .valueTooSmall, .inputTooLong, .invalidRange, .invalidDateRange:
+        case .invalidInput, .missingRequiredField, .valueTooLarge, .valueTooSmall, .inputTooLong, .invalidRange, .invalidDateRange, .validation:
             return .validation
         case .authenticationFailed, .authorizationDenied, .securityViolation, .cryptographicError:
             return .security
         case .invalidState, .operationNotAllowed, .businessRuleViolation:
             return .businessLogic
+        case .systemOperation:
+            return .system
         case .unknown, .internalError:
             return .internalError
         }
@@ -311,6 +327,60 @@ enum PrivarionError: LocalizedError {
 }
 
 // MARK: - Supporting Types
+
+/// System operation specific errors
+enum SystemOperationError: LocalizedError {
+    case networkInterfaceEnumerationFailed(Error)
+    case interfaceStatusRetrievalFailed(Error)
+    case multipleInterfaceRestoreFailed([Error])
+    case connectivityLostAfterSpoofing(String)
+    case originalMACNotFound(String)
+    case macRestoreFailed(String, Error)
+    case interfaceNotFound(String)
+    case macChangeVerificationFailed(interface: String, expected: String, actual: String)
+    
+    var errorDescription: String? {
+        switch self {
+        case .networkInterfaceEnumerationFailed(let error):
+            return "Failed to enumerate network interfaces: \(error.localizedDescription)"
+        case .interfaceStatusRetrievalFailed(let error):
+            return "Failed to retrieve interface status: \(error.localizedDescription)"
+        case .multipleInterfaceRestoreFailed(let errors):
+            return "Failed to restore multiple interfaces: \(errors.map { $0.localizedDescription }.joined(separator: ", "))"
+        case .connectivityLostAfterSpoofing(let interface):
+            return "Network connectivity lost after spoofing interface \(interface)"
+        case .originalMACNotFound(let interface):
+            return "Original MAC address not found for interface \(interface)"
+        case .macRestoreFailed(let interface, let error):
+            return "Failed to restore MAC address for interface \(interface): \(error.localizedDescription)"
+        case .interfaceNotFound(let interface):
+            return "Network interface not found: \(interface)"
+        case .macChangeVerificationFailed(let interface, let expected, let actual):
+            return "MAC change verification failed for \(interface): expected \(expected), got \(actual)"
+        }
+    }
+}
+
+/// Validation specific errors  
+enum ValidationError: LocalizedError {
+    case invalidNetworkInterface(String)
+    case interfaceAlreadySpoofed(String)
+    case interfaceNotSpoofed(String)
+    case invalidMACFormat(String)
+    
+    var errorDescription: String? {
+        switch self {
+        case .invalidNetworkInterface(let interface):
+            return "Invalid network interface: \(interface)"
+        case .interfaceAlreadySpoofed(let interface):
+            return "Interface \(interface) is already spoofed"
+        case .interfaceNotSpoofed(let interface):
+            return "Interface \(interface) is not currently spoofed"
+        case .invalidMACFormat(let mac):
+            return "Invalid MAC address format: \(mac)"
+        }
+    }
+}
 
 /// Error severity levels for appropriate handling and user notification
 enum ErrorSeverity: String, CaseIterable {
