@@ -280,6 +280,28 @@ public class RollbackManager {
             return try await getCurrentDiskUUID()
         case .networkInterface:
             return try await getCurrentNetworkInterfaces()
+        case .systemVersion:
+            return try await getCurrentSystemVersion()
+        case .kernelVersion:
+            return try await getCurrentKernelVersion()
+        case .userID:
+            return try await getCurrentUserID()
+        case .groupID:
+            return try await getCurrentGroupID()
+        case .username:
+            return try await getCurrentUsername()
+        case .homeDirectory:
+            return try await getCurrentHomeDirectory()
+        case .processID:
+            return try await getCurrentProcessID()
+        case .parentProcessID:
+            return try await getCurrentParentProcessID()
+        case .architecture:
+            return try await getCurrentArchitecture()
+        case .volumeUUID:
+            return try await getCurrentVolumeUUID()
+        case .bootVolumeUUID:
+            return try await getCurrentBootVolumeUUID()
         }
     }
     
@@ -295,6 +317,28 @@ public class RollbackManager {
             logger.warning("Disk UUID restoration not implemented - requires advanced techniques")
         case .networkInterface:
             logger.info("Network interface restoration completed")
+        case .systemVersion:
+            logger.warning("System version restoration requires syscall hook removal")
+        case .kernelVersion:
+            logger.warning("Kernel version restoration requires syscall hook removal")
+        case .userID:
+            logger.warning("User ID restoration requires syscall hook removal")
+        case .groupID:
+            logger.warning("Group ID restoration requires syscall hook removal")
+        case .username:
+            logger.warning("Username restoration requires syscall hook removal")
+        case .homeDirectory:
+            logger.warning("Home directory restoration not fully implemented")
+        case .processID:
+            logger.warning("Process ID restoration not possible - runtime value")
+        case .parentProcessID:
+            logger.warning("Parent process ID restoration not possible - runtime value")
+        case .architecture:
+            logger.warning("Architecture restoration requires syscall hook removal")
+        case .volumeUUID:
+            logger.warning("Volume UUID restoration not implemented - requires advanced techniques")
+        case .bootVolumeUUID:
+            logger.warning("Boot volume UUID restoration not implemented - requires advanced techniques")
         }
     }
     
@@ -377,7 +421,73 @@ public class RollbackManager {
         return output.trimmingCharacters(in: .whitespacesAndNewlines)
     }
     
-    // MARK: - Identity Restoration Methods
+    // MARK: - Additional Identity Capture Methods for New Types
+    
+    private func getCurrentSystemVersion() async throws -> String {
+        let result = try await systemCommandExecutor.executeCommand("sw_vers", arguments: ["-productVersion"])
+        return result.standardOutput?.trimmingCharacters(in: .whitespacesAndNewlines) ?? "Unknown"
+    }
+    
+    private func getCurrentKernelVersion() async throws -> String {
+        let result = try await systemCommandExecutor.executeCommand("uname", arguments: ["-v"])
+        return result.standardOutput?.trimmingCharacters(in: .whitespacesAndNewlines) ?? "Unknown"
+    }
+    
+    private func getCurrentUserID() async throws -> String {
+        let result = try await systemCommandExecutor.executeCommand("id", arguments: ["-u"])
+        return result.standardOutput?.trimmingCharacters(in: .whitespacesAndNewlines) ?? "Unknown"
+    }
+    
+    private func getCurrentGroupID() async throws -> String {
+        let result = try await systemCommandExecutor.executeCommand("id", arguments: ["-g"])
+        return result.standardOutput?.trimmingCharacters(in: .whitespacesAndNewlines) ?? "Unknown"
+    }
+    
+    private func getCurrentUsername() async throws -> String {
+        let result = try await systemCommandExecutor.executeCommand("whoami", arguments: [])
+        return result.standardOutput?.trimmingCharacters(in: .whitespacesAndNewlines) ?? "Unknown"
+    }
+    
+    private func getCurrentHomeDirectory() async throws -> String {
+        return NSHomeDirectory()
+    }
+    
+    private func getCurrentProcessID() async throws -> String {
+        return String(ProcessInfo.processInfo.processIdentifier)
+    }
+    
+    private func getCurrentParentProcessID() async throws -> String {
+        let result = try await systemCommandExecutor.executeCommand("ps", arguments: ["-o", "ppid=", "-p", String(ProcessInfo.processInfo.processIdentifier)])
+        return result.standardOutput?.trimmingCharacters(in: .whitespacesAndNewlines) ?? "Unknown"
+    }
+    
+    private func getCurrentArchitecture() async throws -> String {
+        let result = try await systemCommandExecutor.executeCommand("uname", arguments: ["-m"])
+        return result.standardOutput?.trimmingCharacters(in: .whitespacesAndNewlines) ?? "Unknown"
+    }
+    
+    private func getCurrentVolumeUUID() async throws -> String {
+        let result = try await systemCommandExecutor.executeCommand("diskutil", arguments: ["info", "/", "|", "grep", "Volume UUID"])
+        return parseUUIDFromDiskutilOutput(result.standardOutput ?? "")
+    }
+    
+    private func getCurrentBootVolumeUUID() async throws -> String {
+        let result = try await systemCommandExecutor.executeCommand("diskutil", arguments: ["info", "/", "|", "grep", "Volume UUID"])
+        return parseUUIDFromDiskutilOutput(result.standardOutput ?? "")
+    }
+    
+    private func parseUUIDFromDiskutilOutput(_ output: String) -> String {
+        let lines = output.components(separatedBy: .newlines)
+        for line in lines {
+            if line.contains("Volume UUID:") {
+                let components = line.components(separatedBy: ":")
+                if components.count > 1 {
+                    return components[1].trimmingCharacters(in: .whitespacesAndNewlines)
+                }
+            }
+        }
+        return "Unknown"
+    }
     
     private func restoreMACAddress(_ mac: String) async throws {
         // Find the interface to restore

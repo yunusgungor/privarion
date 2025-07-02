@@ -536,4 +536,153 @@ public class HardwareIdentifierEngine {
         }
         return "unknown"
     }
+    
+    /// Generate system version string
+    public func generateSystemVersion(strategy: GenerationStrategy = .realistic) -> String {
+        let macOSVersions = [
+            "macOS 14.5 (23F79)",
+            "macOS 14.4.1 (23E224)",
+            "macOS 14.3.1 (23D60)",
+            "macOS 13.6.7 (22G720)",
+            "macOS 13.5.2 (22G91)",
+            "macOS 12.7.5 (21H1222)"
+        ]
+        
+        switch strategy {
+        case .random:
+            return macOSVersions.randomElement() ?? "macOS 14.5 (23F79)"
+        case .realistic:
+            // Return a commonly used recent version
+            return macOSVersions.prefix(3).randomElement() ?? "macOS 14.5 (23F79)"
+        default:
+            return "macOS 14.5 (23F79)"
+        }
+    }
+    
+    /// Generate kernel version string
+    public func generateKernelVersion(strategy: GenerationStrategy = .realistic) -> String {
+        let kernelVersions = [
+            "Darwin 23.5.0",
+            "Darwin 23.4.0", 
+            "Darwin 23.3.0",
+            "Darwin 22.6.0",
+            "Darwin 22.5.0",
+            "Darwin 21.6.0"
+        ]
+        
+        switch strategy {
+        case .random:
+            return kernelVersions.randomElement() ?? "Darwin 23.5.0"
+        case .realistic:
+            return kernelVersions.prefix(3).randomElement() ?? "Darwin 23.5.0"
+        default:
+            return "Darwin 23.5.0"
+        }
+    }
+    
+    /// Generate user ID
+    public func generateUserID(strategy: GenerationStrategy = .realistic) -> Int {
+        switch strategy {
+        case .random:
+            return Int.random(in: 1000...60000)
+        case .realistic:
+            // Common user ID ranges for regular users on macOS
+            return Int.random(in: 501...1000)
+        default:
+            return 501
+        }
+    }
+    
+    /// Generate group ID
+    public func generateGroupID(strategy: GenerationStrategy = .realistic) -> Int {
+        switch strategy {
+        case .random:
+            return Int.random(in: 1000...60000)
+        case .realistic:
+            // Common group ID ranges for regular users on macOS
+            return Int.random(in: 20...100)
+        default:
+            return 20
+        }
+    }
+    
+    /// Generate username
+    public func generateUsername(strategy: GenerationStrategy = .realistic) -> String {
+        let commonUsernames = [
+            "admin", "user", "john", "jane", "developer", "test",
+            "student", "guest", "manager", "staff", "employee"
+        ]
+        
+        switch strategy {
+        case .random:
+            let randomSuffix = Int.random(in: 100...999)
+            return "\(commonUsernames.randomElement() ?? "user")\(randomSuffix)"
+        case .realistic:
+            return commonUsernames.randomElement() ?? "user"
+        default:
+            return "user"
+        }
+    }
+    
+    /// Generate home directory path
+    public func generateHomeDirectory(strategy: GenerationStrategy = .realistic, username: String? = nil) -> String {
+        let user = username ?? generateUsername(strategy: strategy)
+        return "/Users/\(user)"
+    }
+    
+    /// Generate process ID
+    public func generateProcessID(strategy: GenerationStrategy = .realistic) -> Int {
+        switch strategy {
+        case .random:
+            return Int.random(in: 1...65536)
+        case .realistic:
+            // Typical process ID ranges
+            return Int.random(in: 100...10000)
+        default:
+            return 1234
+        }
+    }
+    
+    /// Generate parent process ID
+    public func generateParentProcessID(strategy: GenerationStrategy = .realistic) -> Int {
+        switch strategy {
+        case .random:
+            return Int.random(in: 1...65536)
+        case .realistic:
+            // Common parent process IDs (init, launchd, shells)
+            return [1, 100, 200, 500, 1000].randomElement() ?? 1
+        default:
+            return 1
+        }
+    }
+    
+    /// Generate architecture string
+    public func generateArchitecture(strategy: GenerationStrategy = .realistic) -> String {
+        let architectures = ["x86_64", "arm64", "i386"]
+        
+        switch strategy {
+        case .random:
+            return architectures.randomElement() ?? "x86_64"
+        case .realistic:
+            // Modern Macs are predominantly arm64 or x86_64
+            return ["x86_64", "arm64"].randomElement() ?? "arm64"
+        default:
+            return "arm64"
+        }
+    }
+    
+    /// Generate volume UUID
+    public func generateVolumeUUID(strategy: GenerationStrategy = .realistic) -> String {
+        return UUID().uuidString
+    }
+    
+    /// Generate boot volume UUID  
+    public func generateBootVolumeUUID(strategy: GenerationStrategy = .realistic) -> String {
+        return UUID().uuidString
+    }
+    
+    /// Generate disk UUID
+    public func generateDiskUUID(strategy: GenerationStrategy = .realistic) -> String {
+        return UUID().uuidString
+    }
 }

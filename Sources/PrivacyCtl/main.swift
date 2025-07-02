@@ -1623,6 +1623,8 @@ struct IdentityBackupCommand: ParsableCommand {
         case .networkInterface:
             let interfaces = engine.getNetworkInterfaces()
             return interfaces.first?.name ?? "unknown"
+        default:
+            return "Not yet implemented in CLI"
         }
     }
     
@@ -2159,6 +2161,8 @@ struct IdentityInfoCommand: ParsableCommand {
             return "Disk UUID identifier"
         case .networkInterface:
             return "Network interface name"
+        default:
+            return "Advanced identity type (syscall hook based)"
         }
     }
     
@@ -2174,6 +2178,8 @@ struct IdentityInfoCommand: ParsableCommand {
             return "UUID format (XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX)"
         case .networkInterface:
             return "Interface name (e.g., en0, en1)"
+        default:
+            return "System-specific format"
         }
     }
     
@@ -2189,6 +2195,8 @@ struct IdentityInfoCommand: ParsableCommand {
             return "High - Boot and filesystem identifier"
         case .networkInterface:
             return "Medium - Network configuration change"
+        default:
+            return "Low - Syscall hook based (reversible)"
         }
     }
 }
@@ -2422,6 +2430,9 @@ struct IdentityValidateCommand: ParsableCommand {
         case .networkInterface:
             // Interface name validation
             return !value.isEmpty && value.count <= 16
+        default:
+            // Basic validation for other types
+            return !value.isEmpty
         }
     }
     
@@ -2442,6 +2453,8 @@ struct IdentityValidateCommand: ParsableCommand {
         case .networkInterface:
             let interfaces = engine.getNetworkInterfaces()
             return interfaces.first?.name ?? "unknown"
+        default:
+            return "Not yet implemented in CLI"
         }
     }
     
