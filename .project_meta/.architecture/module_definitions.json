@@ -1,6 +1,6 @@
 {
-  "architecture_version": "1.0.0",
-  "last_updated": "2025-06-29T00:00:00Z",
+  "architecture_version": "1.1.0",
+  "last_updated": "2025-06-30T21:30:00Z",
   "system_overview": {
     "name": "Privarion Privacy Protection System",
     "description": "Modular macOS privacy protection system preventing application fingerprinting and tracking",
@@ -182,6 +182,49 @@
         "monitoring_overhead": "< 3%",
         "event_processing": "< 1ms"
       }
+    },
+    "network_analytics": {
+      "module_id": "network_analytics",
+      "name": "Network Analytics Engine",
+      "description": "Real-time network traffic analysis with privacy-focused metrics",
+      "type": "analytics",
+      "language": "Swift",
+      "dependencies": ["core_engine", "network_filtering"],
+      "interfaces": ["NetworkAnalyticsProtocol"],
+      "components": [
+        {
+          "name": "NetworkMetricsCollector",
+          "responsibility": "Collect and aggregate network traffic metrics",
+          "apis": ["collectMetrics", "aggregateData", "calculateRates"]
+        },
+        {
+          "name": "PrivacyMetricsEngine",
+          "responsibility": "Calculate privacy-specific network metrics",
+          "apis": ["calculateBlockedRequests", "analyzeTrackingAttempts", "generatePrivacyScore"]
+        },
+        {
+          "name": "RealTimeAnalyzer",
+          "responsibility": "Real-time network traffic analysis and anomaly detection",
+          "apis": ["analyzeTraffic", "detectAnomalies", "generateAlerts"]
+        }
+      ],
+      "frameworks": ["SwiftUI", "Charts", "Network"],
+      "patterns_applied": [
+        "PATTERN-2025-038-SwiftUI-Charts-Integration",
+        "PATTERN-2025-039-Analytics-State-Management",
+        "PATTERN-2025-040-Clean-Architecture-GUI-Module"
+      ],
+      "security_requirements": ["data_privacy", "metrics_anonymization", "secure_aggregation"],
+      "performance_targets": {
+        "metrics_collection": "< 1ms",
+        "real_time_update": "< 100ms",
+        "memory_usage": "< 30MB"
+      },
+      "gui_integration": {
+        "views": ["AnalyticsView", "MetricsChartsView", "PrivacyDashboard"],
+        "state_management": "ObservableObject pattern with @Published properties",
+        "chart_types": ["line_charts", "bar_charts", "pie_charts", "area_charts"]
+      }
     }
   },
   "user_interfaces": {
@@ -202,15 +245,29 @@
     "gui_interface": {
       "module_id": "gui_interface", 
       "name": "SwiftUI Graphical Interface",
-      "description": "Native macOS GUI for user-friendly system management",
+      "description": "Native macOS GUI for user-friendly system management with real-time analytics",
       "type": "interface",
       "language": "Swift",
-      "dependencies": ["core_engine"],
-      "frameworks": ["SwiftUI", "AppKit"],
-      "features": ["module_management", "profile_editor", "real_time_monitoring", "snapshot_management"],
+      "dependencies": ["core_engine", "network_analytics"],
+      "frameworks": ["SwiftUI", "AppKit", "Charts"],
+      "features": [
+        "module_management", 
+        "profile_editor", 
+        "real_time_monitoring", 
+        "snapshot_management",
+        "network_analytics_dashboard",
+        "privacy_metrics_visualization",
+        "real_time_charts"
+      ],
+      "analytics_integration": {
+        "chart_frameworks": ["SwiftUI Charts"],
+        "real_time_updates": "ObservableObject state management",
+        "supported_visualizations": ["network_traffic", "blocked_requests", "privacy_scores", "system_metrics"]
+      },
       "performance_targets": {
         "ui_responsiveness": "< 16ms",
-        "memory_usage": "< 100MB"
+        "memory_usage": "< 100MB",
+        "chart_render_time": "< 50ms"
       }
     }
   },
@@ -234,7 +291,9 @@
     "configuration_flow": "CLI/GUI -> ConfigManager -> Module Configuration -> Module Activation",
     "protection_flow": "App Launch Request -> Module Pipeline -> Protection Applied -> App Execution",
     "monitoring_flow": "System Events -> Syscall Monitor -> Threat Detection -> Alert/Log",
-    "restoration_flow": "Session End -> Snapshot Restoration -> Privacy Cleanup -> System Reset"
+    "restoration_flow": "Session End -> Snapshot Restoration -> Privacy Cleanup -> System Reset",
+    "analytics_flow": "Network Events -> Metrics Collection -> Real-time Analysis -> GUI Visualization",
+    "privacy_metrics_flow": "Traffic Analysis -> Privacy Score Calculation -> Dashboard Display -> User Alerts"
   },
   "quality_attributes": {
     "security": {

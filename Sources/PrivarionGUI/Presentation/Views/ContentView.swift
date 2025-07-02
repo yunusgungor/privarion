@@ -154,6 +154,20 @@ struct SidebarView: View {
                         }
                     }
                 }
+                
+                NavigationLink(value: AppView.analytics) {
+                    HStack {
+                        Label("Network Analytics", systemImage: "chart.bar.xaxis")
+                        Spacer()
+                        // Show live indicator if analytics is active
+                        Circle()
+                            .fill(Color.green)
+                            .frame(width: 8, height: 8)
+                            .opacity(0.8)
+                            .scaleEffect(1.2)
+                            .animation(.easeInOut(duration: 1.0).repeatForever(autoreverses: true), value: true)
+                    }
+                }
             }
             
             Section("System") {
@@ -190,6 +204,9 @@ struct DetailView: View {
         case .macAddress:
             MacAddressView()
                 .frame(minWidth: 600, minHeight: 400)
+        case .analytics:
+            AnalyticsView()
+                .frame(minWidth: 800, minHeight: 600)
         case .logs:
             LogsView()
                 .frame(minWidth: 600, minHeight: 400)

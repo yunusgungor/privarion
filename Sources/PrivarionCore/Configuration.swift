@@ -66,6 +66,7 @@ public struct GlobalConfig: Codable {
 public struct ModuleConfigs: Codable {
     public var identitySpoofing: IdentitySpoofingConfig
     public var networkFilter: NetworkFilterConfig
+    public var networkAnalytics: NetworkAnalyticsConfig
     public var sandboxManager: SandboxManagerConfig
     public var snapshotManager: SnapshotManagerConfig
     public var syscallHook: SyscallHookConfig
@@ -73,6 +74,7 @@ public struct ModuleConfigs: Codable {
     public init() {
         self.identitySpoofing = IdentitySpoofingConfig()
         self.networkFilter = NetworkFilterConfig()
+        self.networkAnalytics = NetworkAnalyticsConfig()
         self.sandboxManager = SandboxManagerConfig()
         self.snapshotManager = SnapshotManagerConfig()
         self.syscallHook = SyscallHookConfig()
@@ -218,6 +220,96 @@ public struct NetworkMonitoringConfig: Codable {
         self.metricsInterval = 60.0
         self.maxEventsInMemory = 1000
     }
+}
+
+/// Network analytics configuration
+public struct NetworkAnalyticsConfig: Codable {
+    /// Enable network analytics collection
+    public var enabled: Bool
+    
+    /// Enable real-time analytics processing
+    public var realTimeProcessing: Bool
+    
+    /// Analytics data retention period in days
+    public var dataRetentionDays: Int
+    
+    /// Time series aggregation intervals in seconds
+    public var aggregationIntervals: [TimeInterval]
+    
+    /// Maximum analytics events to store in memory
+    public var maxEventsInMemory: Int
+    
+    /// Enable bandwidth analytics
+    public var bandwidthAnalytics: Bool
+    
+    /// Enable connection analytics
+    public var connectionAnalytics: Bool
+    
+    /// Enable DNS analytics
+    public var dnsAnalytics: Bool
+    
+    /// Enable application-level analytics
+    public var applicationAnalytics: Bool
+    
+    /// Storage backend for time series data
+    public var storageBackend: AnalyticsStorageBackend
+    
+    /// Export configuration for analytics data
+    public var export: AnalyticsExportConfig
+    
+    public init() {
+        self.enabled = false
+        self.realTimeProcessing = true
+        self.dataRetentionDays = 30
+        self.aggregationIntervals = [60.0, 300.0, 3600.0, 86400.0] // 1min, 5min, 1hour, 1day
+        self.maxEventsInMemory = 5000
+        self.bandwidthAnalytics = true
+        self.connectionAnalytics = true
+        self.dnsAnalytics = true
+        self.applicationAnalytics = true
+        self.storageBackend = .inMemory
+        self.export = AnalyticsExportConfig()
+    }
+}
+
+/// Analytics storage backend options
+public enum AnalyticsStorageBackend: String, Codable, CaseIterable {
+    case inMemory = "in_memory"
+    case fileSystem = "file_system"
+    case hybrid = "hybrid"
+}
+
+/// Analytics export configuration
+public struct AnalyticsExportConfig: Codable {
+    /// Enable automatic export
+    public var enabled: Bool
+    
+    /// Export format
+    public var format: AnalyticsExportFormat
+    
+    /// Export interval in seconds
+    public var intervalSeconds: TimeInterval
+    
+    /// Export directory path
+    public var exportPath: String
+    
+    /// Maximum export file size in MB
+    public var maxFileSizeMB: Int
+    
+    public init() {
+        self.enabled = false
+        self.format = .json
+        self.intervalSeconds = 3600.0 // 1 hour
+        self.exportPath = "~/.privarion/analytics"
+        self.maxFileSizeMB = 50
+    }
+}
+
+/// Analytics export format
+public enum AnalyticsExportFormat: String, Codable, CaseIterable {
+    case json = "json"
+    case csv = "csv"
+    case jsonl = "jsonl"
 }
 
 /// Sandbox manager configuration

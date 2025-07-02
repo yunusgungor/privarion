@@ -137,7 +137,8 @@ struct PrivacyCtl: ParsableCommand {
             HookCommand.self,
             IdentityCommand.self,
             MacAddressCommand.self,
-            NetworkCommands.self
+            NetworkCommands.self,
+            AnalyticsCommands.self
         ]
     )
 }

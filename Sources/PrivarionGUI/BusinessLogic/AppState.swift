@@ -537,6 +537,9 @@ final class AppState: ObservableObject {
                 await loadRecentActivity()
             case .macAddress:
                 await macAddressState.loadInterfaces()
+            case .analytics:
+                // Analytics view manages its own refresh
+                break
             case .settings:
                 // Settings don't need refreshing typically
                 break
@@ -586,6 +589,7 @@ enum AppView: String, CaseIterable {
     case modules = "Modules"
     case profiles = "Profiles"
     case macAddress = "MAC Address"
+    case analytics = "Analytics"
     case settings = "Settings"
     case logs = "Logs"
 }
