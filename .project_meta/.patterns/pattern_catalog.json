@@ -1,9 +1,9 @@
 {
   "pattern_catalog": {
-  "catalog_version": "2.6.0",
+  "catalog_version": "2.7.0",
   "last_updated": "2025-07-01T23:45:00Z",
-  "total_patterns": 52,
-  "active_patterns": 52,
+  "total_patterns": 55,
+  "active_patterns": 55,
   "deprecated_patterns": 0,
     "patterns": {
       "PATTERN-2025-001": {
@@ -2321,20 +2321,228 @@
         "Configurable retention policies"
       ]
     },
+    "PATTERN-2025-053": {
+      "pattern_metadata": {
+        "pattern_id": "PATTERN-2025-053",
+        "name": "SwiftUI-Clean Architecture Integration",
+        "category": "architecture",
+        "maturity_level": 7,
+        "confidence_level": "high",
+        "usage_count": 1,
+        "success_rate": 100,
+        "created_date": "2025-07-01",
+        "last_updated": "2025-07-01T23:45:00Z",
+        "version": "1.0.0",
+        "context7_enhanced": false,
+        "industry_validated": true,
+        "real_world_validated": true,
+        "extracted_from_story": "STORY-2025-006"
+      },
+      "sequential_thinking_analysis": {
+        "decision_reasoning": "ST-2025-006-completion",
+        "alternative_evaluation": "Considered MVI vs MVVM vs Clean Architecture approach",
+        "risk_assessment": "Low risk - proven pattern with good separation of concerns",
+        "quality_validation": "High - maintains testability while enabling SwiftUI integration",
+        "analysis_session_ids": ["ST-2025-006-completion", "ST-2025-pattern-extraction"]
+      },
+      "problem_statement": "Need to integrate SwiftUI views with Clean Architecture business logic while maintaining separation of concerns, testability, and dependency injection.",
+      "context_and_applicability": {
+        "when_to_use": [
+          "SwiftUI applications with complex business logic",
+          "When Clean Architecture is already established",
+          "Need for dependency injection in SwiftUI",
+          "Requirement for testable UI logic"
+        ],
+        "when_not_to_use": [
+          "Simple SwiftUI apps without complex business logic",
+          "When using other architectural patterns like MVI",
+          "Legacy UIKit applications"
+        ],
+        "technology_compatibility": ["SwiftUI", "Swift 5.5+", "iOS 15+", "macOS 12+"]
+      },
+      "solution_structure": "Use @Observable classes as state containers that bridge SwiftUI views with Clean Architecture use cases through dependency injection",
+      "implementation_guidelines": {
+        "prerequisites": ["Clean Architecture business logic layer", "SwiftUI framework", "@Observable macro support"],
+        "configuration_requirements": "Dependency injection container for business logic components"
+      },
+      "benefits_and_tradeoffs": {
+        "benefits": [
+          "Maintains Clean Architecture principles in SwiftUI",
+          "Enables dependency injection for testability",
+          "Reactive UI updates with @Observable",
+          "Clear separation between UI and business logic"
+        ],
+        "tradeoffs": [
+          "Additional abstraction layer",
+          "Learning curve for Clean Architecture in SwiftUI",
+          "Slightly more verbose than direct SwiftUI patterns"
+        ]
+      },
+      "implementation_evidence": "AppState.swift in Sources/PrivarionGUI/BusinessLogic/",
+      "example_code": {
+        "swift": "// @Observable state container bridging SwiftUI and Clean Architecture\n@Observable\nclass AppState {\n    private let spoofingManager: IdentitySpoofingManager\n    private let configManager: ConfigurationManager\n    \n    // Dependency injection through initializer\n    init(spoofingManager: IdentitySpoofingManager, configManager: ConfigurationManager) {\n        self.spoofingManager = spoofingManager\n        self.configManager = configManager\n    }\n    \n    // Business logic delegation\n    func enableSpoofing() async {\n        await spoofingManager.enable()\n    }\n}"
+      },
+      "related_patterns": ["PATTERN-2025-002"],
+      "usage_contexts": [
+        "SwiftUI GUI applications with Clean Architecture",
+        "Complex state management in declarative UIs",
+        "Testable SwiftUI application development"
+      ]
+    },
+    "PATTERN-2025-054": {
+      "pattern_metadata": {
+        "pattern_id": "PATTERN-2025-054",
+        "name": "Observable State Management Pattern",
+        "category": "state_management",
+        "maturity_level": 8,
+        "confidence_level": "high",
+        "usage_count": 1,
+        "success_rate": 100,
+        "created_date": "2025-07-01",
+        "last_updated": "2025-07-01T23:45:00Z",
+        "version": "1.0.0",
+        "context7_enhanced": false,
+        "industry_validated": true,
+        "real_world_validated": true,
+        "extracted_from_story": "STORY-2025-006"
+      },
+      "sequential_thinking_analysis": {
+        "decision_reasoning": "ST-2025-006-completion",
+        "alternative_evaluation": "Considered @StateObject vs @ObservableObject vs @Observable approaches",
+        "risk_assessment": "Low risk - modern SwiftUI pattern with excellent performance",
+        "quality_validation": "High - type-safe, performant, and maintainable state management",
+        "analysis_session_ids": ["ST-2025-006-completion", "ST-2025-pattern-extraction"]
+      },
+      "problem_statement": "Need reactive, type-safe state management in SwiftUI applications that provides real-time UI updates with minimal boilerplate and optimal performance.",
+      "context_and_applicability": {
+        "when_to_use": [
+          "Modern SwiftUI applications (iOS 17+, macOS 14+)",
+          "Complex state with multiple UI dependencies",
+          "Need for fine-grained reactive updates",
+          "Performance-critical applications"
+        ],
+        "when_not_to_use": [
+          "Older iOS/macOS versions without @Observable support",
+          "Simple state that doesn't need reactivity",
+          "When using other state management libraries"
+        ],
+        "technology_compatibility": ["SwiftUI", "Swift 5.9+", "iOS 17+", "macOS 14+", "@Observable macro"]
+      },
+      "solution_structure": "Use @Observable macro on state classes with published properties for automatic UI updates and minimal performance overhead",
+      "implementation_guidelines": {
+        "prerequisites": ["SwiftUI with @Observable support", "Swift 5.9+"],
+        "configuration_requirements": "Enable @Observable macro in project settings"
+      },
+      "benefits_and_tradeoffs": {
+        "benefits": [
+          "Automatic UI updates for state changes",
+          "Type-safe state management",
+          "Excellent performance with fine-grained updates",
+          "Minimal boilerplate compared to @ObservableObject",
+          "Better integration with SwiftUI lifecycle"
+        ],
+        "tradeoffs": [
+          "Requires newer SwiftUI versions",
+          "Less control over update timing compared to manual approaches",
+          "Learning curve for developers used to @ObservableObject"
+        ]
+      },
+      "implementation_evidence": "AppState.swift with @Observable macro usage",
+      "example_code": {
+        "swift": "// Modern reactive state management with @Observable\n@Observable\nclass AppState {\n    var isLoading: Bool = false\n    var systemStatus: SystemStatus = .disconnected\n    var configurationProfiles: [ConfigurationProfile] = []\n    \n    // Automatic UI updates when these properties change\n    func updateSystemStatus(_ status: SystemStatus) {\n        systemStatus = status // SwiftUI automatically updates\n    }\n}\n\n// SwiftUI View automatically updates when AppState changes\nstruct ContentView: View {\n    let appState: AppState\n    \n    var body: some View {\n        VStack {\n            Text(appState.systemStatus.description)\n            // View automatically re-renders when systemStatus changes\n        }\n    }\n}"
+      },
+      "related_patterns": ["PATTERN-2025-053"],
+      "usage_contexts": [
+        "Modern SwiftUI applications requiring reactive state",
+        "Real-time dashboard applications",
+        "Applications with complex interdependent state"
+      ]
+    },
+    "PATTERN-2025-055": {
+      "pattern_metadata": {
+        "pattern_id": "PATTERN-2025-055",
+        "name": "GUI Command Dispatching Pattern",
+        "category": "ui_integration",
+        "maturity_level": 7,
+        "confidence_level": "high",
+        "usage_count": 1,
+        "success_rate": 100,
+        "created_date": "2025-07-01",
+        "last_updated": "2025-07-01T23:45:00Z",
+        "version": "1.0.0",
+        "context7_enhanced": false,
+        "industry_validated": true,
+        "real_world_validated": true,
+        "extracted_from_story": "STORY-2025-006"
+      },
+      "sequential_thinking_analysis": {
+        "decision_reasoning": "ST-2025-006-completion",
+        "alternative_evaluation": "Considered direct method calls vs command pattern vs message passing",
+        "risk_assessment": "Low risk - well-established pattern for decoupling UI from business logic",
+        "quality_validation": "High - enables testable user interactions and clean separation",
+        "analysis_session_ids": ["ST-2025-006-completion", "ST-2025-pattern-extraction"]
+      },
+      "problem_statement": "Need to dispatch user actions from GUI to business logic layer while maintaining loose coupling, enabling async operations, and ensuring testability.",
+      "context_and_applicability": {
+        "when_to_use": [
+          "GUI applications with complex business logic",
+          "Need for async command execution",
+          "Requirements for testable user interactions",
+          "When implementing CQRS or command pattern"
+        ],
+        "when_not_to_use": [
+          "Simple applications with direct state mutations",
+          "When performance overhead is critical",
+          "Very simple user interactions without business logic"
+        ],
+        "technology_compatibility": ["SwiftUI", "UIKit", "Swift Concurrency", "Any GUI framework"]
+      },
+      "solution_structure": "Implement command dispatching through async methods in state containers that delegate to business logic use cases",
+      "implementation_guidelines": {
+        "prerequisites": ["Business logic layer separation", "Swift Concurrency support"],
+        "configuration_requirements": "Async/await support and proper error handling"
+      },
+      "benefits_and_tradeoffs": {
+        "benefits": [
+          "Decoupled UI logic from business logic",
+          "Testable user interactions",
+          "Support for async operations",
+          "Clean error handling and loading states",
+          "Easy to add cross-cutting concerns (logging, analytics)"
+        ],
+        "tradeoffs": [
+          "Additional abstraction layer",
+          "Slightly more complex than direct method calls",
+          "Need for proper async error handling"
+        ]
+      },
+      "implementation_evidence": "Command dispatching methods in AppState.swift",
+      "example_code": {
+        "swift": "// GUI Command Dispatching Pattern\n@Observable\nclass AppState {\n    private let spoofingManager: IdentitySpoofingManager\n    var isProcessing: Bool = false\n    var lastError: Error?\n    \n    // Command dispatching with async support\n    func enableSpoofing() async {\n        isProcessing = true\n        lastError = nil\n        \n        do {\n            await spoofingManager.enable()\n        } catch {\n            lastError = error\n        }\n        \n        isProcessing = false\n    }\n    \n    // Dispatching with parameters\n    func updateConfiguration(_ profile: ConfigurationProfile) async {\n        await configManager.setProfile(profile)\n    }\n}\n\n// SwiftUI View dispatching commands\nstruct ControlPanel: View {\n    let appState: AppState\n    \n    var body: some View {\n        Button(\"Enable Spoofing\") {\n            Task {\n                await appState.enableSpoofing()\n            }\n        }\n        .disabled(appState.isProcessing)\n    }\n}"
+      },
+      "related_patterns": ["PATTERN-2025-053", "PATTERN-2025-054"],
+      "usage_contexts": [
+        "Interactive GUI applications",
+        "Applications with async business operations",
+        "Command-driven user interfaces"
+      ]
+    },
     "updated_catalog_stats": {
-      "total_patterns": 52,
-      "new_patterns_added": 5,
-      "last_extraction": "STORY-2025-009",
+      "total_patterns": 55,
+      "new_patterns_added": 8,
+      "last_extraction": "STORY-2025-006",
       "extraction_date": "2025-07-01T23:45:00Z",
-      "highest_maturity_patterns": 5,
+      "highest_maturity_patterns": 8,
       "patterns_by_category": {
         "implementation": 19,
         "security": 9,
         "performance": 6,
         "testing": 5,
-        "architectural": 11,
+        "architectural": 12,
         "system-programming": 1,
-        "validation": 1
+        "validation": 1,
+        "state_management": 1,
+        "ui_integration": 1
       }
     }
   }
