@@ -16,6 +16,15 @@ internal class DNSProxyServer {
     private let upstreamServers: [String]
     private let queryTimeout: Double
     
+    // Application network rule engine
+    private let ruleEngine: ApplicationNetworkRuleEngine
+    
+    // Advanced blocklist manager
+    private let blocklistManager: BlocklistManager
+    
+    // Real-time traffic monitoring service
+    private let trafficMonitor: TrafficMonitoringService
+    
     weak var delegate: DNSProxyServerDelegate?
     
     internal init(port: Int, upstreamServers: [String], queryTimeout: Double) {
@@ -24,6 +33,9 @@ internal class DNSProxyServer {
         self.dnsPort = NWEndpoint.Port(integerLiteral: UInt16(port))
         self.upstreamServers = upstreamServers
         self.queryTimeout = queryTimeout
+        self.ruleEngine = ApplicationNetworkRuleEngine()
+        self.blocklistManager = BlocklistManager()
+        self.trafficMonitor = TrafficMonitoringService()
     }
     
     /// Start the DNS proxy server
@@ -49,12 +61,18 @@ internal class DNSProxyServer {
         listener?.start(queue: queue)
         isRunning = true
         
+        // Start traffic monitoring
+        trafficMonitor.startMonitoring()
+        
         logger.info("DNS proxy server started on port \(dnsPort)")
     }
     
     /// Stop the DNS proxy server
     internal func stop() {
         guard isRunning else { return }
+        
+        // Stop traffic monitoring
+        trafficMonitor.stopMonitoring()
         
         listener?.cancel()
         listener = nil
@@ -66,6 +84,21 @@ internal class DNSProxyServer {
     /// Check if the server is currently running
     internal var running: Bool {
         return isRunning
+    }
+    
+    /// Get access to the application network rule engine
+    internal var applicationRuleEngine: ApplicationNetworkRuleEngine {
+        return ruleEngine
+    }
+    
+    /// Get access to the blocklist manager
+    internal var blocklist: BlocklistManager {
+        return blocklistManager
+    }
+    
+    /// Get access to the traffic monitoring service
+    internal var monitoring: TrafficMonitoringService {
+        return trafficMonitor
     }
     
     // MARK: - Private Methods
@@ -114,20 +147,62 @@ internal class DNSProxyServer {
         
         logger.debug("DNS query for: \(dnsQuery.domain)")
         
-        // Check if domain should be blocked via delegate
-        let shouldBlock = delegate?.dnsProxy(self, shouldBlockDomain: dnsQuery.domain, for: nil as String?) ?? false
+        var blockingReason: BlockingReason?
+        var blocked = false
         
-        if shouldBlock {
-            logger.info("Blocking DNS query for: \(dnsQuery.domain)")
+        // Check per-application rules first
+        let shouldBlockByAppRule = ruleEngine.shouldBlockQuery(domain: dnsQuery.domain, from: connection)
+        
+        if shouldBlockByAppRule {
+            blocked = true
+            blockingReason = .applicationRule
+            logger.info("Blocking DNS query for: \(dnsQuery.domain) due to application rule")
             sendBlockedResponse(dnsQuery, connection: connection)
-            
-            let latency = Date().timeIntervalSince(startTime)
-            delegate?.dnsProxy(self, didProcessQuery: dnsQuery.domain, blocked: true, latency: latency)
-            return
         }
         
-        // Forward to upstream DNS server
-        forwardDNSQuery(data, originalConnection: connection, domain: dnsQuery.domain, startTime: startTime)
+        // Check advanced blocklist (domains, categories, IPs) if not already blocked
+        if !blocked {
+            let shouldBlockByBlocklist = blocklistManager.shouldBlockDomain(dnsQuery.domain)
+            
+            if shouldBlockByBlocklist {
+                blocked = true
+                blockingReason = .domainBlocklist // This could be more specific based on blocklist type
+                logger.info("Blocking DNS query for: \(dnsQuery.domain) due to blocklist rule")
+                sendBlockedResponse(dnsQuery, connection: connection)
+            }
+        }
+        
+        // Check general domain blocking via delegate (legacy support) if not already blocked
+        if !blocked {
+            let shouldBlockByDelegate = delegate?.dnsProxy(self, shouldBlockDomain: dnsQuery.domain, for: nil as String?) ?? false
+            
+            if shouldBlockByDelegate {
+                blocked = true
+                blockingReason = .customRule
+                logger.info("Blocking DNS query for: \(dnsQuery.domain) due to delegate rule")
+                sendBlockedResponse(dnsQuery, connection: connection)
+            }
+        }
+        
+        // Calculate latency and record traffic event
+        let latency = Date().timeIntervalSince(startTime)
+        
+        // Record traffic monitoring event
+        trafficMonitor.recordDNSQuery(
+            domain: dnsQuery.domain,
+            blocked: blocked,
+            source: nil, // TODO: Extract source from connection
+            latency: latency,
+            reason: blockingReason
+        )
+        
+        // Notify delegate
+        delegate?.dnsProxy(self, didProcessQuery: dnsQuery.domain, blocked: blocked, latency: latency)
+        
+        // Forward to upstream DNS server if not blocked
+        if !blocked {
+            forwardDNSQuery(data, originalConnection: connection, domain: dnsQuery.domain, startTime: startTime)
+        }
     }
     
     private func parseDNSQuery(_ data: Data) -> DNSQuery? {

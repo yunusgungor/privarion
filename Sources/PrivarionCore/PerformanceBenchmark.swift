@@ -94,7 +94,7 @@ public class PerformanceMonitor {
         let totalTime = info.user_time.seconds + info.user_time.microseconds / 1_000_000 +
                        info.system_time.seconds + info.system_time.microseconds / 1_000_000
         
-        return Double(totalTime) * 100.0 / Double(ProcessInfo.processInfo.systemUptime)
+        return Double(totalTime) * 100.0 / Double(Foundation.ProcessInfo.processInfo.systemUptime)
     }
     
     public func getCurrentMemoryUsage() -> Double {

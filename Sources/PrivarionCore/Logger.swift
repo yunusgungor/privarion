@@ -18,9 +18,9 @@ public class PrivarionLogger {
     
     /// Check if running in test environment
     private static var isTestEnvironment: Bool {
-        return ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil ||
-               ProcessInfo.processInfo.environment["XCTestBundlePath"] != nil ||
-               ProcessInfo.processInfo.arguments.contains { $0.contains("xctest") }
+        return Foundation.ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil ||
+               Foundation.ProcessInfo.processInfo.environment["XCTestBundlePath"] != nil ||
+               Foundation.ProcessInfo.processInfo.arguments.contains { $0.contains("xctest") }
     }
     
     /// Initialization

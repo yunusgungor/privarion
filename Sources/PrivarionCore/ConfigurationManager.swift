@@ -21,9 +21,9 @@ public class ConfigurationManager {
     
     /// Check if running in test environment
     private static var isTestEnvironment: Bool {
-        return ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil ||
-               ProcessInfo.processInfo.environment["XCTestBundlePath"] != nil ||
-               ProcessInfo.processInfo.arguments.contains { $0.contains("xctest") }
+        return Foundation.ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil ||
+               Foundation.ProcessInfo.processInfo.environment["XCTestBundlePath"] != nil ||
+               Foundation.ProcessInfo.processInfo.arguments.contains { $0.contains("xctest") }
     }
     
     /// Internal initialization with custom path (for testing)
@@ -42,7 +42,7 @@ public class ConfigurationManager {
         } else {
             // Setup configuration directory using current HOME
             let homeDirectory: URL
-            if let homeEnv = ProcessInfo.processInfo.environment["HOME"] {
+            if let homeEnv = Foundation.ProcessInfo.processInfo.environment["HOME"] {
                 homeDirectory = URL(fileURLWithPath: homeEnv)
             } else {
                 homeDirectory = FileManager.default.homeDirectoryForCurrentUser

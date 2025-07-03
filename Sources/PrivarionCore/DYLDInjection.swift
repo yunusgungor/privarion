@@ -183,7 +183,7 @@ public class DYLDInjectionManager {
         task.arguments = arguments
         
         // Merge with current environment
-        var processEnvironment = ProcessInfo.processInfo.environment
+        var processEnvironment = Foundation.ProcessInfo.processInfo.environment
         for (key, value) in environment {
             processEnvironment[key] = value
         }

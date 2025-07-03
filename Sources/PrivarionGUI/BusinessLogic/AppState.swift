@@ -35,7 +35,33 @@ final class AppState: ObservableObject {
     // MARK: - MAC Address Management
     
     /// MAC Address spoofing state management
-    @Published var macAddressState: MacAddressState
+    @Published var macAddressState = MacAddressState()
+    
+    // MARK: - Network Filtering State
+    
+    /// State management for network filtering functionality
+    class NetworkFilteringState: ObservableObject {
+        @Published var isActive: Bool = false
+        @Published var totalQueries: Int = 0
+        @Published var blockedQueries: Int = 0
+        @Published var allowedQueries: Int = 0
+        @Published var blockedDomains: [String] = []
+        @Published var applicationRules: [String: PrivarionCore.ApplicationNetworkRule] = [:]
+        @Published var lastUpdated: Date = Date()
+        
+        private let networkManager = NetworkFilteringManager.shared
+        
+        func refresh() {
+            let stats = networkManager.getFilteringStatistics()
+            isActive = stats.isActive
+            totalQueries = stats.totalQueries
+            blockedQueries = stats.blockedQueries
+            allowedQueries = stats.allowedQueries
+            blockedDomains = networkManager.getBlockedDomains()
+            applicationRules = networkManager.getAllApplicationRules()
+            lastUpdated = Date()
+        }
+    }
     
     // MARK: - Private Properties
     
@@ -77,6 +103,10 @@ final class AppState: ObservableObject {
     
     @Published var navigationManager: NavigationManager
     
+    // MARK: - Network Filtering Management
+    
+    let networkFilteringState: NetworkFilteringState
+    
     // MARK: - Initialization
     
     init(
@@ -92,12 +122,12 @@ final class AppState: ObservableObject {
         self.searchManager = SearchManager()
         self.keyboardShortcutManager = KeyboardShortcutManager()
         
-        // Initialize MAC Address State
-        self.macAddressState = MacAddressState()
-        
         // Initialize CommandManager and NavigationManager
         self.commandManager = CommandManager()
         self.navigationManager = NavigationManager()
+        
+        // Initialize NetworkFilteringState
+        self.networkFilteringState = NetworkFilteringState()
         
         setupSubscriptions()
         setupSearchManager()
@@ -537,6 +567,8 @@ final class AppState: ObservableObject {
                 await loadRecentActivity()
             case .macAddress:
                 await macAddressState.loadInterfaces()
+            case .networkFiltering:
+                networkFilteringState.refresh()
             case .analytics:
                 // Analytics view manages its own refresh
                 break
@@ -589,6 +621,7 @@ enum AppView: String, CaseIterable {
     case modules = "Modules"
     case profiles = "Profiles"
     case macAddress = "MAC Address"
+    case networkFiltering = "Network Filtering"
     case analytics = "Analytics"
     case settings = "Settings"
     case logs = "Logs"

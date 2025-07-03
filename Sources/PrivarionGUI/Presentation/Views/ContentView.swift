@@ -155,6 +155,18 @@ struct SidebarView: View {
                     }
                 }
                 
+                NavigationLink(value: AppView.networkFiltering) {
+                    HStack {
+                        Label("Network Filtering", systemImage: "shield.lefthalf.filled.slash")
+                        Spacer()
+                        // Show status indicator
+                        Circle()
+                            .fill(appState.networkFilteringState.isActive ? Color.green : Color.gray)
+                            .frame(width: 8, height: 8)
+                            .opacity(0.8)
+                    }
+                }
+                
                 NavigationLink(value: AppView.analytics) {
                     HStack {
                         Label("Network Analytics", systemImage: "chart.bar.xaxis")
@@ -204,6 +216,9 @@ struct DetailView: View {
         case .macAddress:
             MacAddressView()
                 .frame(minWidth: 600, minHeight: 400)
+        case .networkFiltering:
+            NetworkFilteringView()
+                .frame(minWidth: 800, minHeight: 600)
         case .analytics:
             AnalyticsView()
                 .frame(minWidth: 800, minHeight: 600)

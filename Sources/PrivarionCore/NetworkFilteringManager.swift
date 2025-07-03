@@ -2,6 +2,29 @@ import Foundation
 import Network
 import Logging
 
+// MARK: - Supporting Types
+
+/// Filtering statistics for CLI and GUI display
+public struct FilteringStatistics {
+    public let isActive: Bool
+    public let uptime: TimeInterval
+    public let totalQueries: Int
+    public let blockedQueries: Int
+    public let allowedQueries: Int
+    public let averageLatency: TimeInterval
+    public let cacheHitRate: Double
+    
+    public init(isActive: Bool, uptime: TimeInterval, totalQueries: Int, blockedQueries: Int, allowedQueries: Int, averageLatency: TimeInterval, cacheHitRate: Double) {
+        self.isActive = isActive
+        self.uptime = uptime
+        self.totalQueries = totalQueries
+        self.blockedQueries = blockedQueries
+        self.allowedQueries = allowedQueries
+        self.averageLatency = averageLatency
+        self.cacheHitRate = cacheHitRate
+    }
+}
+
 /// Network filtering manager for DNS-level domain blocking and traffic monitoring
 public class NetworkFilteringManager {
     
@@ -22,8 +45,20 @@ public class NetworkFilteringManager {
     /// Network monitoring engine
     private var networkMonitor: NetworkMonitoringEngine?
     
+    /// Blocklist manager
+    private var blocklistManager: BlocklistManager?
+    
+    /// Traffic monitoring service
+    private var trafficMonitor: TrafficMonitoringService?
+    
+    /// Application network rule engine
+    private var ruleEngine: ApplicationNetworkRuleEngine?
+    
     /// Current filtering status
     private var isActive: Bool = false
+    
+    /// Start time for uptime calculation
+    private var startTime: Date?
     
     /// DNS query cache
     private var dnsCache: [String: DNSCacheEntry] = [:]
@@ -39,6 +74,14 @@ public class NetworkFilteringManager {
     private init() {
         self.configManager = ConfigurationManager.shared
         setupLogging()
+        initializeServices()
+    }
+    
+    /// Initialize all filtering services
+    private func initializeServices() {
+        self.blocklistManager = BlocklistManager()
+        self.trafficMonitor = TrafficMonitoringService()
+        self.ruleEngine = ApplicationNetworkRuleEngine()
     }
     
     // MARK: - Public Interface
@@ -91,53 +134,45 @@ public class NetworkFilteringManager {
     
     // MARK: - Domain Management
     
+    /// Get blocked domains (use configuration for now)
+    public func getBlockedDomains() -> [String] {
+        return configManager.getCurrentConfiguration().modules.networkFilter.blockedDomains
+    }
+    
     /// Add domain to blocklist
     public func addBlockedDomain(_ domain: String) throws {
         logger.info("Adding domain to blocklist: \\(domain)")
         
-        let normalizedDomain = normalizeDomain(domain)
-        guard isValidDomain(normalizedDomain) else {
-            throw NetworkFilteringError.invalidDomain(domain)
-        }
+        blocklistManager?.addBlockedDomain(domain)
         
+        // Also update configuration for backward compatibility
+        let normalizedDomain = normalizeDomain(domain)
         var config = configManager.getCurrentConfiguration()
         
         if !config.modules.networkFilter.blockedDomains.contains(normalizedDomain) {
             config.modules.networkFilter.blockedDomains.append(normalizedDomain)
             try configManager.updateConfiguration(config)
-            
-            // Clear cache for this domain
-            clearDNSCache(for: normalizedDomain)
-            
-            logger.info("Domain added to blocklist: \\(normalizedDomain)")
-        } else {
-            logger.warning("Domain already in blocklist: \\(normalizedDomain)")
         }
+        
+        logger.info("Domain added to blocklist: \\(normalizedDomain)")
     }
     
     /// Remove domain from blocklist
     public func removeBlockedDomain(_ domain: String) throws {
         logger.info("Removing domain from blocklist: \\(domain)")
         
+        blocklistManager?.removeBlockedDomain(domain)
+        
+        // Also update configuration for backward compatibility
         let normalizedDomain = normalizeDomain(domain)
         var config = configManager.getCurrentConfiguration()
         
         if let index = config.modules.networkFilter.blockedDomains.firstIndex(of: normalizedDomain) {
             config.modules.networkFilter.blockedDomains.remove(at: index)
             try configManager.updateConfiguration(config)
-            
-            // Clear cache for this domain
-            clearDNSCache(for: normalizedDomain)
-            
-            logger.info("Domain removed from blocklist: \\(normalizedDomain)")
-        } else {
-            logger.warning("Domain not found in blocklist: \\(normalizedDomain)")
         }
-    }
-    
-    /// Get list of blocked domains
-    public func getBlockedDomains() -> [String] {
-        return configManager.getCurrentConfiguration().modules.networkFilter.blockedDomains
+        
+        logger.info("Domain removed from blocklist: \\(normalizedDomain)")
     }
     
     /// Check if a domain is blocked
@@ -199,21 +234,18 @@ public class NetworkFilteringManager {
     // MARK: - Statistics and Monitoring
     
     /// Get network filtering statistics
-    public func getFilteringStatistics() -> NetworkFilteringStatistics {
-        let stats = NetworkFilteringStatistics()
-        
-        if let monitor = networkMonitor {
-            stats.totalQueries = monitor.totalQueries
-            stats.blockedQueries = monitor.blockedQueries
-            stats.allowedQueries = monitor.allowedQueries
-            stats.averageLatency = monitor.averageLatency
-        }
-        
-        stats.cacheHitRate = calculateCacheHitRate()
-        stats.isActive = isActive
-        stats.uptime = isActive ? networkMonitor?.uptime ?? 0 : 0
-        
-        return stats
+    public func getFilteringStatistics() -> FilteringStatistics {
+        let stats = trafficMonitor?.getCurrentStatistics()
+        let uptime = startTime.map { Date().timeIntervalSince($0) } ?? 0
+        return FilteringStatistics(
+            isActive: isActive,
+            uptime: uptime,
+            totalQueries: stats?.totalQueries ?? 0,
+            blockedQueries: stats?.blockedQueries ?? 0,
+            allowedQueries: stats?.allowedQueries ?? 0,
+            averageLatency: stats?.averageLatency ?? 0,
+            cacheHitRate: 0.0 // Calculate from cache statistics if available
+        )
     }
     
     // MARK: - Private Methods
@@ -332,51 +364,6 @@ extension NetworkFilteringManager: DNSProxyServerDelegate {
     }
 }
 
-// MARK: - Supporting Types
-
-/// Network filtering statistics
-public class NetworkFilteringStatistics {
-    public var totalQueries: Int = 0
-    public var blockedQueries: Int = 0
-    public var allowedQueries: Int = 0
-    public var averageLatency: TimeInterval = 0.0
-    public var cacheHitRate: Double = 0.0
-    public var isActive: Bool = false
-    public var uptime: TimeInterval = 0.0
-}
-
-/// DNS cache entry
-private struct DNSCacheEntry {
-    let response: Data
-    let timestamp: Date
-    let ttl: TimeInterval
-    
-    var isExpired: Bool {
-        return Date().timeIntervalSince(timestamp) > ttl
-    }
-}
-
-/// Network filtering errors
-public enum NetworkFilteringError: Error, LocalizedError {
-    case filteringDisabled
-    case invalidDomain(String)
-    case proxyStartFailed(String)
-    case configurationError(String)
-    
-    public var errorDescription: String? {
-        switch self {
-        case .filteringDisabled:
-            return "Network filtering is disabled in configuration"
-        case .invalidDomain(let domain):
-            return "Invalid domain format: \(domain)"
-        case .proxyStartFailed(let reason):
-            return "Failed to start DNS proxy: \(reason)"
-        case .configurationError(let reason):
-            return "Configuration error: \(reason)"
-        }
-    }
-}
-
 // MARK: - Extensions
 
 extension LogLevel {
@@ -421,6 +408,49 @@ internal class NetworkMonitoringEngine {
             blockedQueries += 1
         } else {
             allowedQueries += 1
+        }
+    }
+}
+
+/// Network filtering statistics
+public class NetworkFilteringStatistics {
+    public var totalQueries: Int = 0
+    public var blockedQueries: Int = 0
+    public var allowedQueries: Int = 0
+    public var averageLatency: TimeInterval = 0.0
+    public var cacheHitRate: Double = 0.0
+    public var isActive: Bool = false
+    public var uptime: TimeInterval = 0.0
+}
+
+/// DNS cache entry
+private struct DNSCacheEntry {
+    let response: Data
+    let timestamp: Date
+    let ttl: TimeInterval
+    
+    var isExpired: Bool {
+        return Date().timeIntervalSince(timestamp) > ttl
+    }
+}
+
+/// Network filtering errors
+public enum NetworkFilteringError: Error, LocalizedError {
+    case filteringDisabled
+    case invalidDomain(String)
+    case proxyStartFailed(String)
+    case configurationError(String)
+    
+    public var errorDescription: String? {
+        switch self {
+        case .filteringDisabled:
+            return "Network filtering is disabled in configuration"
+        case .invalidDomain(let domain):
+            return "Invalid domain format: \(domain)"
+        case .proxyStartFailed(let reason):
+            return "Failed to start DNS proxy: \(reason)"
+        case .configurationError(let reason):
+            return "Configuration error: \(reason)"
         }
     }
 }

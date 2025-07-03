@@ -185,6 +185,41 @@ public struct ApplicationNetworkRule: Codable {
     }
 }
 
+// MARK: - GUI Compatibility Extensions
+extension ApplicationNetworkRule {
+    /// Get all target domains (combination of blocked and allowed)
+    public var targets: [String] {
+        return blockedDomains + allowedDomains
+    }
+    
+    /// Creation date for GUI display (using current date if not available)
+    public var createdAt: Date {
+        return Date() // Could be enhanced to store actual creation date
+    }
+    
+    /// Convenience initializer matching GUI requirements
+    public init(applicationId: String, ruleType: NetworkRuleType, enabled: Bool = true, targets: [String] = [], createdAt: Date = Date()) {
+        self.applicationId = applicationId
+        self.ruleType = ruleType
+        self.enabled = enabled
+        
+        // Distribute targets based on rule type
+        switch ruleType {
+        case .blocklist:
+            self.blockedDomains = targets
+            self.allowedDomains = []
+        case .allowlist:
+            self.blockedDomains = []
+            self.allowedDomains = targets
+        case .monitor:
+            self.blockedDomains = targets
+            self.allowedDomains = []
+        }
+        
+        self.priority = 1
+    }
+}
+
 /// Network rule type
 public enum NetworkRuleType: String, Codable, CaseIterable {
     case blocklist = "blocklist"

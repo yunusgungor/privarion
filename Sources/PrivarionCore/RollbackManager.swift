@@ -453,12 +453,12 @@ public class RollbackManager {
     }
     
     private func getCurrentProcessID() async throws -> String {
-        return String(ProcessInfo.processInfo.processIdentifier)
+        return String(Foundation.ProcessInfo.processInfo.processIdentifier)
     }
     
     private func getCurrentParentProcessID() async throws -> String {
-        let result = try await systemCommandExecutor.executeCommand("ps", arguments: ["-o", "ppid=", "-p", String(ProcessInfo.processInfo.processIdentifier)])
-        return result.standardOutput?.trimmingCharacters(in: .whitespacesAndNewlines) ?? "Unknown"
+        let result = try await systemCommandExecutor.executeCommand("ps", arguments: ["-o", "ppid=", "-p", String(Foundation.ProcessInfo.processInfo.processIdentifier)])
+        return result.standardOutput?.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines) ?? "Unknown"
     }
     
     private func getCurrentArchitecture() async throws -> String {

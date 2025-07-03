@@ -214,7 +214,7 @@ public class SystemCommandExecutor {
         }
         
         // If not found in standard paths, use PATH environment variable
-        if let pathEnv = ProcessInfo.processInfo.environment["PATH"] {
+        if let pathEnv = Foundation.ProcessInfo.processInfo.environment["PATH"] {
             let paths = pathEnv.components(separatedBy: ":")
             for pathDir in paths {
                 let fullPath = "\(pathDir)/\(command)"
