@@ -9,6 +9,8 @@ final class SyscallMonitoringEngineTests: XCTestCase {
     override func setUp() {
         super.setUp()
         monitoringEngine = SyscallMonitoringEngine.shared
+        // Clear all rules for clean test state
+        monitoringEngine.clearAllRules()
     }
     
     override func tearDown() {
@@ -17,6 +19,8 @@ final class SyscallMonitoringEngineTests: XCTestCase {
         } catch {
             // Ignore errors during tearDown
         }
+        // Clear all rules for test isolation
+        monitoringEngine.clearAllRules()
         monitoringEngine = nil
         super.tearDown()
     }
@@ -372,33 +376,41 @@ final class SyscallMonitoringEngineTests: XCTestCase {
     
     func testAddRule_Performance() {
         // Test that rule addition completes within reasonable time
-        measure {
-            for i in 0..<100 {
-                let condition = SyscallMonitoringEngine.RuleCondition(
-                    syscalls: ["open"],
-                    processFilters: nil,
-                    pathFilters: nil,
-                    networkFilters: nil,
-                    customCondition: nil
-                )
-                
-                let rule = SyscallMonitoringEngine.MonitoringRule(
-                    id: "test-rule-\(i)",
-                    name: "Test Rule \(i)",
-                    description: "Performance test rule",
-                    condition: condition,
-                    output: "Test output",
-                    priority: .info,
-                    enabled: true,
-                    exceptions: []
-                )
-                
-                do {
-                    try monitoringEngine.addRule(rule)
-                } catch {
-                    // Ignore errors in performance test
-                }
+        let startTime = Date()
+        
+        for i in 0..<100 {
+            let condition = SyscallMonitoringEngine.RuleCondition(
+                syscalls: ["open"],
+                processFilters: nil,
+                pathFilters: nil,
+                networkFilters: nil,
+                customCondition: nil
+            )
+            
+            let rule = SyscallMonitoringEngine.MonitoringRule(
+                id: "test-rule-\(i)",
+                name: "Test Rule \(i)",
+                description: "Performance test rule",
+                condition: condition,
+                output: "Test output",
+                priority: .info,
+                enabled: true,
+                exceptions: []
+            )
+            
+            do {
+                try monitoringEngine.addRule(rule)
+            } catch {
+                XCTFail("Rule addition failed during performance test: \(error)")
             }
         }
+        
+        let elapsedTime = Date().timeIntervalSince(startTime)
+        
+        // Assert that adding 100 rules takes less than 1 second (reasonable performance threshold)
+        XCTAssertLessThan(elapsedTime, 1.0, "Adding 100 rules should take less than 1 second, took \(elapsedTime) seconds")
+        
+        // Also verify that rules were actually added
+        XCTAssertEqual(monitoringEngine.getRules().count, 100, "Should have 100 rules after performance test")
     }
 }

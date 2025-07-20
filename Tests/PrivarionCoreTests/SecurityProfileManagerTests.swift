@@ -433,14 +433,13 @@ final class SecurityProfileManagerTests: XCTestCase {
             try profileManager.activateProfile(profileID: profile.id)
             
             // When
-            let stats = profileManager.getProfileStatistics(profileID: profile.id)
+            let stats = try profileManager.getProfileStatistics(profileID: profile.id)
             
             // Then
-            XCTAssertNotNil(stats)
-            XCTAssertGreaterThanOrEqual(stats?.totalEvaluations, 0)
-            XCTAssertGreaterThanOrEqual(stats?.allowedActions, 0)
-            XCTAssertGreaterThanOrEqual(stats?.deniedActions, 0)
-            XCTAssertGreaterThanOrEqual(stats?.averageEvaluationTime, 0)
+            XCTAssertGreaterThanOrEqual(stats.totalEvaluations, 0)
+            XCTAssertGreaterThanOrEqual(stats.allowedActions, 0)
+            XCTAssertGreaterThanOrEqual(stats.deniedActions, 0)
+            XCTAssertGreaterThanOrEqual(stats.averageEvaluationTime, 0)
         } catch {
             XCTFail("Getting profile statistics should not throw error: \(error)")
         }

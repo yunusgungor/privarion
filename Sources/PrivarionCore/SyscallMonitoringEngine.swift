@@ -353,7 +353,13 @@ public class SyscallMonitoringEngine {
         // Validate rule
         try validateRule(rule)
         
-        rulesQueue.async(flags: .barrier) {
+        // Check for duplicate ID and add rule atomically
+        try rulesQueue.sync {
+            if self.rules[rule.id] != nil {
+                throw MonitoringError.invalidRuleCondition("Rule with ID '\(rule.id)' already exists")
+            }
+            
+            // Add the rule
             self.rules[rule.id] = rule
         }
         
@@ -388,6 +394,15 @@ public class SyscallMonitoringEngine {
         return rulesQueue.sync {
             return Array(rules.values)
         }
+    }
+    
+    /// Clear all monitoring rules (useful for testing)
+    public func clearAllRules() {
+        rulesQueue.async(flags: .barrier) {
+            self.rules.removeAll()
+        }
+        
+        logger.info("Cleared all monitoring rules")
     }
     
     /// Get monitoring statistics
