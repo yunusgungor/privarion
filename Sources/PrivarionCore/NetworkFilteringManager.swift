@@ -381,37 +381,6 @@ extension LogLevel {
     }
 }
 
-/// Network Monitoring Engine placeholder
-internal class NetworkMonitoringEngine {
-    var totalQueries: Int = 0
-    var blockedQueries: Int = 0
-    var allowedQueries: Int = 0
-    var averageLatency: TimeInterval = 0.0
-    var uptime: TimeInterval = 0.0
-    
-    init(config: NetworkMonitoringConfig) {
-        // Placeholder implementation
-    }
-    
-    func start() {
-        // Placeholder implementation
-    }
-    
-    func stop() {
-        // Placeholder implementation
-    }
-    
-    func recordDNSQuery(domain: String, blocked: Bool, latency: TimeInterval) {
-        // Placeholder implementation
-        totalQueries += 1
-        if blocked {
-            blockedQueries += 1
-        } else {
-            allowedQueries += 1
-        }
-    }
-}
-
 /// Network filtering statistics
 public class NetworkFilteringStatistics {
     public var totalQueries: Int = 0

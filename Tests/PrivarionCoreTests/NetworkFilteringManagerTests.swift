@@ -163,6 +163,174 @@ final class NetworkFilteringManagerTests: XCTestCase {
                          "Statistics collection should complete within reasonable time")
     }
     
+    // MARK: - Domain Management Tests
+    
+    func testDomainBlocking() throws {
+        let testDomain = "test-blocked-domain.com"
+        
+        // Initially should not be blocked
+        XCTAssertFalse(manager.isDomainBlocked(testDomain), "Domain should not be blocked initially")
+        
+        // Add to blocklist
+        try manager.addBlockedDomain(testDomain)
+        
+        // Should now be blocked
+        XCTAssertTrue(manager.isDomainBlocked(testDomain), "Domain should be blocked after adding")
+        
+        // Should appear in blocked domains list
+        let blockedDomains = manager.getBlockedDomains()
+        XCTAssertTrue(blockedDomains.contains(testDomain.lowercased()), "Domain should appear in blocked list")
+        
+        // Remove from blocklist
+        try manager.removeBlockedDomain(testDomain)
+        
+        // Should no longer be blocked
+        XCTAssertFalse(manager.isDomainBlocked(testDomain), "Domain should not be blocked after removal")
+    }
+    
+    func testSubdomainBlocking() throws {
+        let baseDomain = "example.com"
+        let subdomain = "ads.example.com"
+        
+        // Add base domain to blocklist
+        try manager.addBlockedDomain(baseDomain)
+        
+        // Both base and subdomain should be blocked
+        XCTAssertTrue(manager.isDomainBlocked(baseDomain), "Base domain should be blocked")
+        XCTAssertTrue(manager.isDomainBlocked(subdomain), "Subdomain should be blocked")
+        
+        // Clean up
+        try manager.removeBlockedDomain(baseDomain)
+    }
+    
+    func testDomainNormalization() throws {
+        let domain1 = "EXAMPLE.COM"
+        let domain2 = "  example.com  "
+        let domain3 = "example.com"
+        
+        try manager.addBlockedDomain(domain1)
+        
+        // All variations should be considered blocked due to normalization
+        XCTAssertTrue(manager.isDomainBlocked(domain2), "Normalized domain should be blocked")
+        XCTAssertTrue(manager.isDomainBlocked(domain3), "Lowercase domain should be blocked")
+        
+        try manager.removeBlockedDomain(domain3)
+    }
+    
+    func testInvalidDomainHandling() {
+        // Test with various invalid domain formats
+        let invalidDomains = ["", ".", "...", "invalid..domain", "-invalid.com", "invalid-.com"]
+        
+        for invalidDomain in invalidDomains {
+            XCTAssertNoThrow({
+                // Should handle gracefully, not crash
+                let isBlocked = self.manager.isDomainBlocked(invalidDomain)
+                XCTAssertFalse(isBlocked, "Invalid domain should not be blocked: \(invalidDomain)")
+            }, "Should handle invalid domain gracefully: \(invalidDomain)")
+        }
+    }
+    
+    // MARK: - Application Rules Tests
+    
+    func testApplicationRuleManagement() throws {
+        let appId = "com.test.app"
+        var rule = ApplicationNetworkRule(applicationId: appId, ruleType: .blocklist)
+        rule.blockedDomains = ["ads.com", "tracker.net"]
+        rule.enabled = true
+        
+        // Initially no rule should exist
+        XCTAssertNil(manager.getApplicationRule(for: appId), "No rule should exist initially")
+        
+        // Set the rule
+        try manager.setApplicationRule(rule)
+        
+        // Rule should now exist
+        let retrievedRule = manager.getApplicationRule(for: appId)
+        XCTAssertNotNil(retrievedRule, "Rule should exist after setting")
+        XCTAssertEqual(retrievedRule?.applicationId, appId, "Application ID should match")
+        XCTAssertEqual(retrievedRule?.ruleType, .blocklist, "Rule type should match")
+        XCTAssertEqual(retrievedRule?.blockedDomains.count, 2, "Should have 2 blocked domains")
+        
+        // Remove the rule
+        try manager.removeApplicationRule(for: appId)
+        
+        // Rule should no longer exist
+        XCTAssertNil(manager.getApplicationRule(for: appId), "Rule should not exist after removal")
+    }
+    
+    func testAllApplicationRules() throws {
+        let app1Id = "com.test.app1"
+        let app2Id = "com.test.app2"
+        
+        var rule1 = ApplicationNetworkRule(applicationId: app1Id, ruleType: .blocklist)
+        rule1.blockedDomains = ["ads.com"]
+        rule1.enabled = true
+        
+        var rule2 = ApplicationNetworkRule(applicationId: app2Id, ruleType: .allowlist)
+        rule2.allowedDomains = ["safe.com"]
+        rule2.enabled = true
+        
+        try manager.setApplicationRule(rule1)
+        try manager.setApplicationRule(rule2)
+        
+        let allRules = manager.getAllApplicationRules()
+        XCTAssertEqual(allRules.count, 2, "Should have 2 rules")
+        XCTAssertNotNil(allRules[app1Id], "Should contain first app rule")
+        XCTAssertNotNil(allRules[app2Id], "Should contain second app rule")
+        
+        // Clean up
+        try manager.removeApplicationRule(for: app1Id)
+        try manager.removeApplicationRule(for: app2Id)
+    }
+    
+    // MARK: - Network Filtering State Tests
+    
+    func testFilteringStateManagement() {
+        // Initially should not be active
+        XCTAssertFalse(manager.isFilteringActive, "Filtering should not be active initially")
+        
+        // Note: We don't test actual start/stop here as it requires network permissions
+        // and may interfere with system networking in test environment
+        // These would be covered in integration tests
+    }
+    
+    // MARK: - Statistics Extended Tests
+    
+    func testStatisticsConsistencyOverTime() async throws {
+        let stats1 = manager.getFilteringStatistics()
+        
+        // Wait a brief moment
+        try await Task.sleep(nanoseconds: 50_000_000) // 0.05 seconds
+        
+        let stats2 = manager.getFilteringStatistics()
+        
+        // Uptime should increase (if filtering was started) or remain 0
+        XCTAssertGreaterThanOrEqual(stats2.uptime, stats1.uptime, "Uptime should not decrease")
+        
+        // Other stats should be consistent or increase
+        XCTAssertGreaterThanOrEqual(stats2.totalQueries, stats1.totalQueries, "Total queries should not decrease")
+        XCTAssertGreaterThanOrEqual(stats2.blockedQueries, stats1.blockedQueries, "Blocked queries should not decrease")
+        XCTAssertGreaterThanOrEqual(stats2.allowedQueries, stats1.allowedQueries, "Allowed queries should not decrease")
+    }
+    
+    func testStatisticsDataTypes() {
+        let stats = manager.getFilteringStatistics()
+        
+        // Verify data types and ranges
+        XCTAssertTrue(stats.isActive == true || stats.isActive == false, "isActive should be boolean")
+        XCTAssertTrue(stats.uptime.isFinite, "Uptime should be finite")
+        XCTAssertTrue(stats.averageLatency.isFinite, "Average latency should be finite")
+        XCTAssertTrue(stats.cacheHitRate.isFinite, "Cache hit rate should be finite")
+        
+        // Verify non-negative values
+        XCTAssertGreaterThanOrEqual(stats.uptime, 0, "Uptime should be non-negative")
+        XCTAssertGreaterThanOrEqual(stats.totalQueries, 0, "Total queries should be non-negative")
+        XCTAssertGreaterThanOrEqual(stats.blockedQueries, 0, "Blocked queries should be non-negative")
+        XCTAssertGreaterThanOrEqual(stats.allowedQueries, 0, "Allowed queries should be non-negative")
+        XCTAssertGreaterThanOrEqual(stats.averageLatency, 0, "Average latency should be non-negative")
+        XCTAssertGreaterThanOrEqual(stats.cacheHitRate, 0, "Cache hit rate should be non-negative")
+    }
+    
     // MARK: - Integration Tests
     
     func testBasicWorkflow() async throws {
@@ -170,14 +338,42 @@ final class NetworkFilteringManagerTests: XCTestCase {
         let initialStats = manager.getFilteringStatistics()
         XCTAssertNotNil(initialStats, "Should get initial statistics")
         
+        // Test domain management
+        let testDomain = "workflow-test.com"
+        try manager.addBlockedDomain(testDomain)
+        XCTAssertTrue(manager.isDomainBlocked(testDomain), "Domain should be blocked in workflow")
+        
         // Wait a bit and get stats again
         try await Task.sleep(nanoseconds: 100_000_000) // 0.1 seconds
         
         let laterStats = manager.getFilteringStatistics()
         XCTAssertNotNil(laterStats, "Should get later statistics")
         
-        // Uptime should have increased
+        // Uptime should have increased or remained the same
         XCTAssertGreaterThanOrEqual(laterStats.uptime, initialStats.uptime, 
-                                   "Uptime should increase over time")
+                                   "Uptime should not decrease over time")
+        
+        // Clean up
+        try manager.removeBlockedDomain(testDomain)
+    }
+    
+    func testDNSLevelBlockingIntegration() throws {
+        // Test the core DNS-level blocking functionality
+        let maliciousDomain = "malicious-ads.com"
+        let safeDomain = "safe-content.com"
+        
+        // Add malicious domain to blocklist
+        try manager.addBlockedDomain(maliciousDomain)
+        
+        // Verify blocking logic
+        XCTAssertTrue(manager.isDomainBlocked(maliciousDomain), "Malicious domain should be blocked")
+        XCTAssertFalse(manager.isDomainBlocked(safeDomain), "Safe domain should not be blocked")
+        
+        // Test with subdomains
+        let maliciousSubdomain = "tracker.\(maliciousDomain)"
+        XCTAssertTrue(manager.isDomainBlocked(maliciousSubdomain), "Malicious subdomain should be blocked")
+        
+        // Clean up
+        try manager.removeBlockedDomain(maliciousDomain)
     }
 }

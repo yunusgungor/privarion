@@ -2,6 +2,9 @@ import Foundation
 import Logging
 import ArgumentParser
 
+// Type alias for backward compatibility
+public typealias Configuration = PrivarionConfig
+
 /// Core configuration management for Privarion privacy protection system
 public struct PrivarionConfig: Codable {
     /// Version of the configuration schema
@@ -70,6 +73,7 @@ public struct ModuleConfigs: Codable {
     public var sandboxManager: SandboxManagerConfig
     public var snapshotManager: SnapshotManagerConfig
     public var syscallHook: SyscallHookConfig
+    public var syscallMonitoring: SyscallMonitoringConfig
     
     public init() {
         self.identitySpoofing = IdentitySpoofingConfig()
@@ -78,6 +82,7 @@ public struct ModuleConfigs: Codable {
         self.sandboxManager = SandboxManagerConfig()
         self.snapshotManager = SnapshotManagerConfig()
         self.syscallHook = SyscallHookConfig()
+        self.syscallMonitoring = SyscallMonitoringConfig()
     }
 }
 
@@ -377,6 +382,23 @@ public struct SyscallHookConfig: Codable {
     public init() {
         self.enabled = false
         self.debugMode = false
+    }
+}
+
+/// Syscall monitoring configuration
+public struct SyscallMonitoringConfig: Codable {
+    public var enabled: Bool
+    public var debugMode: Bool
+    public var logLevel: LogLevel
+    public var maxRules: Int
+    public var realTimeProcessing: Bool
+    
+    public init() {
+        self.enabled = false
+        self.debugMode = false
+        self.logLevel = .info
+        self.maxRules = 1000
+        self.realTimeProcessing = true
     }
 }
 

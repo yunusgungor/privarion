@@ -385,6 +385,17 @@ public final class SyscallHookManager {
         logger.info("Hook removed successfully for \(handle.functionName)")
     }
     
+    /// Remove all installed hooks
+    public func removeAllHooks() throws {
+        try ensureInitialized()
+        
+        logger.debug("Removing all installed hooks")
+        
+        ph_cleanup()
+        
+        logger.info("All hooks removed successfully")
+    }
+    
     /// Get pointer to original function
     public func getOriginalFunction<T>(_ handle: HookHandle, as type: T.Type) -> T? {
         var mutableHandle = handle.rawHandle
