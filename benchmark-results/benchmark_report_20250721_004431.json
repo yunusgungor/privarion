@@ -1,0 +1,120 @@
+{
+  "benchmark_run": {
+    "timestamp": "2025-07-21T00:49:12+03:00",
+    "project": "Privarion",
+    "version": "3737688",
+    "commit": "3737688452f037dc7765c3e666f0865c0fda24df",
+    "system": {
+      "os": "Darwin",
+      "arch": "x86_64",
+      "swift_version": "Apple Swift version 6.1.2 (swiftlang-6.1.2.1.2 clang-1700.0.13.5)"
+    },
+    "results": [
+{"metrics":{"timestamp":1753046036.875036,"cpuUsage":0,"reportId":"D8C16D72-1E10-437C-AA58-C10472CD7F58","memoryUsageMB":0,"interactive":true,"startupTimeMs":null,"renderTimeMs":101.219426,"operationName":"app_startup_simulation_iter_5"},"testName":"app_startup_simulation","duration":102.099433,"iterations":5,"status":"PASSED"}
+,
+{"metrics":{"memoryUsageMB":0.01171875,"startupTimeMs":null,"timestamp":1753046036.9377599,"reportId":"FD3C1B51-5656-4216-8AED-2EFA6E2ED258","interactive":true,"cpuUsage":0,"operationName":"concurrent_operations_iter_3","renderTimeMs":21.969154},"testName":"concurrent_operations","duration":19.372573333333335,"status":"PASSED","iterations":3}
+,
+{"iterations":10,"testName":"configuration_loading","duration":0.00081959999999999997,"metrics":{"cpuUsage":0,"timestamp":1753046036.9394889,"memoryUsageMB":0,"reportId":"F0CC8BE1-CCA3-4685-9E28-2B8D802122BB","startupTimeMs":null,"interactive":true,"renderTimeMs":0.00056700000000000001,"operationName":"configuration_loading_iter_10"},"status":"PASSED"}
+,
+{"duration":1.6070096999999997,"status":"PASSED","metrics":{"renderTimeMs":1.388056,"cpuUsage":0,"memoryUsageMB":0,"interactive":true,"startupTimeMs":null,"timestamp":1753046036.9576581,"reportId":"74965193-2995-432B-B0EB-A1E29C204192","operationName":"configuration_saving_iter_10"},"testName":"configuration_saving","iterations":10}
+,
+{"iterations":50,"testName":"high_load_test","duration":1.3642929600000004,"metrics":{"cpuUsage":0,"timestamp":1753046037.030333,"memoryUsageMB":0,"reportId":"A46C3856-1866-496C-B7FD-406E5C457554","startupTimeMs":null,"interactive":true,"renderTimeMs":1.2336579999999999,"operationName":"high_load_test_iter_50"},"status":"PASSED"}
+,
+{"duration":13.352728600000001,"iterations":5,"metrics":{"startupTimeMs":null,"memoryUsageMB":0.01171875,"cpuUsage":0,"renderTimeMs":13.963782999999999,"operationName":"hook_library_loading_iter_5","reportId":"4F699BD7-EE8A-4B0B-8D52-DD7E742391D3","timestamp":1753046037.099195,"interactive":true},"status":"PASSED","testName":"hook_library_loading"}
+,
+{"testName":"memory_stability_stress","status":"PASSED","duration":0.11378589999999997,"iterations":20,"metrics":{"timestamp":1753046037.1051159,"operationName":"memory_stability_stress_iter_20","memoryUsageMB":0,"startupTimeMs":null,"interactive":true,"cpuUsage":0,"reportId":"FD292522-B9D3-45F4-8A08-3DEBA07A29C2","renderTimeMs":0.104408}}
+,
+{"duration":0.00090470000000000014,"iterations":10,"testName":"baseline_config_loading","metrics":{"timestamp":1753046037.1080508,"renderTimeMs":0.00063000000000000003,"memoryUsageMB":0,"interactive":true,"startupTimeMs":null,"operationName":"baseline_config_loading_iter_10","cpuUsage":0,"reportId":"3C705F64-7968-4A25-8EAF-E73C179A008C"},"status":"PASSED"}
+,
+{"status":"PASSED","metrics":{"operationName":"regression_baseline_iter_5","renderTimeMs":0.000678,"cpuUsage":0,"startupTimeMs":null,"reportId":"1A4A0241-99AF-492D-A826-13C431E609D0","timestamp":1753046037.1096091,"interactive":true,"memoryUsageMB":0},"iterations":5,"testName":"regression_baseline","duration":0.0010906000000000002}
+{"status":"PASSED","iterations":5,"duration":1.3337011999999999,"metrics":{"renderTimeMs":1.3010679999999999,"cpuUsage":0,"startupTimeMs":null,"operationName":"regression_baseline_iter_5","memoryUsageMB":0,"interactive":true,"reportId":"49BF6352-8810-4AEE-8038-68C18B7561D9","timestamp":1753046037.1168351},"testName":"regression_baseline"}
+,
+{"status":"PASSED","duration":42.603638799999999,"testName":"system_command_execution","iterations":5,"metrics":{"startupTimeMs":null,"memoryUsageMB":0,"reportId":"F64A3D41-66D1-4A49-84D6-3374B88861AB","interactive":true,"timestamp":1753046037.332418,"renderTimeMs":9.0429139999999997,"operationName":"system_command_execution_iter_5","cpuUsage":0}}
+,
+{"duration":104.52041020000001,"status":"PASSED","metrics":{"operationName":"app_startup_simulation_iter_5","timestamp":1753046411.748749,"memoryUsageMB":0,"interactive":true,"cpuUsage":0,"startupTimeMs":null,"reportId":"9C195AF9-5051-473A-A659-A0A39B57D380","renderTimeMs":103.176585},"testName":"app_startup_simulation","iterations":5}
+,
+{"metrics":{"memoryUsageMB":0.015625,"operationName":"concurrent_operations_iter_3","interactive":true,"cpuUsage":0,"startupTimeMs":null,"timestamp":1753046411.813066,"renderTimeMs":19.393125000000001,"reportId":"E638917E-845A-447F-B20E-9CAB31963475"},"status":"PASSED","testName":"concurrent_operations","duration":19.991160333333337,"iterations":3}
+,
+{"duration":0.00066850000000000004,"iterations":10,"testName":"configuration_loading","metrics":{"startupTimeMs":null,"cpuUsage":0,"renderTimeMs":0.00042700000000000002,"memoryUsageMB":0,"reportId":"B0BD5FDF-6062-4624-8F6B-57D266440F46","operationName":"configuration_loading_iter_10","timestamp":1753046411.8146729,"interactive":true},"status":"PASSED"}
+,
+{"duration":1.4524622,"iterations":10,"status":"PASSED","metrics":{"cpuUsage":0,"operationName":"configuration_saving_iter_10","renderTimeMs":1.287606,"interactive":true,"timestamp":1753046411.8307881,"memoryUsageMB":0,"reportId":"5E70097C-B74E-43FD-A578-DBA7EFBBB67B","startupTimeMs":null},"testName":"configuration_saving"}
+,
+{"metrics":{"operationName":"high_load_test_iter_50","timestamp":1753046411.8975,"reportId":"2746E337-44B1-44EF-A63F-E8DD6A4F5D4C","memoryUsageMB":0,"renderTimeMs":1.4451970000000001,"startupTimeMs":null,"interactive":true,"cpuUsage":0},"testName":"high_load_test","iterations":50,"status":"PASSED","duration":1.2574893199999999}
+,
+{"status":"PASSED","duration":14.8197858,"testName":"hook_library_loading","metrics":{"interactive":true,"startupTimeMs":null,"timestamp":1753046411.9735022,"cpuUsage":0,"operationName":"hook_library_loading_iter_5","renderTimeMs":15.873220999999999,"reportId":"6E624253-64C6-4B44-8F49-03DBE7E0DCA2","memoryUsageMB":0},"iterations":5}
+,
+{"testName":"memory_stability_stress","status":"PASSED","metrics":{"interactive":true,"operationName":"memory_stability_stress_iter_20","cpuUsage":0,"timestamp":1753046411.9809232,"memoryUsageMB":0,"startupTimeMs":null,"reportId":"5C60E369-F57F-4ECC-8993-F72331DA9483","renderTimeMs":0.102511},"duration":0.13517065,"iterations":20}
+,
+{"status":"PASSED","iterations":10,"metrics":{"cpuUsage":0,"timestamp":1753046411.983252,"memoryUsageMB":0,"reportId":"CE635AC7-9CA0-4125-BB1D-71B99E49CD7E","interactive":true,"operationName":"baseline_config_loading_iter_10","renderTimeMs":0.00072599999999999997,"startupTimeMs":null},"testName":"baseline_config_loading","duration":0.0010843000000000001}
+,
+{"metrics":{"operationName":"regression_baseline_iter_5","timestamp":1753046411.9853821,"reportId":"2CFC7033-1DFD-403D-892A-92B9C3A1FEA4","memoryUsageMB":0,"renderTimeMs":0.00064099999999999997,"startupTimeMs":null,"interactive":true,"cpuUsage":0},"testName":"regression_baseline","iterations":5,"status":"PASSED","duration":0.0011408}
+{"duration":1.3019586000000001,"iterations":5,"testName":"regression_baseline","metrics":{"startupTimeMs":null,"cpuUsage":0,"renderTimeMs":1.3117589999999999,"memoryUsageMB":0,"reportId":"FA8E1C88-32BF-4B40-B93B-16A8E2D0A9BE","operationName":"regression_baseline_iter_5","timestamp":1753046411.9923801,"interactive":true},"status":"PASSED"}
+,
+{"duration":31.094782600000002,"status":"PASSED","testName":"system_command_execution","iterations":5,"metrics":{"memoryUsageMB":0,"operationName":"system_command_execution_iter_5","interactive":true,"cpuUsage":0,"startupTimeMs":null,"timestamp":1753046412.151823,"renderTimeMs":68.884382000000002,"reportId":"B95CBB10-E196-4DEB-842A-CFF686EDCE6C"}}
+,
+{"duration":103.19053260000001,"iterations":5,"status":"PASSED","metrics":{"operationName":"app_startup_simulation_iter_5","startupTimeMs":null,"timestamp":1753046627.3199658,"reportId":"4FD1D81B-0D2B-4632-9A70-A9AE252EB300","interactive":true,"cpuUsage":0,"renderTimeMs":104.93817300000001,"memoryUsageMB":0},"testName":"app_startup_simulation"}
+,
+{"duration":17.778317333333334,"status":"PASSED","iterations":3,"metrics":{"timestamp":1753046627.377753,"startupTimeMs":null,"interactive":true,"memoryUsageMB":0.00390625,"renderTimeMs":15.911261,"operationName":"concurrent_operations_iter_3","cpuUsage":0,"reportId":"62E01CB1-D411-4F85-A10A-A122ADED9F67"},"testName":"concurrent_operations"}
+,
+{"testName":"configuration_loading","metrics":{"reportId":"8E2E8F3F-C01F-4B7E-AA31-9826E5ED382E","operationName":"configuration_loading_iter_10","renderTimeMs":0.00048500000000000003,"timestamp":1753046627.3792911,"memoryUsageMB":0,"startupTimeMs":null,"interactive":true,"cpuUsage":0},"duration":0.00073740000000000014,"iterations":10,"status":"PASSED"}
+,
+{"iterations":10,"metrics":{"timestamp":1753046627.3950229,"startupTimeMs":null,"interactive":true,"memoryUsageMB":0,"renderTimeMs":1.122476,"operationName":"configuration_saving_iter_10","cpuUsage":0,"reportId":"A83890B1-9E34-4D4C-875C-EB7ECD844F15"},"testName":"configuration_saving","duration":1.4154830000000003,"status":"PASSED"}
+,
+{"duration":1.0968753,"status":"PASSED","iterations":50,"metrics":{"reportId":"9D9EF26C-7BD1-47C2-9E56-6BC202E76DAC","timestamp":1753046627.453274,"renderTimeMs":0.90813200000000005,"cpuUsage":0,"startupTimeMs":null,"operationName":"high_load_test_iter_50","interactive":true,"memoryUsageMB":0},"testName":"high_load_test"}
+,
+{"metrics":{"startupTimeMs":null,"operationName":"hook_library_loading_iter_5","reportId":"33566B90-EC7E-4BB8-9B85-9A6ED450204F","renderTimeMs":15.033737,"timestamp":1753046627.5274482,"memoryUsageMB":0,"cpuUsage":0,"interactive":true},"duration":14.498916599999998,"status":"PASSED","iterations":5,"testName":"hook_library_loading"}
+,
+{"metrics":{"renderTimeMs":0.10710600000000001,"reportId":"FC3D70A4-F5EC-481E-B2A2-1D070E6C8F4A","cpuUsage":0,"interactive":true,"startupTimeMs":null,"operationName":"memory_stability_stress_iter_20","timestamp":1753046627.5341349,"memoryUsageMB":0},"duration":0.13869345000000005,"testName":"memory_stability_stress","status":"PASSED","iterations":20}
+,
+{"status":"PASSED","iterations":10,"duration":0.00099830000000000014,"metrics":{"reportId":"58B1C5A0-EBE6-4952-93F3-9B3FD22CDB0A","startupTimeMs":null,"interactive":true,"timestamp":1753046627.5362811,"cpuUsage":0,"memoryUsageMB":0,"renderTimeMs":0.00069300000000000004,"operationName":"baseline_config_loading_iter_10"},"testName":"baseline_config_loading"}
+,
+{"metrics":{"startupTimeMs":null,"operationName":"regression_baseline_iter_5","reportId":"840C8866-EB36-4C11-BA25-4C3EC8AD7308","renderTimeMs":0.00065099999999999999,"timestamp":1753046627.5384932,"memoryUsageMB":0,"cpuUsage":0,"interactive":true},"duration":0.0011709999999999999,"status":"PASSED","iterations":5,"testName":"regression_baseline"}
+{"metrics":{"operationName":"regression_baseline_iter_5","timestamp":1753046627.5454021,"cpuUsage":0,"renderTimeMs":1.3032600000000001,"startupTimeMs":null,"interactive":true,"memoryUsageMB":0,"reportId":"1841952E-0F6D-42C7-976F-49EB00B1563F"},"testName":"regression_baseline","status":"PASSED","duration":1.2877582000000001,"iterations":5}
+,
+{"metrics":{"renderTimeMs":6.0917789999999998,"reportId":"59103466-54A1-496C-9BFA-EFB0CCDFDBE9","cpuUsage":0,"interactive":true,"startupTimeMs":null,"operationName":"system_command_execution_iter_5","timestamp":1753046627.7047701,"memoryUsageMB":0},"duration":31.53284,"testName":"system_command_execution","status":"PASSED","iterations":5}
+,
+{"duration":102.3454964,"metrics":{"startupTimeMs":null,"interactive":true,"timestamp":1753046937.077425,"memoryUsageMB":0,"cpuUsage":0,"renderTimeMs":100.81559,"reportId":"2502D68E-211C-479B-A164-CAEB374E3384","operationName":"app_startup_simulation_iter_5"},"iterations":5,"status":"PASSED","testName":"app_startup_simulation"}
+,
+{"duration":17.511296666666667,"metrics":{"startupTimeMs":null,"interactive":true,"timestamp":1753046937.134722,"memoryUsageMB":0,"cpuUsage":0,"renderTimeMs":16.112725999999999,"reportId":"7EC23734-AB4C-4DE5-99CF-D3B65A3E8C27","operationName":"concurrent_operations_iter_3"},"iterations":3,"status":"PASSED","testName":"concurrent_operations"}
+,
+{"iterations":10,"metrics":{"renderTimeMs":0.000531,"cpuUsage":0,"reportId":"5BFBEA02-4CBF-48F1-8F20-38B822EDD351","timestamp":1753046937.1365981,"interactive":true,"startupTimeMs":null,"memoryUsageMB":0,"operationName":"configuration_loading_iter_10"},"testName":"configuration_loading","duration":0.00085109999999999993,"status":"PASSED"}
+,
+{"testName":"configuration_saving","status":"PASSED","metrics":{"renderTimeMs":1.0080340000000001,"reportId":"1786CB37-9E2C-4D9F-834B-D6007D80C83A","memoryUsageMB":0,"timestamp":1753046937.1511631,"interactive":true,"cpuUsage":0,"operationName":"configuration_saving_iter_10","startupTimeMs":null},"duration":1.2432220999999999,"iterations":10}
+,
+{"duration":1.1007393999999999,"testName":"high_load_test","status":"PASSED","metrics":{"renderTimeMs":0.97338800000000003,"operationName":"high_load_test_iter_50","memoryUsageMB":0,"interactive":true,"timestamp":1753046937.2096939,"cpuUsage":0,"reportId":"1FF60C2D-A45D-4865-9F30-8CD88D8C6972","startupTimeMs":null},"iterations":50}
+,
+{"status":"PASSED","testName":"hook_library_loading","iterations":5,"metrics":{"operationName":"hook_library_loading_iter_5","timestamp":1753046937.2841611,"startupTimeMs":null,"renderTimeMs":15.814780000000001,"cpuUsage":0,"memoryUsageMB":0,"interactive":true,"reportId":"CBC6B2DA-64B2-4A8E-8E7C-5A21AB825265"},"duration":14.5166602}
+,
+{"testName":"memory_stability_stress","duration":0.15592540000000005,"status":"PASSED","iterations":20,"metrics":{"renderTimeMs":0.134797,"reportId":"07E8F05A-44A0-470D-B130-E799C572FE9D","interactive":true,"operationName":"memory_stability_stress_iter_20","startupTimeMs":null,"timestamp":1753046937.291975,"cpuUsage":0,"memoryUsageMB":0}}
+,
+{"testName":"baseline_config_loading","duration":0.0010038999999999998,"status":"PASSED","iterations":10,"metrics":{"memoryUsageMB":0,"startupTimeMs":null,"renderTimeMs":0.00064099999999999997,"timestamp":1753046937.2942429,"reportId":"FB39C237-B76C-4B07-84DD-74156F0660F4","operationName":"baseline_config_loading_iter_10","interactive":true,"cpuUsage":0}}
+,
+{"status":"PASSED","duration":0.0011408000000000002,"metrics":{"interactive":true,"reportId":"C484209C-2E12-4292-805D-334B6F0ED7A5","operationName":"regression_baseline_iter_5","startupTimeMs":null,"cpuUsage":0,"renderTimeMs":0.00070200000000000004,"timestamp":1753046937.2960138,"memoryUsageMB":0},"iterations":5,"testName":"regression_baseline"}
+{"metrics":{"cpuUsage":0,"startupTimeMs":null,"reportId":"64D1D31F-22CD-4251-98D8-0592FB9DEB9D","interactive":true,"renderTimeMs":1.311979,"memoryUsageMB":0,"timestamp":1753046937.3034868,"operationName":"regression_baseline_iter_5"},"duration":1.3263856000000001,"status":"PASSED","testName":"regression_baseline","iterations":5}
+,
+{"metrics":{"timestamp":1753046937.4658871,"operationName":"system_command_execution_iter_5","renderTimeMs":9.5191960000000009,"interactive":true,"startupTimeMs":null,"cpuUsage":0,"memoryUsageMB":0,"reportId":"8D9693E2-1540-4A12-8287-A03F33D6C9D5"},"duration":31.867755799999998,"testName":"system_command_execution","iterations":5,"status":"PASSED"}
+,
+{"duration":104.318457,"iterations":5,"testName":"app_startup_simulation","metrics":{"cpuUsage":0,"timestamp":1753048151.748239,"interactive":true,"reportId":"CDBCA853-CE48-45C8-8ED3-C42700EFD35E","startupTimeMs":null,"operationName":"app_startup_simulation_iter_5","memoryUsageMB":0,"renderTimeMs":103.453318},"status":"PASSED"}
+,
+{"testName":"concurrent_operations","metrics":{"operationName":"concurrent_operations_iter_3","startupTimeMs":null,"timestamp":1753048151.8058529,"renderTimeMs":16.783608999999998,"reportId":"67D9B4C1-EE7B-45EA-9290-06E4B2ED7C52","cpuUsage":0,"memoryUsageMB":0.01953125,"interactive":true},"status":"PASSED","iterations":3,"duration":17.748438}
+,
+{"metrics":{"reportId":"4A3E100D-A701-4737-A1BE-1BB320477073","timestamp":1753048151.807256,"cpuUsage":0,"renderTimeMs":0.000426,"operationName":"configuration_loading_iter_10","interactive":true,"memoryUsageMB":0,"startupTimeMs":null},"iterations":10,"testName":"configuration_loading","status":"PASSED","duration":0.00056849999999999999}
+,
+{"iterations":10,"status":"PASSED","duration":1.3912086000000001,"testName":"configuration_saving","metrics":{"cpuUsage":0,"renderTimeMs":1.3410420000000001,"startupTimeMs":null,"operationName":"configuration_saving_iter_10","reportId":"6BA7D510-494D-4901-9B0C-EC0B8BC3503B","timestamp":1753048151.822469,"interactive":true,"memoryUsageMB":0}}
+,
+{"metrics":{"timestamp":1753048151.8799911,"startupTimeMs":null,"operationName":"high_load_test_iter_50","interactive":true,"memoryUsageMB":0,"cpuUsage":0,"renderTimeMs":0.92735100000000004,"reportId":"DE4AF044-48D2-4BE4-9CE2-1B52EDE65574"},"testName":"high_load_test","duration":1.1001212199999997,"iterations":50,"status":"PASSED"}
+,
+{"testName":"hook_library_loading","iterations":5,"status":"PASSED","metrics":{"cpuUsage":0,"reportId":"C25C2334-A63D-4F93-8166-A3A6F184E1A8","renderTimeMs":13.704869,"timestamp":1753048151.952318,"operationName":"hook_library_loading_iter_5","memoryUsageMB":0.00390625,"startupTimeMs":null,"interactive":true},"duration":14.133417399999999}
+,
+{"testName":"memory_stability_stress","iterations":20,"status":"PASSED","metrics":{"cpuUsage":0,"reportId":"1FCCEB73-544B-4118-8FE0-D6C931C87EFF","renderTimeMs":0.019369000000000001,"timestamp":1753048151.954417,"operationName":"memory_stability_stress_iter_20","memoryUsageMB":0,"startupTimeMs":null,"interactive":true},"duration":0.025056800000000001}
+,
+{"iterations":10,"status":"PASSED","metrics":{"interactive":true,"startupTimeMs":null,"cpuUsage":0,"reportId":"FD209374-9BA0-46E5-A9C3-3302BEE1271C","timestamp":1753048151.955677,"renderTimeMs":0.00038099999999999999,"memoryUsageMB":0,"operationName":"baseline_config_loading_iter_10"},"testName":"baseline_config_loading","duration":0.00059800000000000012}
+,
+{"duration":0.00091940000000000012,"testName":"regression_baseline","status":"PASSED","metrics":{"interactive":true,"operationName":"regression_baseline_iter_5","reportId":"D6BE7F78-8706-4E22-B903-408E1332738B","timestamp":1753048151.9573641,"startupTimeMs":null,"cpuUsage":0,"memoryUsageMB":0,"renderTimeMs":0.00038499999999999998},"iterations":5}
+{"iterations":5,"metrics":{"memoryUsageMB":0,"startupTimeMs":null,"renderTimeMs":1.269933,"operationName":"regression_baseline_iter_5","interactive":true,"cpuUsage":0,"reportId":"1FF11D12-FFCA-44AF-923F-1E3967203F4A","timestamp":1753048151.963866},"status":"PASSED","duration":1.2479217999999999,"testName":"regression_baseline"}
+,
+{"status":"PASSED","iterations":5,"metrics":{"interactive":true,"renderTimeMs":65.363696000000004,"reportId":"CD27BFA1-E076-4A9F-8011-239A8665D2B0","timestamp":1753048152.1200619,"cpuUsage":0,"startupTimeMs":null,"memoryUsageMB":0,"operationName":"system_command_execution_iter_5"},"duration":30.891408200000001,"testName":"system_command_execution"}
+
+    ]
+  }
+}

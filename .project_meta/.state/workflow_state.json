@@ -1,6 +1,25 @@
 {
-  "current_state": "executing_story", 
-  "previous_state": "learning_extraction",
+  "current_state": "learning_extraction", 
+  "previous_state": "story_completed",
+  "state_transition_timestamp": "2025-07-21T01:06:32Z",
+  "completed_story": {
+    "story_id": "STORY-2025-010",
+    "title": "Advanced Network Analytics Module",
+    "completion_timestamp": "2025-07-21T01:06:32Z",
+    "test_results": {
+      "total_tests": 8,
+      "passed_tests": 8,
+      "failed_tests": 0,
+      "performance_benchmarks_met": true,
+      "execution_time": "0.026s"
+    }
+  },
+  "learning_extraction_created": {
+    "file_path": "/Users/yunusgungor/arge/privarion/.project_meta/.learning/learning_extraction_2025-010.md",
+    "quality_score": 9.5,
+    "patterns_discovered": 3,
+    "performance_insights": ["500x faster than required", "1667x better latency"]
+  },
   "state_history": [
     {
       "state": "idle",
