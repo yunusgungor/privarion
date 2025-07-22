@@ -4,7 +4,7 @@ import Logging
 
 /// DNS proxy server for intercepting and filtering DNS requests
 @available(macOS 10.14, *)
-internal class DNSProxyServer {
+internal class DNSProxyServer: DNSProxyServerProtocol {
     private let configuration: NetworkFilterConfig
     private let logger: Logger
     private var listener: NWListener?

@@ -260,6 +260,9 @@ public struct NetworkMonitoringConfig: Codable {
         self.metricsInterval = 60.0
         self.maxEventsInMemory = 1000
     }
+    
+    /// Default configuration instance
+    public static let `default` = NetworkMonitoringConfig()
 }
 
 /// Network analytics configuration

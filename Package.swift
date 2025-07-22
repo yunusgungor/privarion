@@ -38,7 +38,9 @@ let package = Package(
         // Swift Collections for advanced data structures
         .package(url: "https://github.com/apple/swift-collections", from: "1.0.0"),
         // KeyboardShortcuts for global macOS shortcuts
-        .package(url: "https://github.com/sindresorhus/KeyboardShortcuts", from: "1.15.0")
+        .package(url: "https://github.com/sindresorhus/KeyboardShortcuts", from: "1.15.0"),
+        // SwiftNIO for high-performance async networking
+        .package(url: "https://github.com/apple/swift-nio", from: "2.65.0")
     ],
     targets: [
         // CLI executable target
@@ -55,7 +57,12 @@ let package = Package(
             dependencies: [
                 "PrivarionHook",
                 .product(name: "Logging", package: "swift-log"),
-                .product(name: "Collections", package: "swift-collections")
+                .product(name: "Collections", package: "swift-collections"),
+                .product(name: "NIOCore", package: "swift-nio"),
+                .product(name: "NIOPosix", package: "swift-nio"),
+                .product(name: "NIOFoundationCompat", package: "swift-nio"),
+                .product(name: "NIOHTTP1", package: "swift-nio"),
+                .product(name: "NIOWebSocket", package: "swift-nio")
             ]
         ),
         // Low-level C hook library
