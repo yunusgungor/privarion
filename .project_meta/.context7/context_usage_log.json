@@ -38,6 +38,27 @@
       ]
     },
     {
+      "session_id": "session_20250127_001", 
+      "timestamp": "2025-01-27T16:00:00Z",
+      "library_id": "/apple/swift-nio",
+      "topic": "performance testing load testing benchmarking concurrent connections",
+      "tokens_retrieved": 6000,
+      "purpose": "STORY-2025-014 WebSocket Dashboard Performance Validation research",
+      "findings_summary": "Retrieved comprehensive SwiftNIO performance testing documentation covering allocation counter framework, concurrent connection patterns, memory profiling, load testing strategies, and WebSocket performance validation techniques",
+      "cache_status": "cached",
+      "usage_type": "story_planning",
+      "story_id": "STORY-2025-014",
+      "key_patterns_identified": [
+        "SwiftNIO allocation counter test framework with memory baseline management",
+        "Concurrent connection handling with withThrowingDiscardingTaskGroup patterns",
+        "Performance benchmarking tools integration (perf, heaptrack)",
+        "WebSocket server upgrader performance configuration",
+        "NIOAsyncChannel back pressure strategies for high-throughput scenarios",
+        "Test source/sink patterns for async stream validation",
+        "Memory leak detection and allocation tracking methodologies"
+      ]
+    },
+    {
       "session_id": "session_20250629_001",
       "timestamp": "2025-06-29T00:00:00Z",
       "library_id": "/swiftlang/swift",
