@@ -74,7 +74,7 @@ internal class SwiftNIODNSProxyServer {
                 // Configure the channel pipeline for DNS processing
                 return channel.eventLoop.makeCompletedFuture {
                     // PATTERN-2025-067: Wrap channel with NIOAsyncChannel for async I/O
-                    let asyncChannel = try NIOAsyncChannel<AddressedEnvelope<ByteBuffer>, AddressedEnvelope<ByteBuffer>>(
+                    let _ = try NIOAsyncChannel<AddressedEnvelope<ByteBuffer>, AddressedEnvelope<ByteBuffer>>(
                         wrappingChannelSynchronously: channel
                     )
                     return ()

@@ -89,7 +89,7 @@ final class SecurityProfileManagerTests: XCTestCase {
             XCTAssertNotNil(profile1)
             
             // This should fail
-            let profile2 = try profileManager.createProfile(config: profileConfig2)
+            let _ = try profileManager.createProfile(config: profileConfig2)
             XCTFail("Creating profile with duplicate name should throw error")
         } catch {
             // Then
@@ -113,7 +113,7 @@ final class SecurityProfileManagerTests: XCTestCase {
         
         // When & Then
         do {
-            let profile = try profileManager.createProfile(config: profileConfig)
+            let _ = try profileManager.createProfile(config: profileConfig)
             XCTFail("Creating profile with empty name should throw error")
         } catch {
             XCTAssertTrue(error is SecurityProfileManager.ProfileError)

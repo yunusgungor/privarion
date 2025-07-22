@@ -16,7 +16,7 @@ struct NetworkCommands: ParsableCommand {
         commandName: "network",
         abstract: "Network filtering and monitoring commands",
         discussion: """
-        Control DNS-level domain blocking, per-application network rules, and real-time traffic monitoring.
+        Control DNS-level domain blocking, network rules, and real-time traffic monitoring.
         
         Examples:
           privarion network start                  # Start network filtering
@@ -63,7 +63,7 @@ extension NetworkCommands {
                 print("✅ Network filtering started successfully")
                 
                 if verbose {
-                    let stats = NetworkFilteringManager.shared.getFilteringStatistics()
+                    let _ = NetworkFilteringManager.shared.getFilteringStatistics()
                     print("📊 Status: Active")
                     print("📡 DNS Proxy: Running")
                     print("📈 Monitoring: Enabled")
@@ -127,7 +127,7 @@ extension NetworkCommands {
                     if blockedDomains.isEmpty {
                         print("   (none)")
                     } else {
-                        for domain in blockedDomains.prefix(10) {
+                        for _ in blockedDomains.prefix(10) {
                             print("   • (domain)")
                         }
                         if blockedDomains.count > 10 {
@@ -140,8 +140,8 @@ extension NetworkCommands {
                     if appRules.isEmpty {
                         print("   (none)")
                     } else {
-                        for (appId, rule) in appRules.prefix(5) {
-                            let status = rule.enabled ? "✅" : "❌"
+                        for (_, rule) in appRules.prefix(5) {
+                            let _ = rule.enabled ? "✅" : "❌"
                             print("   (status) (appId) ((rule.ruleType.rawValue))")
                         }
                         if appRules.count > 5 {
@@ -158,7 +158,7 @@ extension NetworkCommands {
         private func formatUptime(_ uptime: TimeInterval) -> String {
             let hours = Int(uptime) / 3600
             let minutes = (Int(uptime) % 3600) / 60
-            let seconds = Int(uptime) % 60
+            let _ = Int(uptime) % 60
             
             if hours > 0 {
                 return "(hours)h (minutes)m (seconds)s"
@@ -277,7 +277,7 @@ extension NetworkCommands {
             
             let domainsToShow = limit.map { blockedDomains.prefix($0) } ?? blockedDomains.prefix(100)
             
-            for domain in domainsToShow {
+            for _ in domainsToShow {
                 print("• (domain)")
             }
             
@@ -421,7 +421,7 @@ extension NetworkCommands {
             
             do {
                 try NetworkFilteringManager.shared.setApplicationRule(finalRule)
-                let status = finalRule.enabled ? "enabled" : "disabled"
+                let _ = finalRule.enabled ? "enabled" : "disabled"
                 print("✅ Added (type.rawValue) rule for (applicationId) ((status))")
                 print("💡 Use 'privarion network app list' to see all rules")
             } catch {
@@ -468,9 +468,9 @@ extension NetworkCommands {
                 return
             }
             
-            for (appId, rule) in rules.sorted(by: { $0.value.priority > $1.value.priority }) {
-                let status = rule.enabled ? "✅" : "❌"
-                let priority = rule.priority > 0 ? " (priority: (rule.priority))" : ""
+            for (_, rule) in rules.sorted(by: { $0.value.priority > $1.value.priority }) {
+                let _ = rule.enabled ? "✅" : "❌"
+                let _ = rule.priority > 0 ? " (priority: (rule.priority))" : ""
                 
                 print("(status) (appId)")
                 print("   Type: (rule.ruleType.rawValue)(priority)")
@@ -525,7 +525,7 @@ extension NetworkCommands {
         
         private func printStatistics() {
             let stats = NetworkFilteringManager.shared.getFilteringStatistics()
-            let timestamp = DateFormatter.timeFormatter.string(from: Date())
+            let _ = DateFormatter.timeFormatter.string(from: Date())
             
             print("📊 Network Filtering Statistics ((timestamp))")
             print("═══════════════════════════════════════════")
@@ -550,7 +550,7 @@ extension NetworkCommands {
         private func formatUptime(_ uptime: TimeInterval) -> String {
             let hours = Int(uptime) / 3600
             let minutes = (Int(uptime) % 3600) / 60
-            let seconds = Int(uptime) % 60
+            let _ = Int(uptime) % 60
             
             if hours > 0 {
                 return "(hours)h (minutes)m (seconds)s"

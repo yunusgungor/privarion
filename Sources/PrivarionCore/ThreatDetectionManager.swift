@@ -538,8 +538,11 @@ public final class ThreatDetectionManager: @unchecked Sendable {
     /// Check geographic restrictions
     private func checkGeographicRestrictions(_ connection: ConnectionEvent) {
         // Simplified geolocation check - in production would use proper GeoIP service
-        let isAllowedRegion = true // Placeholder
+        // TODO: Implement actual geolocation service integration
+        let isAllowedRegion = true // Placeholder - always allow for now
         
+        // Geographic restriction check disabled until GeoIP service integration
+        // This function currently acts as a placeholder for future geolocation functionality
         if !isAllowedRegion {
             let _ = SecurityMonitoringEngine.SecurityEvent(
                 eventType: .suspiciousTraffic,
