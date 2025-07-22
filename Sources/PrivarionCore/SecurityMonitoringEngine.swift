@@ -517,6 +517,12 @@ public final class SecurityMonitoringEngine: @unchecked Sendable {
         detectionRules.removeAll { $0.id == id }
         os_log("Detection rule removed: %{public}@", log: OSLog.default, type: .info, id)
     }
+    
+    /// Reports a custom security event to the monitoring system
+    /// - Parameter event: The security event to report
+    public func reportSecurityEvent(_ event: SecurityEvent) {
+        addSecurityEvent(event)
+    }
 }
 
 // MARK: - Supporting Types
