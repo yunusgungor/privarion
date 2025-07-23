@@ -122,6 +122,8 @@ struct PrivacyCtl: ParsableCommand {
             privarion logs --follow             # Monitor system logs
             privarion identity backup           # Backup system identity
             privarion identity restore <id>     # Restore from backup
+            privarion permission list           # List active temporary permissions
+            privarion permission grant com.app Camera 30m  # Grant temporary permission
         
         For detailed help on any command, use: privarion help <command>
         """,
@@ -138,7 +140,8 @@ struct PrivacyCtl: ParsableCommand {
             IdentityCommand.self,
             MacAddressCommand.self,
             NetworkCommands.self,
-            AnalyticsCommands.self
+            AnalyticsCommands.self,
+            PermissionCommands.self
         ]
     )
 }

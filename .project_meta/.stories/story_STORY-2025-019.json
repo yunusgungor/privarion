@@ -1,0 +1,210 @@
+{
+  "id": "STORY-2025-019",
+  "title": "As a Privarion user, I want a GUI interface for temporary permission management so that I can visually manage permissions alongside the CLI tools",
+  "description": "Integrate the temporary permission management system (TemporaryPermissionManager) into the existing PrivarionGUI SwiftUI application, providing users with a comprehensive graphical interface to manage temporary permissions. This story builds on STORY-2025-018 by extending the CLI capabilities into a native macOS GUI experience using Clean Architecture and TCA patterns researched via Context7.",
+  "status": "planned",
+  "priority": "high",
+  "acceptanceCriteria": [
+    {
+      "criteria": "Users can view all active temporary permissions in a dedicated GUI tab with real-time updates",
+      "testable": true,
+      "validated": false,
+      "phase": "Phase 1"
+    },
+    {
+      "criteria": "Permission list automatically updates when permissions expire or are modified",
+      "testable": true,
+      "validated": false,
+      "phase": "Phase 1"
+    },
+    {
+      "criteria": "Navigation integration works seamlessly with existing PrivarionGUI tabs and maintains design consistency",
+      "testable": true,
+      "validated": false,
+      "phase": "Phase 1"
+    },
+    {
+      "criteria": "UI responsiveness maintains <16ms response time for all temporary permission operations (60fps)",
+      "testable": true,
+      "validated": false,
+      "phase": "Phase 1"
+    },
+    {
+      "criteria": "Users can grant new temporary permissions via GUI with form validation and error handling",
+      "testable": true,
+      "validated": false,
+      "phase": "Phase 2"
+    },
+    {
+      "criteria": "Users can revoke existing permissions with confirmation dialog and success feedback",
+      "testable": true,
+      "validated": false,
+      "phase": "Phase 2"
+    },
+    {
+      "criteria": "Form validation prevents all invalid permission requests (invalid app paths, malformed durations, etc.)",
+      "testable": true,
+      "validated": false,
+      "phase": "Phase 2"
+    },
+    {
+      "criteria": "Error states are clearly communicated to users with actionable recovery suggestions",
+      "testable": true,
+      "validated": false,
+      "phase": "Phase 2"
+    },
+    {
+      "criteria": "Users can export permission data from GUI in JSON and CSV formats",
+      "testable": true,
+      "validated": false,
+      "phase": "Phase 3"
+    },
+    {
+      "criteria": "Search and filter functionality performs efficiently with 100+ permissions (<200ms search response)",
+      "testable": true,
+      "validated": false,
+      "phase": "Phase 3"
+    },
+    {
+      "criteria": "Batch operations (multi-select revoke) maintain data consistency and provide progress feedback",
+      "testable": true,
+      "validated": false,
+      "phase": "Phase 3"
+    },
+    {
+      "criteria": "Settings and preferences integrate with existing PrivarionGUI preference system",
+      "testable": true,
+      "validated": false,
+      "phase": "Phase 3"
+    }
+  ],
+  "dependencies": ["STORY-2025-018"],
+  "estimatedHours": 60,
+  "actualHours": 0,
+  "qualityMetrics": {
+    "codeCoverage": 0,
+    "testsPassed": 0,
+    "performanceScore": 0
+  },
+  "technicalRequirements": {
+    "swiftVersion": "5.9+",
+    "macOSVersion": "13.0+",
+    "frameworks": ["SwiftUI", "Combine", "@Observable"],
+    "architecturePatterns": ["Clean Architecture", "TCA (Swift Composable Architecture)", "Actor-based concurrency"],
+    "performanceTargets": {
+      "uiResponseTime": "<16ms",
+      "permissionOperations": "<3ms",
+      "memoryFootprint": "<5MB additional",
+      "searchPerformance": "<200ms for 1000+ items"
+    }
+  },
+  "phases": {
+    "phase1": {
+      "name": "Core Integration",
+      "estimatedHours": 20,
+      "deliverables": [
+        "TemporaryPermissionInteractor implementation",
+        "Basic TemporaryPermissionsView with list functionality",
+        "Integration with existing AppState",
+        "Navigation tab addition"
+      ],
+      "qualityGate": {
+        "uiRenderingCorrect": false,
+        "actorIntegrationNonBlocking": false,
+        "memoryUsageUnder2MB": false,
+        "existingTestsPass": false,
+        "newUITestsCoverage": false
+      }
+    },
+    "phase2": {
+      "name": "Permission Management",
+      "estimatedHours": 20,
+      "deliverables": [
+        "GrantPermissionSheet for creating new temporary permissions",
+        "Permission detail view with revoke functionality",
+        "Error handling and loading states",
+        "Form validation and user feedback"
+      ],
+      "qualityGate": {
+        "formValidationComplete": false,
+        "errorHandlingComplete": false,
+        "performanceMetricsMet": false,
+        "userExperienceValidated": false,
+        "integrationTestsCoverage": false
+      }
+    },
+    "phase3": {
+      "name": "Advanced Features",
+      "estimatedHours": 20,
+      "deliverables": [
+        "Export functionality (JSON/CSV)",
+        "Search and filtering capabilities",
+        "Batch operations (revoke multiple)",
+        "Settings and preferences integration"
+      ],
+      "qualityGate": {
+        "exportEfficiencyMet": false,
+        "searchPerformanceMet": false,
+        "batchOperationsACID": false,
+        "fullFeatureTestCoverage": false,
+        "documentationUpdated": false
+      }
+    }
+  },
+  "context7Research": {
+    "researchSessions": [
+      {
+        "date": "2025-07-23",
+        "library": "/nalexn/clean-architecture-swiftui",
+        "topic": "Clean Architecture patterns for SwiftUI applications",
+        "keyFindings": [
+          "Stateless views with business logic in interactors",
+          "State injection via @Environment from AppState",
+          "Side effects forwarded to Interactors",
+          "Repository pattern for data access"
+        ]
+      },
+      {
+        "date": "2025-07-23",
+        "library": "/pointfreeco/swift-composable-architecture",
+        "topic": "TCA patterns for state management and dependency injection",
+        "keyFindings": [
+          "@Shared state for cross-feature data",
+          "@ObservableState for local view state",
+          "Dependency injection via @Dependency wrapper",
+          "TestStore for comprehensive testing"
+        ]
+      }
+    ],
+    "appliedPatterns": [
+      "Clean Architecture layer separation",
+      "TCA state management with @Shared",
+      "Dependency injection for actor integration",
+      "Observable state for reactive UI updates"
+    ]
+  },
+  "sequentialThinkingAnalysis": {
+    "planningSession": "2025-07-23",
+    "sessionId": "STORY-2025-019-planning",
+    "keyDecisions": [
+      "Hybrid Clean Architecture + TCA approach for best of both patterns",
+      "Three-phase implementation to minimize risk and ensure quality",
+      "Actor integration via repository pattern to maintain UI responsiveness",
+      "Feature parity with CLI while enhancing user experience"
+    ],
+    "riskAssessment": [
+      "Actor integration complexity mitigated with @MainActor patterns",
+      "State synchronization issues handled via @Shared state",
+      "Performance degradation prevented with lazy loading and monitoring"
+    ]
+  },
+  "createdAt": "2025-07-23T18:10:15Z",
+  "updatedAt": "2025-07-23T18:10:15Z",
+  "createdBy": "GitHub Copilot - Codeflow System v3.0",
+  "tags": ["GUI", "SwiftUI", "TCA", "Clean Architecture", "Temporary Permissions", "macOS", "User Interface"],
+  "relatedDocuments": [
+    "STORY-2025-019_PLANNING_DOCUMENT.md",
+    "STORY-2025-018_FINAL_COMPLETION_SUMMARY.md",
+    "PRD.md"
+  ]
+}
