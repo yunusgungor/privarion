@@ -63,6 +63,108 @@ final class AppState: ObservableObject {
         }
     }
     
+    // MARK: - Temporary Permission State
+    
+    /// State management for temporary permission functionality
+    @MainActor
+    class TemporaryPermissionState: ObservableObject {
+        @Published var activeGrants: [PrivarionCore.TemporaryPermissionManager.TemporaryPermissionGrant] = []
+        @Published var isLoading: Bool = false
+        @Published var error: String? = nil
+        @Published var selectedGrant: PrivarionCore.TemporaryPermissionManager.TemporaryPermissionGrant? = nil
+        @Published var showingGrantSheet: Bool = false
+        @Published var lastUpdated: Date = Date()
+        
+        private let temporaryPermissionManager: TemporaryPermissionManager
+        private let logger = Logger(label: "TemporaryPermissionState")
+        weak var appState: AppState?
+        
+        init() {
+            self.temporaryPermissionManager = TemporaryPermissionManager()
+            Task {
+                await refresh()
+            }
+        }
+        
+        func refresh() async {
+            isLoading = true
+            error = nil
+            
+            let grants = await temporaryPermissionManager.getActiveGrants()
+            await MainActor.run {
+                self.activeGrants = grants
+                self.lastUpdated = Date()
+                self.isLoading = false
+                
+                // Update search manager with new permissions
+                appState?.permissionSearchManager.updatePermissions(grants)
+            }
+            logger.debug("Successfully refreshed temporary permissions: \(grants.count) active grants")
+        }
+        
+        func grantPermission(_ request: PrivarionCore.TemporaryPermissionManager.GrantRequest) async -> Bool {
+            isLoading = true
+            error = nil
+            
+            do {
+                let result = try await temporaryPermissionManager.grantPermission(request)
+                await MainActor.run {
+                    switch result {
+                    case .granted(let grant):
+                        self.activeGrants.append(grant)
+                        self.showingGrantSheet = false
+                        self.isLoading = false
+                    case .denied(let reason), .invalidRequest(let reason):
+                        self.error = reason
+                        self.isLoading = false
+                    case .alreadyExists(let grant):
+                        // Update the existing grant in the list
+                        if let index = self.activeGrants.firstIndex(where: { $0.id == grant.id }) {
+                            self.activeGrants[index] = grant
+                        }
+                        self.error = "Permission already exists"
+                        self.isLoading = false
+                    }
+                }
+                logger.info("Permission grant attempt for bundle")
+                
+                switch result {
+                case .granted:
+                    return true
+                default:
+                    return false
+                }
+            } catch {
+                await MainActor.run {
+                    self.error = error.localizedDescription
+                    self.isLoading = false
+                }
+                logger.error("Failed to grant permission: \(error)")
+                return false
+            }
+        }
+        
+        func revokePermission(grantID: String) async -> Bool {
+            isLoading = true
+            error = nil
+            
+            let success = await temporaryPermissionManager.revokePermission(grantID: grantID)
+            await MainActor.run {
+                if success {
+                    self.activeGrants.removeAll { $0.id == grantID }
+                    if self.selectedGrant?.id == grantID {
+                        self.selectedGrant = nil
+                    }
+                } else {
+                    self.error = "Failed to revoke permission"
+                }
+                self.isLoading = false
+            }
+            logger.info("Permission revocation \(success ? "successful" : "failed"): \(grantID)")
+            return success
+        }
+    }
+    
     // MARK: - Private Properties
     
     private let logger = Logger(label: "AppState")
@@ -107,6 +209,16 @@ final class AppState: ObservableObject {
     
     let networkFilteringState: NetworkFilteringState
     
+    // MARK: - Temporary Permission Management
+    
+    @Published var temporaryPermissionState: TemporaryPermissionState
+    
+    /// Export/Import manager for file operations
+    private let exportManager = PermissionExportManager()
+    
+    /// Search and filtering manager
+    let permissionSearchManager = PermissionSearchManager()
+    
     // MARK: - Initialization
     
     init(
@@ -128,6 +240,10 @@ final class AppState: ObservableObject {
         
         // Initialize NetworkFilteringState
         self.networkFilteringState = NetworkFilteringState()
+        
+        // Initialize TemporaryPermissionState
+        self.temporaryPermissionState = TemporaryPermissionState()
+        self.temporaryPermissionState.appState = self
         
         setupSubscriptions()
         setupSearchManager()
@@ -569,6 +685,8 @@ final class AppState: ObservableObject {
                 await macAddressState.loadInterfaces()
             case .networkFiltering:
                 networkFilteringState.refresh()
+            case .temporaryPermissions:
+                await temporaryPermissionState.refresh()
             case .analytics:
                 // Analytics view manages its own refresh
                 break
@@ -611,6 +729,38 @@ final class AppState: ObservableObject {
         currentView = .settings
         logger.debug("Advanced preferences requested via command")
     }
+    
+    // MARK: - Export/Import Operations
+    
+    /// Exports current permissions to JSON format
+    /// - Returns: JSON data ready for file saving
+    /// - Throws: Export errors
+    func exportPermissionsToJSON() async throws -> Data {
+        let permissions = temporaryPermissionState.activeGrants
+        guard !permissions.isEmpty else {
+            throw ExportError.noPermissionsToExport
+        }
+        return try await exportManager.exportToJSON(permissions: permissions)
+    }
+    
+    /// Exports current permissions to CSV format
+    /// - Returns: CSV data ready for file saving
+    /// - Throws: Export errors
+    func exportPermissionsToCSV() async throws -> Data {
+        let permissions = temporaryPermissionState.activeGrants
+        guard !permissions.isEmpty else {
+            throw ExportError.noPermissionsToExport
+        }
+        return try await exportManager.exportToCSV(permissions: permissions)
+    }
+    
+    /// Imports permission templates from JSON data
+    /// - Parameter data: JSON data to import
+    /// - Returns: Array of permission templates
+    /// - Throws: Import errors
+    func importPermissionTemplates(from data: Data) async throws -> [PermissionTemplate] {
+        return try await exportManager.importFromJSON(data: data)
+    }
 }
 
 // MARK: - Supporting Types
@@ -622,6 +772,7 @@ enum AppView: String, CaseIterable {
     case profiles = "Profiles"
     case macAddress = "MAC Address"
     case networkFiltering = "Network Filtering"
+    case temporaryPermissions = "Temporary Permissions"
     case analytics = "Analytics"
     case settings = "Settings"
     case logs = "Logs"

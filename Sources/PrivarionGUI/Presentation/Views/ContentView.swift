@@ -167,6 +167,23 @@ struct SidebarView: View {
                     }
                 }
                 
+                NavigationLink(value: AppView.temporaryPermissions) {
+                    HStack {
+                        Label("Temporary Permissions", systemImage: "clock.badge.exclamationmark")
+                        Spacer()
+                        if !appState.temporaryPermissionState.activeGrants.isEmpty {
+                            Text("\(appState.temporaryPermissionState.activeGrants.count)")
+                                .font(.caption2)
+                                .fontWeight(.medium)
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(Color.purple)
+                                .clipShape(Capsule())
+                        }
+                    }
+                }
+                
                 NavigationLink(value: AppView.analytics) {
                     HStack {
                         Label("Network Analytics", systemImage: "chart.bar.xaxis")
@@ -218,6 +235,9 @@ struct DetailView: View {
                 .frame(minWidth: 600, minHeight: 400)
         case .networkFiltering:
             NetworkFilteringView()
+                .frame(minWidth: 800, minHeight: 600)
+        case .temporaryPermissions:
+            TemporaryPermissionsView()
                 .frame(minWidth: 800, minHeight: 600)
         case .analytics:
             AnalyticsView()

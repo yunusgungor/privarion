@@ -9,7 +9,7 @@ public actor TemporaryPermissionManager {
     // MARK: - Types
     
     /// Enhanced temporary permission grant with persistence support
-    public struct TemporaryPermissionGrant: Sendable, Codable {
+    public struct TemporaryPermissionGrant: Sendable, Codable, Hashable {
         public let id: String
         public let bundleIdentifier: String
         public let serviceName: String
