@@ -484,11 +484,184 @@ public final class DashboardVisualizationManager: @unchecked Sendable {
 
 extension DashboardVisualizationManager {
     
+    // MARK: - Ephemeral File System Metrics
+    
+    /// Generate ephemeral file system usage chart
+    /// - Parameters:
+    ///   - ephemeralSpaces: Active ephemeral spaces data
+    ///   - chartType: Type of chart to generate (line, bar, gauge)
+    /// - Returns: Chart data for ephemeral file system metrics
+    public func generateEphemeralFileSystemChart(
+        ephemeralSpaces: [EphemeralFileSystemManager.EphemeralSpace],
+        chartType: ChartType = .bar
+    ) -> ChartData {
+        
+        let currentTime = Date()
+        
+        switch chartType {
+        case .bar:
+            // Show current ephemeral spaces by age
+            let spaceAges = ephemeralSpaces.map { space in
+                currentTime.timeIntervalSince(space.createdAt) / 60 // Age in minutes
+            }
+            
+            let labels = ephemeralSpaces.map { space in
+                space.id.uuidString.prefix(8).description
+            }
+            
+            let dataset = DataSet(
+                label: "Space Age (minutes)",
+                data: spaceAges,
+                backgroundColor: "#3498db",
+                borderColor: "#2980b9",
+                borderWidth: 1
+            )
+            
+            return ChartData(
+                type: "bar",
+                title: "Active Ephemeral Spaces",
+                labels: Array(labels),
+                datasets: [dataset],
+                options: ChartOptions(
+                    responsive: true,
+                    scales: ScaleOptions(
+                        y: AxisOptions(beginAtZero: true),
+                        x: AxisOptions()
+                    )
+                )
+            )
+            
+        case .gauge:
+            // Show usage percentage of max spaces
+            let maxSpaces = 50.0 // From configuration
+            let currentUsage = Double(ephemeralSpaces.count)
+            let usagePercentage = (currentUsage / maxSpaces) * 100
+            
+            let dataset = DataSet(
+                label: "Space Usage",
+                data: [usagePercentage, 100 - usagePercentage],
+                backgroundColor: getGaugeColors(for: usagePercentage)
+            )
+            
+            return ChartData(
+                type: "doughnut",
+                title: "Ephemeral Space Usage",
+                labels: ["Used", "Available"],
+                datasets: [dataset],
+                options: ChartOptions(responsive: true)
+            )
+            
+        case .line:
+            // Show ephemeral space creation/destruction over time
+            let timeLabels = generateTimeLabels(from: currentTime.addingTimeInterval(-300), to: currentTime, interval: 30)
+            let creationData = getHistoricalValues(for: "ephemeral_creation_rate", in: 300)
+            let destructionData = getHistoricalValues(for: "ephemeral_destruction_rate", in: 300)
+            
+            let creationDataset = DataSet(
+                label: "Creation Rate",
+                data: creationData,
+                backgroundColor: "rgba(46, 204, 113, 0.2)",
+                borderColor: "#2ecc71",
+                borderWidth: 2
+            )
+            
+            let destructionDataset = DataSet(
+                label: "Destruction Rate",
+                data: destructionData,
+                backgroundColor: "rgba(231, 76, 60, 0.2)",
+                borderColor: "#e74c3c",
+                borderWidth: 2
+            )
+            
+            return ChartData(
+                type: "line",
+                title: "Ephemeral Space Activity",
+                labels: timeLabels,
+                datasets: [creationDataset, destructionDataset],
+                options: ChartOptions(
+                    responsive: true,
+                    scales: ScaleOptions(
+                        y: AxisOptions(beginAtZero: true),
+                        x: AxisOptions()
+                    )
+                )
+            )
+            
+        default:
+            // Default to bar chart
+            return generateEphemeralFileSystemChart(ephemeralSpaces: ephemeralSpaces, chartType: .bar)
+        }
+    }
+    
+    /// Generate ephemeral performance metrics chart
+    /// - Parameters:
+    ///   - performanceData: Performance metrics from ephemeral operations
+    /// - Returns: Chart data for ephemeral performance metrics
+    public func generateEphemeralPerformanceChart(
+        performanceData: [String: [Double]]
+    ) -> ChartData {
+        
+        let labels = ["Snapshot Creation", "Mount Operation", "Cleanup Operation"]
+        var datasets: [DataSet] = []
+        
+        if let snapshotTimes = performanceData["snapshot_creation_ms"] {
+            let avgSnapshotTime = snapshotTimes.reduce(0, +) / Double(snapshotTimes.count)
+            let dataset = DataSet(
+                label: "Average Time (ms)",
+                data: [avgSnapshotTime],
+                backgroundColor: "#f39c12",
+                borderColor: "#e67e22",
+                borderWidth: 1
+            )
+            datasets.append(dataset)
+        }
+        
+        if let mountTimes = performanceData["mount_operation_ms"] {
+            let avgMountTime = mountTimes.reduce(0, +) / Double(mountTimes.count)
+            let dataset = DataSet(
+                label: "Mount Time (ms)",
+                data: [avgMountTime],
+                backgroundColor: "#3498db",
+                borderColor: "#2980b9",
+                borderWidth: 1
+            )
+            datasets.append(dataset)
+        }
+        
+        if let cleanupTimes = performanceData["cleanup_operation_ms"] {
+            let avgCleanupTime = cleanupTimes.reduce(0, +) / Double(cleanupTimes.count)
+            let dataset = DataSet(
+                label: "Cleanup Time (ms)",
+                data: [avgCleanupTime],
+                backgroundColor: "#e74c3c",
+                borderColor: "#c0392b",
+                borderWidth: 1
+            )
+            datasets.append(dataset)
+        }
+        
+        return ChartData(
+            type: "bar",
+            title: "Ephemeral Operations Performance",
+            labels: labels,
+            datasets: datasets,
+            options: ChartOptions(
+                responsive: true,
+                scales: ScaleOptions(
+                    y: AxisOptions(beginAtZero: true),
+                    x: AxisOptions()
+                )
+            )
+        )
+    }
+    
     /// Generate comprehensive dashboard data package
     public func generateDashboardPackage(
         performanceMetrics: [String: Double],
         loadTestResults: [(connections: Int, latency: Double, errorRate: Double)] = [],
-        connectionData: [String: Int] = [:]
+        connectionData: [String: Int] = [:],
+        ephemeralSpaces: [EphemeralFileSystemManager.EphemeralSpace] = [],
+        ephemeralPerformance: [String: [Double]] = [:]
     ) -> [String: ChartData] {
         
         var charts: [String: ChartData] = [:]
@@ -515,7 +688,32 @@ extension DashboardVisualizationManager {
             charts["connection_heatmap"] = generateConnectionHeatmap(connectionData: connectionData)
         }
         
-        os_log("Generated dashboard package with %d charts", log: OSLog.default, type: .info, charts.count)
+        // Ephemeral file system charts
+        if !ephemeralSpaces.isEmpty {
+            charts["ephemeral_usage"] = generateEphemeralFileSystemChart(
+                ephemeralSpaces: ephemeralSpaces,
+                chartType: .gauge
+            )
+            
+            charts["ephemeral_activity"] = generateEphemeralFileSystemChart(
+                ephemeralSpaces: ephemeralSpaces,
+                chartType: .line
+            )
+            
+            charts["ephemeral_spaces"] = generateEphemeralFileSystemChart(
+                ephemeralSpaces: ephemeralSpaces,
+                chartType: .bar
+            )
+        }
+        
+        // Ephemeral performance metrics
+        if !ephemeralPerformance.isEmpty {
+            charts["ephemeral_performance"] = generateEphemeralPerformanceChart(
+                performanceData: ephemeralPerformance
+            )
+        }
+        
+        os_log("Generated dashboard package with %d charts (including ephemeral metrics)", log: OSLog.default, type: .info, charts.count)
         return charts
     }
 }

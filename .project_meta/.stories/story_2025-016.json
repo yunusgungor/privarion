@@ -2,7 +2,7 @@
   "id": "STORY-2025-016",
   "title": "Ephemeral File System with APFS Snapshots for Zero-Trace Execution",
   "description": "PRD'nin core privacy protection requirements'ına uygun olarak, macOS APFS snapshot teknolojisini kullanarak application'ların tamamen ephemeral (geçici) file system'lerde çalıştırılmasını sağlayan sistem. Bu sistem, application'ların disk'te hiçbir iz bırakmamasını garanti edecek ve process terminate olduğunda tüm dosya değişikliklerini otomatik olarak yok edecek. Enterprise privacy protection için kritik bir capability.",
-  "status": "planned",
+  "status": "ready_for_implementation",
   "priority": "critical",
   "acceptanceCriteria": [
     {

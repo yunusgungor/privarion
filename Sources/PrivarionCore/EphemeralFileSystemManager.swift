@@ -23,17 +23,20 @@ public final class EphemeralFileSystemManager: Sendable {
         public let maxEphemeralSpaces: Int
         public let cleanupTimeoutSeconds: Int
         public let enableSecurityMonitoring: Bool
+        public let isTestMode: Bool
         
         public init(
             basePath: String = "/tmp/privarion/ephemeral",
             maxEphemeralSpaces: Int = 50,
             cleanupTimeoutSeconds: Int = 300,
-            enableSecurityMonitoring: Bool = true
+            enableSecurityMonitoring: Bool = true,
+            isTestMode: Bool = false
         ) {
             self.basePath = basePath
             self.maxEphemeralSpaces = maxEphemeralSpaces
             self.cleanupTimeoutSeconds = cleanupTimeoutSeconds
             self.enableSecurityMonitoring = enableSecurityMonitoring
+            self.isTestMode = isTestMode
         }
         
         public static let `default` = Configuration()
@@ -98,20 +101,19 @@ public final class EphemeralFileSystemManager: Sendable {
         }
     }
     
-    // MARK: - Properties
-    
-    private let configuration: Configuration
-    private let logger: Logger
-    private let securityMonitor: SecurityMonitoringEngine?
-    
     /// Actor for thread-safe management of ephemeral spaces
     private actor SpaceRegistry {
         private var activeSpaces: [UUID: EphemeralSpace] = [:]
         private var cleanupTimers: [UUID: Timer] = [:]
+        private let maxSpaces: Int
+        
+        init(maxSpaces: Int) {
+            self.maxSpaces = maxSpaces
+        }
         
         func registerSpace(_ space: EphemeralSpace) throws {
-            guard activeSpaces.count < 50 else {
-                throw EphemeralError.maxSpacesExceeded(50)
+            guard activeSpaces.count < maxSpaces else {
+                throw EphemeralError.maxSpacesExceeded(maxSpaces)
             }
             activeSpaces[space.id] = space
         }
@@ -135,7 +137,12 @@ public final class EphemeralFileSystemManager: Sendable {
         }
     }
     
-    private let spaceRegistry = SpaceRegistry()
+    // MARK: - Properties
+    
+    private let configuration: Configuration
+    private let logger: Logger
+    private let securityMonitor: SecurityMonitoringEngine?
+    private let spaceRegistry: SpaceRegistry
     
     // MARK: - Initialization
     
@@ -146,6 +153,7 @@ public final class EphemeralFileSystemManager: Sendable {
         self.configuration = configuration
         self.logger = Logger(subsystem: "com.privarion.core", category: "EphemeralFileSystem")
         self.securityMonitor = securityMonitor
+        self.spaceRegistry = SpaceRegistry(maxSpaces: configuration.maxEphemeralSpaces)
         
         // Validate configuration
         try validateConfiguration(configuration)
@@ -343,51 +351,234 @@ public final class EphemeralFileSystemManager: Sendable {
     }
     
     private func createAPFSSnapshot(name: String) async throws {
-        // Note: This is a simplified implementation
-        // Real APFS snapshot creation would require system-level APIs
         logger.debug("Creating APFS snapshot: \(name)")
         
-        // Simulate snapshot creation delay
-        try await Task.sleep(nanoseconds: 10_000_000) // 10ms
+        let startTime = DispatchTime.now()
         
-        // In a real implementation, this would call diskutil or use private APIs
-        // For demonstration, we'll create a placeholder directory
-        let snapshotPath = "\(configuration.basePath)/snapshots/\(name)"
-        try FileManager.default.createDirectory(atPath: snapshotPath, withIntermediateDirectories: true)
+        // In test mode, simulate snapshot creation without real APFS operations
+        if configuration.isTestMode {
+            logger.debug("Test mode: Simulating APFS snapshot creation")
+            
+            // Simulate some work
+            try await Task.sleep(nanoseconds: 10_000_000) // 10ms
+            
+            // Verify snapshot creation performance (<100ms target)
+            let duration = DispatchTime.now().uptimeNanoseconds - startTime.uptimeNanoseconds
+            let durationMs = Double(duration) / 1_000_000
+            
+            logger.debug("Simulated APFS snapshot '\(name)' created in \(String(format: "%.2f", durationMs))ms")
+            return
+        }
+        
+        // Real APFS snapshot creation using tmutil (Time Machine snapshots)
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/tmutil")
+        process.arguments = ["localsnapshot"]
+        
+        let pipe = Pipe()
+        process.standardOutput = pipe
+        process.standardError = pipe
+        
+        do {
+            try process.run()
+            process.waitUntilExit()
+            
+            let data = pipe.fileHandleForReading.readDataToEndOfFile()
+            let output = String(data: data, encoding: .utf8) ?? ""
+            
+            guard process.terminationStatus == 0 else {
+                throw EphemeralError.snapshotCreationFailed("tmutil failed with status \(process.terminationStatus): \(output)")
+            }
+            
+            // Verify snapshot creation performance (<100ms target)
+            let duration = DispatchTime.now().uptimeNanoseconds - startTime.uptimeNanoseconds
+            let durationMs = Double(duration) / 1_000_000
+            
+            if durationMs > 100 {
+                logger.warning("APFS snapshot creation exceeded performance target: \(String(format: "%.2f", durationMs))ms")
+            }
+            
+            logger.info("APFS snapshot \(name) created successfully in \(String(format: "%.2f", durationMs))ms")
+            
+        } catch {
+            logger.error("Failed to create APFS snapshot \(name): \(error.localizedDescription)")
+            throw EphemeralError.snapshotCreationFailed(error.localizedDescription)
+        }
     }
     
     private func deleteAPFSSnapshot(name: String) async throws {
         logger.debug("Deleting APFS snapshot: \(name)")
         
-        // Simulate snapshot deletion delay
-        try await Task.sleep(nanoseconds: 5_000_000) // 5ms
+        let startTime = DispatchTime.now()
         
-        // Remove placeholder directory
-        let snapshotPath = "\(configuration.basePath)/snapshots/\(name)"
-        if FileManager.default.fileExists(atPath: snapshotPath) {
-            try FileManager.default.removeItem(atPath: snapshotPath)
+        // In test mode, simulate snapshot deletion without real APFS operations
+        if configuration.isTestMode {
+            logger.debug("Test mode: Simulating APFS snapshot deletion")
+            
+            // Simulate some work
+            try await Task.sleep(nanoseconds: 5_000_000) // 5ms
+            
+            // Verify cleanup performance (<200ms target)
+            let duration = DispatchTime.now().uptimeNanoseconds - startTime.uptimeNanoseconds
+            let durationMs = Double(duration) / 1_000_000
+            
+            logger.debug("Simulated APFS snapshot '\(name)' deleted in \(String(format: "%.2f", durationMs))ms")
+            return
+        }
+        
+        // Real APFS snapshot deletion using diskutil
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/sbin/diskutil")
+        process.arguments = ["apfs", "deleteSnapshot", "/", "-name", name]
+        
+        let pipe = Pipe()
+        process.standardOutput = pipe
+        process.standardError = pipe
+        
+        do {
+            try process.run()
+            process.waitUntilExit()
+            
+            let data = pipe.fileHandleForReading.readDataToEndOfFile()
+            let output = String(data: data, encoding: .utf8) ?? ""
+            
+            guard process.terminationStatus == 0 else {
+                throw EphemeralError.snapshotDeletionFailed("diskutil failed with status \(process.terminationStatus): \(output)")
+            }
+            
+            // Verify cleanup performance (<200ms target)
+            let duration = DispatchTime.now().uptimeNanoseconds - startTime.uptimeNanoseconds
+            let durationMs = Double(duration) / 1_000_000
+            
+            if durationMs > 200 {
+                logger.warning("APFS snapshot deletion exceeded performance target: \(String(format: "%.2f", durationMs))ms")
+            }
+            
+            logger.info("APFS snapshot \(name) deleted successfully in \(String(format: "%.2f", durationMs))ms")
+            
+        } catch {
+            logger.error("Failed to delete APFS snapshot \(name): \(error.localizedDescription)")
+            throw EphemeralError.snapshotDeletionFailed(error.localizedDescription)
         }
     }
     
     private func mountSnapshot(snapshotName: String, mountPath: String) async throws {
         logger.debug("Mounting snapshot \(snapshotName) at \(mountPath)")
         
-        // Simulate mount operation delay
-        try await Task.sleep(nanoseconds: 20_000_000) // 20ms
+        let startTime = DispatchTime.now()
         
-        // In a real implementation, this would use mount system calls
-        // For demonstration, we'll create the mount point structure
+        // Create mount point directory
         try FileManager.default.createDirectory(atPath: mountPath, withIntermediateDirectories: true)
+        
+        // In test mode, simulate mounting without real APFS operations
+        if configuration.isTestMode {
+            logger.debug("Test mode: Simulating APFS snapshot mount")
+            
+            // Simulate some work
+            try await Task.sleep(nanoseconds: 5_000_000) // 5ms
+            
+            // Verify mount performance (<50ms target)
+            let duration = DispatchTime.now().uptimeNanoseconds - startTime.uptimeNanoseconds
+            let durationMs = Double(duration) / 1_000_000
+            
+            logger.debug("Simulated APFS snapshot '\(snapshotName)' mounted at \(mountPath) in \(String(format: "%.2f", durationMs))ms")
+            return
+        }
+        
+        // Mount APFS snapshot using mount_apfs
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/sbin/mount_apfs")
+        process.arguments = ["-s", snapshotName, "/", mountPath]
+        
+        let pipe = Pipe()
+        process.standardOutput = pipe
+        process.standardError = pipe
+        
+        do {
+            try process.run()
+            process.waitUntilExit()
+            
+            let data = pipe.fileHandleForReading.readDataToEndOfFile()
+            let output = String(data: data, encoding: .utf8) ?? ""
+            
+            guard process.terminationStatus == 0 else {
+                throw EphemeralError.mountOperationFailed("mount_apfs failed with status \(process.terminationStatus): \(output)")
+            }
+            
+            // Verify mount performance (<50ms target)
+            let duration = DispatchTime.now().uptimeNanoseconds - startTime.uptimeNanoseconds
+            let durationMs = Double(duration) / 1_000_000
+            
+            if durationMs > 50 {
+                logger.warning("APFS snapshot mount exceeded performance target: \(String(format: "%.2f", durationMs))ms")
+            }
+            
+            logger.info("APFS snapshot \(snapshotName) mounted at \(mountPath) in \(String(format: "%.2f", durationMs))ms")
+            
+        } catch {
+            logger.error("Failed to mount APFS snapshot \(snapshotName): \(error.localizedDescription)")
+            
+            // Cleanup mount directory on failure
+            try? FileManager.default.removeItem(atPath: mountPath)
+            
+            throw EphemeralError.mountOperationFailed(error.localizedDescription)
+        }
     }
     
     private func unmountSnapshot(mountPath: String) async throws {
         logger.debug("Unmounting snapshot at \(mountPath)")
         
-        // Simulate unmount operation delay
-        try await Task.sleep(nanoseconds: 15_000_000) // 15ms
+        let startTime = DispatchTime.now()
         
-        // In a real implementation, this would use unmount system calls
-        // For demonstration, we'll just ensure the directory is ready for removal
+        // Test mode: Skip actual unmount operation
+        if configuration.isTestMode {
+            logger.debug("Test mode: Simulating snapshot unmount at \(mountPath)")
+            
+            // Simulate unmount delay
+            try await Task.sleep(nanoseconds: 10_000_000) // 10ms
+            
+            // Clean up directory if it exists
+            if FileManager.default.fileExists(atPath: mountPath) {
+                try? FileManager.default.removeItem(atPath: mountPath)
+            }
+            
+            let duration = DispatchTime.now().uptimeNanoseconds - startTime.uptimeNanoseconds
+            let durationMs = Double(duration) / 1_000_000
+            
+            logger.info("Test mode: APFS snapshot unmounted from \(mountPath) in \(String(format: "%.2f", durationMs))ms")
+            return
+        }
+        
+        // Production mode: Use umount to unmount the snapshot
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/sbin/umount")
+        process.arguments = [mountPath]
+        
+        let pipe = Pipe()
+        process.standardOutput = pipe
+        process.standardError = pipe
+        
+        do {
+            try process.run()
+            process.waitUntilExit()
+            
+            let data = pipe.fileHandleForReading.readDataToEndOfFile()
+            let output = String(data: data, encoding: .utf8) ?? ""
+            
+            guard process.terminationStatus == 0 else {
+                throw EphemeralError.unmountOperationFailed("umount failed with status \(process.terminationStatus): \(output)")
+            }
+            
+            // Verify unmount performance
+            let duration = DispatchTime.now().uptimeNanoseconds - startTime.uptimeNanoseconds
+            let durationMs = Double(duration) / 1_000_000
+            
+            logger.info("APFS snapshot unmounted from \(mountPath) in \(String(format: "%.2f", durationMs))ms")
+            
+        } catch {
+            logger.error("Failed to unmount APFS snapshot at \(mountPath): \(error.localizedDescription)")
+            throw EphemeralError.unmountOperationFailed(error.localizedDescription)
+        }
     }
     
     private func scheduleCleanup(for space: EphemeralSpace) async {

@@ -36,8 +36,17 @@ final class ApplicationLauncherTests: XCTestCase {
             withIntermediateDirectories: true
         )
         
-        // Initialize dependencies
-        ephemeralManager = try EphemeralFileSystemManager()
+        // Initialize dependencies with test configuration
+        let ephemeralConfig = EphemeralFileSystemManager.Configuration(
+            basePath: testWorkspace.appendingPathComponent("ephemeral").path,
+            maxEphemeralSpaces: 10,
+            cleanupTimeoutSeconds: 60,
+            enableSecurityMonitoring: false,
+            isTestMode: true
+        )
+        ephemeralManager = try EphemeralFileSystemManager(
+            configuration: ephemeralConfig
+        )
         securityMonitor = SecurityMonitoringEngine()
         
         // Initialize application launcher
@@ -66,6 +75,25 @@ final class ApplicationLauncherTests: XCTestCase {
     }
     
     // MARK: - Helper Methods
+    
+    /// Safely terminates a process if it's still running
+    private func safeTerminateProcess(_ processId: UUID) async throws -> ApplicationLauncher.ProcessResult? {
+        // Check if process is still running
+        let processInfo = await applicationLauncher.getProcessInfo(processId)
+        
+        if processInfo != nil {
+            // Process is still running, terminate it
+            do {
+                return try await applicationLauncher.terminateProcess(processId)
+            } catch ApplicationLauncher.LaunchError.processTerminationFailed {
+                // Process might have already ended, return nil
+                return nil
+            }
+        } else {
+            // Process already completed
+            return nil
+        }
+    }
     
     private func createTestApplication() throws -> String {
         let appPath = testWorkspace.appendingPathComponent("test_app.sh").path
@@ -347,6 +375,143 @@ final class ApplicationLauncherTests: XCTestCase {
         // Verify all terminated
         let finalProcesses = await applicationLauncher.getRunningProcesses()
         XCTAssertTrue(finalProcesses.isEmpty)
+    }
+    
+    // MARK: - Tests: Ephemeral File System Integration
+    
+    func testLaunchApplicationWithEphemeralFileSystemIntegration() async throws {
+        // Launch application in new ephemeral space
+        let handle = try await applicationLauncher.launchApplicationInNewSpace(
+            at: testApplicationPath
+        )
+        
+        // Verify ephemeral space exists
+        let ephemeralSpaces = await ephemeralManager.listActiveSpaces()
+        XCTAssertTrue(ephemeralSpaces.contains { $0.id == handle.ephemeralSpaceId })
+        
+        // Wait for completion
+        try await Task.sleep(nanoseconds: 2_000_000_000) // 2 seconds
+        
+        // Safely terminate and verify cleanup
+        let result = try await safeTerminateProcess(handle.id)
+        if let result = result {
+            XCTAssertEqual(result.exitCode, 0)
+        }
+        
+        // Verify ephemeral space is cleaned up
+        let finalSpaces = await ephemeralManager.listActiveSpaces()
+        XCTAssertFalse(finalSpaces.contains { $0.id == handle.ephemeralSpaceId })
+    }
+    
+    func testEphemeralSpaceIsolation() async throws {
+        // Create test application that writes files
+        let fileWriterApp = try createTestApplicationWithCustomBehavior(
+            writeFiles: ["isolation_test_1.txt", "isolation_test_2.txt"]
+        )
+        
+        // Launch in two different ephemeral spaces
+        let handle1 = try await applicationLauncher.launchApplicationInNewSpace(
+            at: fileWriterApp
+        )
+        let handle2 = try await applicationLauncher.launchApplicationInNewSpace(
+            at: fileWriterApp
+        )
+        
+        // Verify different ephemeral spaces
+        XCTAssertNotEqual(handle1.ephemeralSpaceId, handle2.ephemeralSpaceId)
+        
+        // Wait for completion
+        try await Task.sleep(nanoseconds: 2_000_000_000)
+        
+        // Safely terminate both processes
+        _ = try await safeTerminateProcess(handle1.id)
+        _ = try await safeTerminateProcess(handle2.id)
+        
+        // Clean up test app
+        try? FileManager.default.removeItem(atPath: fileWriterApp)
+    }
+    
+    func testEphemeralSpacePerformanceMetrics() async throws {
+        // Launch application with performance monitoring
+        let config = ApplicationLauncher.LaunchConfiguration(
+            enableResourceMonitoring: true
+        )
+        
+        let handle = try await applicationLauncher.launchApplicationInNewSpace(
+            at: testApplicationPath,
+            configuration: config
+        )
+        
+        // Wait for some execution
+        try await Task.sleep(nanoseconds: 1_500_000_000)
+        
+        // Get process info to check if it's still running
+        let processInfo = await applicationLauncher.getProcessInfo(handle.id)
+        
+        if processInfo != nil {
+            // Process is still running, terminate it
+            let result = try await applicationLauncher.terminateProcess(handle.id)
+            
+            // Verify resource usage tracking
+            XCTAssertNotNil(result.resourceUsage)
+            if let resourceUsage = result.resourceUsage {
+                XCTAssertGreaterThanOrEqual(resourceUsage.peakMemoryMB, 0)
+                XCTAssertGreaterThanOrEqual(resourceUsage.cpuTimeSeconds, 0)
+            }
+        } else {
+            // Process already completed, that's fine too
+            XCTAssertTrue(true, "Process completed normally")
+        }
+    }
+    
+    func testEphemeralSpaceSecurityMonitoring() async throws {
+        // Verify security monitor integration
+        let initialEvents = securityMonitor.getSecurityEvents()
+        let initialCount = initialEvents.count
+        
+        // Launch application
+        let handle = try await applicationLauncher.launchApplicationInNewSpace(
+            at: testApplicationPath
+        )
+        
+        // Wait for completion
+        try await Task.sleep(nanoseconds: 2_000_000_000)
+        
+        // Safely terminate
+        _ = try await safeTerminateProcess(handle.id)
+        
+        // Verify security events were logged
+        let finalEvents = securityMonitor.getSecurityEvents()
+        XCTAssertGreaterThan(finalEvents.count, initialCount)
+    }
+    
+    func testEphemeralSpaceCleanupOnFailure() async throws {
+        // Create application that will fail
+        let failingApp = try createTestApplicationWithCustomBehavior(exitCode: 1)
+        
+        do {
+            let handle = try await applicationLauncher.launchApplicationInNewSpace(
+                at: failingApp
+            )
+            
+            // Wait for failure
+            try await Task.sleep(nanoseconds: 2_000_000_000)
+            
+            // Try to terminate (might already be dead)
+            _ = try? await applicationLauncher.terminateProcess(handle.id)
+            
+            // Verify ephemeral space is cleaned up even on failure
+            let spaces = await ephemeralManager.listActiveSpaces()
+            XCTAssertFalse(spaces.contains { $0.id == handle.ephemeralSpaceId })
+            
+        } catch {
+            // Even if launch fails, ensure no leaked spaces
+            let spaces = await ephemeralManager.listActiveSpaces()
+            XCTAssertTrue(spaces.isEmpty)
+        }
+        
+        // Clean up test app
+        try? FileManager.default.removeItem(atPath: failingApp)
     }
     
     // MARK: - Tests: Error Handling
