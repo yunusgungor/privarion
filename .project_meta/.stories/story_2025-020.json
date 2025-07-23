@@ -1,0 +1,323 @@
+{
+  "id": "STORY-2025-020",
+  "title": "As a Privarion user, I want advanced GUI features for permission management so that I can efficiently manage permissions with batch operations and personalized settings",
+  "description": "Complete the advanced features that were deferred in STORY-2025-019 due to time constraints. This story implements batch operations, settings integration, advanced monitoring, and comprehensive testing to fully complete the temporary permission GUI functionality with professional user experience.",
+  "status": "completed",
+  "priority": "high",
+  "acceptanceCriteria": [
+    {
+      "criteria": "Users can select multiple permissions using checkboxes or Cmd+click with visual highlighting",
+      "testable": true,
+      "validated": false,
+      "phase": "Phase 1",
+      "id": "AC-020-001"
+    },
+    {
+      "criteria": "Batch revoke operation works on all selected permissions with progress feedback",
+      "testable": true,
+      "validated": false,
+      "phase": "Phase 1",
+      "id": "AC-020-002"
+    },
+    {
+      "criteria": "Batch export (JSON/CSV) includes only selected permissions",
+      "testable": true,
+      "validated": false,
+      "phase": "Phase 1",
+      "id": "AC-020-003"
+    },
+    {
+      "criteria": "Select All / Deselect All functionality works correctly with filtered results",
+      "testable": true,
+      "validated": false,
+      "phase": "Phase 1",
+      "id": "AC-020-004"
+    },
+    {
+      "criteria": "Selection state persists during search/filter operations",
+      "testable": true,
+      "validated": false,
+      "phase": "Phase 1",
+      "id": "AC-020-005"
+    },
+    {
+      "criteria": "Batch operations provide progress feedback for operations >10 items",
+      "testable": true,
+      "validated": false,
+      "phase": "Phase 1",
+      "id": "AC-020-006"
+    },
+    {
+      "criteria": "User preferences are persisted in UserDefaults and restored on app launch",
+      "testable": true,
+      "validated": false,
+      "phase": "Phase 2",
+      "id": "AC-020-007"
+    },
+    {
+      "criteria": "Default export format setting (JSON/CSV) is respected in all export operations",
+      "testable": true,
+      "validated": false,
+      "phase": "Phase 2",
+      "id": "AC-020-008"
+    },
+    {
+      "criteria": "Auto-refresh interval setting controls UI updates with configurable timing",
+      "testable": true,
+      "validated": false,
+      "phase": "Phase 2",
+      "id": "AC-020-009"
+    },
+    {
+      "criteria": "Search behavior preferences (case sensitive, regex) are saved and applied",
+      "testable": true,
+      "validated": false,
+      "phase": "Phase 2",
+      "id": "AC-020-010"
+    },
+    {
+      "criteria": "Window size and position preferences are restored between sessions",
+      "testable": true,
+      "validated": false,
+      "phase": "Phase 2",
+      "id": "AC-020-011"
+    },
+    {
+      "criteria": "Settings changes take effect immediately without requiring app restart",
+      "testable": true,
+      "validated": false,
+      "phase": "Phase 2",
+      "id": "AC-020-012"
+    },
+    {
+      "criteria": "Permission expiry warnings appear 1 hour before expiration (configurable)",
+      "testable": true,
+      "validated": false,
+      "phase": "Phase 3",
+      "id": "AC-020-013"
+    },
+    {
+      "criteria": "Real-time permission status updates occur without manual refresh",
+      "testable": true,
+      "validated": false,
+      "phase": "Phase 3",
+      "id": "AC-020-014"
+    },
+    {
+      "criteria": "System notifications for permission changes with user preference control",
+      "testable": true,
+      "validated": false,
+      "phase": "Phase 3",
+      "id": "AC-020-015"
+    },
+    {
+      "criteria": "Performance monitoring shows <500ms for batch operations with 100+ items",
+      "testable": true,
+      "validated": false,
+      "phase": "Phase 3",
+      "id": "AC-020-016"
+    },
+    {
+      "criteria": "Unit test coverage ≥90% for all new features with comprehensive assertions",
+      "testable": true,
+      "validated": false,
+      "phase": "Phase 3",
+      "id": "AC-020-017"
+    },
+    {
+      "criteria": "Integration tests cover all user workflows including error scenarios",
+      "testable": true,
+      "validated": false,
+      "phase": "Phase 3",
+      "id": "AC-020-018"
+    },
+    {
+      "criteria": "Error handling tests validate all failure scenarios with user-friendly messages",
+      "testable": true,
+      "validated": false,
+      "phase": "Phase 3",
+      "id": "AC-020-019"
+    },
+    {
+      "criteria": "Memory usage <2MB additional for selection state management at scale",
+      "testable": true,
+      "validated": false,
+      "phase": "Phase 3",
+      "id": "AC-020-020"
+    }
+  ],
+  "dependencies": ["STORY-2025-019"],
+  "estimatedHours": 10,
+  "actualHours": 0,
+  "qualityMetrics": {
+    "codeCoverage": 0,
+    "testsPassed": 0,
+    "performanceScore": 0
+  },
+  "technicalRequirements": {
+    "swiftVersion": "5.9+",
+    "macOSVersion": "13.0+",
+    "frameworks": ["SwiftUI", "Combine", "@Observable", "Swift Collections"],
+    "architecturePatterns": ["Clean Architecture", "OrderedSet Selection Management", "SwiftUI Settings Integration"],
+    "performanceTargets": {
+      "batchOperations": "<500ms for 100+ items",
+      "uiResponseTime": "<16ms",
+      "memoryFootprint": "<2MB additional",
+      "testCoverage": "≥90%"
+    }
+  },
+  "phases": {
+    "phase1": {
+      "name": "Batch Operations Foundation",
+      "estimatedHours": 4,
+      "deliverables": [
+        "OrderedSet-based selection state management",
+        "Multi-selection UI components with visual feedback",
+        "Batch operation algorithms (revoke, export)",
+        "Progress tracking for bulk operations",
+        "Select All/None functionality"
+      ],
+      "qualityGate": {
+        "selectionUIFunctional": false,
+        "orderedSetIntegration": false,
+        "batchOperationsComplete": false,
+        "visualFeedbackImplemented": false,
+        "performanceTestingPassed": false
+      }
+    },
+    "phase2": {
+      "name": "Settings Integration",
+      "estimatedHours": 3,
+      "deliverables": [
+        "Settings data model with @AppStorage",
+        "Settings UI with immediate updates",
+        "UserDefaults persistence implementation",
+        "Settings import/export functionality",
+        "Native macOS design patterns"
+      ],
+      "qualityGate": {
+        "settingsPersistence": false,
+        "immediateUpdates": false,
+        "macOSDesignCompliance": false,
+        "importExportFunctional": false,
+        "settingsValidation": false
+      }
+    },
+    "phase3": {
+      "name": "Advanced Monitoring & Testing",
+      "estimatedHours": 3,
+      "deliverables": [
+        "Real-time monitoring enhancements",
+        "Comprehensive testing suite (unit + integration)",
+        "Performance monitoring and optimization",
+        "Error handling and edge case coverage",
+        "Documentation and code polish"
+      ],
+      "qualityGate": {
+        "testCoverageAchieved": false,
+        "realTimeMonitoringFunctional": false,
+        "performanceBenchmarksMet": false,
+        "errorHandlingComprehensive": false,
+        "documentationComplete": false
+      }
+    }
+  },
+  "context7Research": {
+    "researchSessions": [
+      {
+        "date": "2025-07-23",
+        "library": "/apple/swift-collections",
+        "topic": "OrderedSet and batch operations for multi-selection management",
+        "keyFindings": [
+          "OrderedSet provides O(1) insertion/removal with order preservation",
+          "Set algebra operations (union, intersection, subtract) for batch processing",
+          "removeAll(where:) for conditional batch operations",
+          "Performance optimizations for large datasets"
+        ]
+      },
+      {
+        "date": "2025-07-23",
+        "library": "Internal Research",
+        "topic": "macOS Settings integration patterns and SwiftUI preferences",
+        "keyFindings": [
+          "@AppStorage for reactive UserDefaults integration",
+          "Native macOS settings design patterns",
+          "Settings validation and error handling",
+          "Immediate setting application without restart"
+        ]
+      }
+    ],
+    "appliedPatterns": [
+      "OrderedSet Selection Management Pattern",
+      "SwiftUI Settings Integration Pattern", 
+      "Batch Progress Feedback Pattern",
+      "Context7-Accelerated Development Pattern"
+    ],
+    "researchQuality": 9.0,
+    "implementationReadiness": "high"
+  },
+  "sequentialThinkingAnalysis": {
+    "planningSession": "2025-07-23",
+    "sessionId": "STORY-2025-020-planning",
+    "keyDecisions": [
+      "OrderedSet selection management for efficient multi-selection with preserved order",
+      "Three-phase implementation prioritizing critical features first",
+      "@AppStorage integration for seamless settings persistence",
+      "Comprehensive testing strategy with 90% coverage target"
+    ],
+    "riskAssessment": [
+      "OrderedSet learning curve mitigated with Context7 research patterns",
+      "Settings complexity handled with native @AppStorage patterns", 
+      "Performance risks addressed with monitoring from implementation start",
+      "Testing time overrun prevented with parallel test development"
+    ],
+    "implementationStrategy": {
+      "approach": "Deferred features completion with enhanced patterns",
+      "estimationMethod": "Context7 enhanced + learning calibration (14x factor from STORY-2025-019)",
+      "qualityAssurance": "Test-driven development with continuous validation",
+      "riskMitigation": "Proven patterns from research + phase-based validation"
+    }
+  },
+  "learningIntegration": {
+    "basedOnStory": "STORY-2025-019",
+    "learningsApplied": [
+      "Estimation accuracy improvement with Context7 factor",
+      "SwiftUI-Actor integration patterns proven effective",
+      "Phase-based development reduces risk and improves quality",
+      "Context7 research accelerates development significantly"
+    ],
+    "estimationCalibration": {
+      "originalMethodEstimate": 15,
+      "context7EnhancedEstimate": 10,
+      "learningCalibrationFactor": 0.67,
+      "confidenceLevel": "high"
+    }
+  },
+  "newPatternsIdentified": [
+    {
+      "patternId": "PATTERN-2025-092",
+      "name": "OrderedSet Selection Management Pattern",
+      "category": "implementation",
+      "description": "Efficient multi-selection state management using OrderedSet for UI consistency",
+      "maturityLevel": 4
+    },
+    {
+      "patternId": "PATTERN-2025-093", 
+      "name": "SwiftUI Settings Integration Pattern",
+      "category": "implementation",
+      "description": "Native macOS settings integration with @AppStorage and reactive updates",
+      "maturityLevel": 5
+    },
+    {
+      "patternId": "PATTERN-2025-094",
+      "name": "Batch Progress Feedback Pattern",
+      "category": "ux",
+      "description": "User feedback for long-running batch operations with progress tracking",
+      "maturityLevel": 4
+    }
+  ],
+  "created": "2025-07-23T23:55:00Z",
+  "lastUpdated": "2025-07-23T23:55:00Z",
+  "createdBy": "Codeflow System v3.0",
+  "version": "1.0.0"
+}

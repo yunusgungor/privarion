@@ -279,7 +279,7 @@ public actor TemporaryPermissionManager {
     }
     
     /// Clear all grants - intended for testing purposes only
-    internal func clearAllGrants() async {
+    public func clearAllGrants() async {
         grants.removeAll()
         await persistGrants()
         logger.debug("All grants cleared for testing")

@@ -3,6 +3,7 @@ import PrivarionCore
 import Logging
 import AppKit
 import UniformTypeIdentifiers
+import OrderedCollections
 
 /// Temporary Permissions View implementing Clean Architecture patterns
 /// Based on Context7 research: Clean SwiftUI patterns + TCA state management
@@ -12,15 +13,24 @@ struct TemporaryPermissionsView: View {
     @EnvironmentObject private var appState: AppState
     private let logger = Logger(label: "TemporaryPermissionsView")
     
+    // Batch operations state - Context7 Research: OrderedSet for efficient selection management
+    @State private var selectedPermissions: OrderedSet<PrivarionCore.TemporaryPermissionManager.TemporaryPermissionGrant> = []
+    @State private var isInSelectionMode: Bool = false
+    @State private var showingBatchActionSheet = false
+    
     // Export/Import state
     @State private var showingImportPicker = false
     @State private var showingExportSuccess = false
     @State private var showingExportError = false
     @State private var exportErrorMessage = ""
+    @State private var showingSettings = false
     
     var body: some View {
         NavigationSplitView {
-            PermissionListView()
+            PermissionListView(
+                selectedPermissions: $selectedPermissions,
+                isInSelectionMode: isInSelectionMode
+            )
                 .navigationTitle("Active Permissions")
                 .navigationSplitViewColumnWidth(min: 300, ideal: 350, max: 400)
         } detail: {
@@ -29,6 +39,20 @@ struct TemporaryPermissionsView: View {
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 HStack(spacing: 8) {
+                    // Batch operations toggle
+                    Button(isInSelectionMode ? "Done" : "Select") {
+                        toggleSelectionMode()
+                    }
+                    .disabled(appState.temporaryPermissionState.isLoading)
+                    
+                    // Batch actions (visible only in selection mode)
+                    if isInSelectionMode && !selectedPermissions.isEmpty {
+                        Button("Actions") {
+                            showingBatchActionSheet = true
+                        }
+                        .disabled(appState.temporaryPermissionState.isLoading)
+                    }
+                    
                     Menu {
                         Button("Export to JSON") {
                             Task { await exportToJSON() }
@@ -53,16 +77,27 @@ struct TemporaryPermissionsView: View {
             }
             
             ToolbarItem(placement: .secondaryAction) {
-                Button("Refresh") {
-                    Task {
-                        await appState.temporaryPermissionState.refresh()
+                HStack(spacing: 8) {
+                    Button("Settings") {
+                        showingSettings = true
                     }
+                    .disabled(appState.temporaryPermissionState.isLoading)
+                    
+                    Button("Refresh") {
+                        Task {
+                            await appState.temporaryPermissionState.refresh()
+                        }
+                    }
+                    .disabled(appState.temporaryPermissionState.isLoading)
                 }
-                .disabled(appState.temporaryPermissionState.isLoading)
             }
         }
         .sheet(isPresented: $appState.temporaryPermissionState.showingGrantSheet) {
             GrantPermissionSheet()
+                .environmentObject(appState)
+        }
+        .sheet(isPresented: $showingSettings) {
+            TemporaryPermissionSettingsView()
                 .environmentObject(appState)
         }
         .fileImporter(
@@ -84,8 +119,69 @@ struct TemporaryPermissionsView: View {
         } message: {
             Text(exportErrorMessage)
         }
+        .confirmationDialog("Batch Actions", isPresented: $showingBatchActionSheet) {
+            Button("Revoke Selected (\(selectedPermissions.count))") {
+                Task { await performBatchRevoke() }
+            }
+            .disabled(selectedPermissions.isEmpty)
+            
+            Button("Export Selected") {
+                Task { await exportSelectedPermissions() }
+            }
+            .disabled(selectedPermissions.isEmpty)
+            
+            Button("Cancel", role: .cancel) { }
+        } message: {
+            Text("\(selectedPermissions.count) permission(s) selected")
+        }
         .task {
             await appState.temporaryPermissionState.refresh()
+        }
+    }
+    
+    // MARK: - Batch Operations Methods
+    
+    private func toggleSelectionMode() {
+        withAnimation(.easeInOut(duration: 0.2)) {
+            isInSelectionMode.toggle()
+            if !isInSelectionMode {
+                selectedPermissions.removeAll()
+            }
+        }
+    }
+    
+    private func performBatchRevoke() async {
+        logger.info("Starting batch revoke operation for \(selectedPermissions.count) permissions")
+        
+        for permission in selectedPermissions {
+            let success = await appState.temporaryPermissionState.revokePermission(grantID: permission.id)
+            if success {
+                logger.info("Successfully revoked permission: \(permission.id)")
+            } else {
+                logger.error("Failed to revoke permission: \(permission.id)")
+            }
+        }
+        
+        // Clear selection and refresh
+        await MainActor.run {
+            selectedPermissions.removeAll()
+            isInSelectionMode = false
+        }
+        
+        await appState.temporaryPermissionState.refresh()
+        logger.info("Batch revoke operation completed")
+    }
+    
+    private func exportSelectedPermissions() async {
+        do {
+            let permissionsArray = Array(selectedPermissions)
+            let data = try await PermissionExportManager().exportToJSON(permissions: permissionsArray)
+            await saveFile(data: data, fileName: "selected_permissions.json", contentType: .json)
+        } catch {
+            await MainActor.run {
+                exportErrorMessage = error.localizedDescription
+                showingExportError = true
+            }
         }
     }
     
@@ -169,6 +265,8 @@ struct TemporaryPermissionsView: View {
 private struct PermissionListView: View {
     
     @EnvironmentObject private var appState: AppState
+    @Binding var selectedPermissions: OrderedSet<PrivarionCore.TemporaryPermissionManager.TemporaryPermissionGrant>
+    let isInSelectionMode: Bool
     
     var body: some View {
         VStack(spacing: 0) {
@@ -182,9 +280,13 @@ private struct PermissionListView: View {
                 } else if appState.temporaryPermissionState.activeGrants.isEmpty {
                     PermissionsEmptyStateView()
                 } else {
-                    List(appState.temporaryPermissionState.activeGrants, id: \.id, selection: $appState.temporaryPermissionState.selectedGrant) { grant in
-                        PermissionRowView(grant: grant)
-                            .tag(grant)
+                    List(appState.temporaryPermissionState.activeGrants, id: \.id, selection: isInSelectionMode ? nil : $appState.temporaryPermissionState.selectedGrant) { grant in
+                        PermissionRowView(
+                            grant: grant,
+                            selectedPermissions: $selectedPermissions,
+                            isInSelectionMode: isInSelectionMode
+                        )
+                        .tag(grant)
                     }
                     .listStyle(.inset)
                 }
@@ -271,9 +373,25 @@ private struct PermissionStatCard: View {
 /// Individual permission row in the list
 private struct PermissionRowView: View {
     let grant: PrivarionCore.TemporaryPermissionManager.TemporaryPermissionGrant
+    @Binding var selectedPermissions: OrderedSet<PrivarionCore.TemporaryPermissionManager.TemporaryPermissionGrant>
+    let isInSelectionMode: Bool
+    
+    private var isSelected: Bool {
+        selectedPermissions.contains(grant)
+    }
     
     var body: some View {
         HStack {
+            // Selection checkbox (visible only in selection mode)
+            if isInSelectionMode {
+                Button(action: toggleSelection) {
+                    Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                        .foregroundColor(isSelected ? .blue : .secondary)
+                        .font(.title2)
+                }
+                .buttonStyle(PlainButtonStyle())
+            }
+            
             VStack(alignment: .leading, spacing: 4) {
                 Text(grant.bundleIdentifier)
                     .font(.headline)
@@ -319,6 +437,20 @@ private struct PermissionRowView: View {
             }
         }
         .padding(.vertical, 4)
+        .contentShape(Rectangle())
+        .onTapGesture {
+            if isInSelectionMode {
+                toggleSelection()
+            }
+        }
+    }
+    
+    private func toggleSelection() {
+        if isSelected {
+            selectedPermissions.remove(grant)
+        } else {
+            selectedPermissions.append(grant)
+        }
     }
     
     private var remainingTimeText: String {

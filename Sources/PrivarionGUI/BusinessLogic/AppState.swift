@@ -163,6 +163,12 @@ final class AppState: ObservableObject {
             logger.info("Permission revocation \(success ? "successful" : "failed"): \(grantID)")
             return success
         }
+        
+        /// Clear all grants - for testing purposes only
+        internal func clearAllGrantsForTesting() async {
+            await temporaryPermissionManager.clearAllGrants()
+            await refresh()
+        }
     }
     
     // MARK: - Private Properties

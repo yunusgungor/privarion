@@ -76,6 +76,7 @@ let package = Package(
             dependencies: [
                 "PrivarionCore",
                 .product(name: "Logging", package: "swift-log"),
+                .product(name: "Collections", package: "swift-collections"),
                 .product(name: "KeyboardShortcuts", package: "KeyboardShortcuts")
             ]
         ),
