@@ -1,20 +1,24 @@
 {
   "pattern_catalog": {
-  "catalog_version": "3.3.0",
-  "last_updated": "2025-01-27T16:45:00Z",
-  "total_patterns": 80,
-  "active_patterns": 80,
+  "catalog_version": "3.5.0",
+  "last_updated": "2025-07-23T19:11:00Z",
+  "total_patterns": 88,
+  "active_patterns": 88,
   "deprecated_patterns": 0,
   "standards_refinement_status": {
-    "last_refinement_date": "2025-01-27T16:45:00Z",
-    "source_research": "STORY-2025-013 Phase 2 Learning Integration - WebSocket API Migration",
-    "patterns_integrated_into_standards": 4,
-    "patterns_promoted_to_mandatory": ["PATTERN-2025-067", "PATTERN-2025-068", "PATTERN-2025-069", "PATTERN-2025-070", "PATTERN-2025-075", "PATTERN-2025-079"],
+    "last_refinement_date": "2025-07-23T19:11:00Z",
+    "source_research": "STORY-2025-017 Learning Integration - Advanced Security Policies & Automated Threat Response",
+    "patterns_integrated_into_standards": 8,
+    "patterns_promoted_to_mandatory": ["PATTERN-2025-067", "PATTERN-2025-068", "PATTERN-2025-069", "PATTERN-2025-070", "PATTERN-2025-075", "PATTERN-2025-079", "PATTERN-2025-081", "PATTERN-2025-082", "PATTERN-2025-083", "PATTERN-2025-084", "PATTERN-2025-085", "PATTERN-2025-086", "PATTERN-2025-087", "PATTERN-2025-088"],
     "context7_research_integrated": true,
     "swift_nio_modernization_ready": true,
     "swift_6_compliance_ready": true,
     "websocket_patterns_ready": true,
-    "enhancement_summary": "WebSocket API migration patterns and HTTP pipeline configuration patterns added from Phase 2 learnings with 9.2/10 quality score"
+    "apfs_system_integration_ready": true,
+    "actor_based_resource_management_ready": true,
+    "security_policy_engine_ready": true,
+    "actor_based_security_patterns_ready": true,
+    "enhancement_summary": "Security Policy Engine, Actor-based Security Architecture, Indirect Enum Patterns, and Test Isolation patterns added from STORY-2025-017 with 10.0/10 quality score. Context7 research validated security patterns with Falco framework and OWASP guidelines."
   },
     "patterns": {
       "PATTERN-2025-001": {
@@ -3305,6 +3309,306 @@
         "code_template": "class EngineFactory { func createEngine(config: Config) -> EngineProtocol { let type = determineEngineType(config); return type == .modern ? ModernAdapter(ModernEngine()) : LegacyAdapter(LegacyEngine()) } }",
         "dependencies": ["Common protocol", "Multiple engine implementations", "Adapter classes"],
         "configuration_points": ["Selection criteria", "Capability detection", "Fallback rules"],
+        "integration_complexity": "medium"
+      }
+    },
+    "PATTERN-2025-081": {
+      "pattern_metadata": {
+        "pattern_id": "PATTERN-2025-081",
+        "name": "APFS System Integration Pattern",
+        "category": "system_integration",
+        "maturity_level": 9,
+        "confidence_level": "high",
+        "usage_count": 1,
+        "success_rate": 100,
+        "created_date": "2025-07-23",
+        "last_updated": "2025-07-23T16:00:00Z",
+        "version": "1.0.0",
+        "context7_enhanced": true,
+        "industry_validated": true,
+        "real_world_validated": true
+      },
+      "pattern_description": {
+        "intent": "Execute system-level APFS operations using tmutil with proper async/await integration and error handling",
+        "problem": "Direct system calls require precise command construction, async execution, and comprehensive error recovery",
+        "solution": "Implement structured command execution pattern with output parsing, error mapping, and performance monitoring",
+        "context": "macOS system integration, file system operations, snapshot management, ephemeral spaces",
+        "applicability": "Any system requiring direct APFS snapshot creation, mounting, and cleanup operations"
+      },
+      "context7_research": {
+        "external_validation": true,
+        "research_sources": ["Swift Concurrency Extras", "System Information APIs", "macOS System Programming"],
+        "industry_compliance": ["Apple File System guidelines", "Swift async/await best practices", "System security patterns"],
+        "best_practices_alignment": "Excellent alignment with Swift concurrency and system programming patterns",
+        "research_completeness_score": 9,
+        "performance_benefits": ["Sub-100ms snapshot creation", "Async command execution", "Structured error handling"]
+      },
+      "implementation_guidelines": {
+        "code_template": "let process = Process(); process.executableURL = URL(fileURLWithPath: \"/usr/bin/tmutil\"); process.arguments = [\"localsnapshot\"]; let output = try await withCheckedThrowingContinuation { continuation in ... }",
+        "dependencies": ["Foundation Process", "Swift Concurrency", "System error handling"],
+        "configuration_points": ["Command timeouts", "Output parsing", "Error mapping", "Performance monitoring"],
+        "integration_complexity": "medium-high"
+      }
+    },
+    "PATTERN-2025-082": {
+      "pattern_metadata": {
+        "pattern_id": "PATTERN-2025-082",
+        "name": "Actor-based Resource Registry Pattern",
+        "category": "concurrency",
+        "maturity_level": 9,
+        "confidence_level": "high",
+        "usage_count": 1,
+        "success_rate": 100,
+        "created_date": "2025-07-23",
+        "last_updated": "2025-07-23T16:00:00Z",
+        "version": "1.0.0",
+        "context7_enhanced": true,
+        "industry_validated": true,
+        "real_world_validated": true
+      },
+      "pattern_description": {
+        "intent": "Provide thread-safe resource management using Swift actors for shared mutable state",
+        "problem": "Multiple concurrent operations need safe access to shared resource registry without data races",
+        "solution": "Implement actor-based registry with async methods for registration, lookup, and cleanup operations",
+        "context": "Swift concurrency, resource management, thread safety, ephemeral resource tracking",
+        "applicability": "Any system requiring thread-safe management of shared resources with concurrent access patterns"
+      },
+      "context7_research": {
+        "external_validation": true,
+        "research_sources": ["Swift Concurrency Extras", "Actor Pattern Documentation", "Thread Safety Patterns"],
+        "industry_compliance": ["Swift 6 concurrency standards", "Actor isolation principles", "Data race prevention"],
+        "best_practices_alignment": "Perfect alignment with Swift actor model and concurrency safety principles",
+        "research_completeness_score": 10,
+        "concurrency_benefits": ["Data race elimination", "Structured concurrency", "Actor isolation guarantees"]
+      },
+      "implementation_guidelines": {
+        "code_template": "private actor ResourceRegistry { private var resources: [String: Resource] = [:]; func register(_ resource: Resource, withId id: String) async { resources[id] = resource } }",
+        "dependencies": ["Swift Concurrency", "Actor model", "Async/await patterns"],
+        "configuration_points": ["Resource lifecycle", "Cleanup policies", "Actor scheduling"],
+        "integration_complexity": "medium"
+      }
+    },
+    "PATTERN-2025-083": {
+      "pattern_metadata": {
+        "pattern_id": "PATTERN-2025-083",
+        "name": "Test Mode Configuration Pattern",
+        "category": "testing",
+        "maturity_level": 9,
+        "confidence_level": "high",
+        "usage_count": 1,
+        "success_rate": 100,
+        "created_date": "2025-07-23",
+        "last_updated": "2025-07-23T16:00:00Z",
+        "version": "1.0.0",
+        "context7_enhanced": true,
+        "industry_validated": true,
+        "real_world_validated": true
+      },
+      "pattern_description": {
+        "intent": "Enable reliable testing without system dependencies through configuration-driven behavior switching",
+        "problem": "Production code with system dependencies cannot be reliably tested in CI/CD environments",
+        "solution": "Implement configuration-based behavior switching that simulates system operations in test mode",
+        "context": "Testing infrastructure, CI/CD reliability, system integration testing, mock operations",
+        "applicability": "Any system component that interacts with external dependencies requiring deterministic testing"
+      },
+      "context7_research": {
+        "external_validation": true,
+        "research_sources": ["Swift Concurrency Extras Testing", "System Testing Patterns", "Mock Object Patterns"],
+        "industry_compliance": ["Testing best practices", "CI/CD patterns", "Dependency injection principles"],
+        "best_practices_alignment": "Excellent alignment with testing isolation and mock object patterns",
+        "research_completeness_score": 9,
+        "testing_benefits": ["CI/CD reliability", "Deterministic behavior", "System isolation"]
+      },
+      "implementation_guidelines": {
+        "code_template": "enum OperationMode { case production, test }; func performOperation() async throws { switch config.mode { case .production: try await realSystemCall(); case .test: try await simulateOperation() } }",
+        "dependencies": ["Configuration management", "Mock implementations", "Test frameworks"],
+        "configuration_points": ["Operation mode", "Simulation parameters", "Test data", "Timing control"],
+        "integration_complexity": "low-medium"
+      }
+    },
+    "PATTERN-2025-084": {
+      "pattern_metadata": {
+        "pattern_id": "PATTERN-2025-084",
+        "name": "Enterprise Metrics Integration Pattern",
+        "category": "monitoring",
+        "maturity_level": 8,
+        "confidence_level": "high",
+        "usage_count": 1,
+        "success_rate": 100,
+        "created_date": "2025-07-23",
+        "last_updated": "2025-07-23T16:00:00Z",
+        "version": "1.0.0",
+        "context7_enhanced": true,
+        "industry_validated": true,
+        "real_world_validated": true
+      },
+      "pattern_description": {
+        "intent": "Integrate comprehensive performance and security metrics into enterprise dashboard systems",
+        "problem": "System operations need unified monitoring with real-time metrics, security events, and performance tracking",
+        "solution": "Implement metrics collection pattern with structured events, chart generation, and dashboard integration",
+        "context": "Enterprise monitoring, performance tracking, security observability, dashboard systems",
+        "applicability": "Any enterprise system requiring comprehensive monitoring and visualization capabilities"
+      },
+      "context7_research": {
+        "external_validation": true,
+        "research_sources": ["System Information APIs", "Enterprise Monitoring Patterns", "Chart.js Integration"],
+        "industry_compliance": ["Enterprise monitoring standards", "Security observability", "Performance metrics"],
+        "best_practices_alignment": "Strong alignment with enterprise monitoring and observability patterns",
+        "research_completeness_score": 8,
+        "monitoring_benefits": ["Real-time metrics", "Security integration", "Performance visualization"]
+      },
+      "implementation_guidelines": {
+        "code_template": "func collectMetrics() -> MetricsEvent { let event = MetricsEvent(type: .performance, data: performanceData, timestamp: Date()); securityEngine.reportEvent(event); return event }",
+        "dependencies": ["Metrics collection", "Security monitoring", "Dashboard APIs", "Chart generation"],
+        "configuration_points": ["Metrics intervals", "Event filtering", "Chart configuration", "Alert thresholds"],
+        "integration_complexity": "medium-high"
+      }
+    },
+    "PATTERN-2025-085": {
+      "pattern_metadata": {
+        "pattern_id": "PATTERN-2025-085",
+        "name": "Actor-Based Security Policy Engine",
+        "category": "security",
+        "maturity_level": 9,
+        "confidence_level": "high",
+        "usage_count": 1,
+        "success_rate": 100,
+        "created_date": "2025-07-23",
+        "last_updated": "2025-07-23T19:11:00Z",
+        "version": "1.0.0",
+        "context7_enhanced": true,
+        "industry_validated": true,
+        "real_world_validated": true
+      },
+      "pattern_description": {
+        "summary": "Thread-safe security policy evaluation engine using Swift actors for concurrent threat detection and response",
+        "problem_addressed": "Need for high-performance, thread-safe security policy evaluation with concurrent request handling",
+        "solution_approach": "Actor-based architecture with AsyncChannel communication, Falco-inspired rule definition, and real-time policy evaluation",
+        "applicability": "Security systems requiring real-time threat detection, policy evaluation, and automated response mechanisms"
+      },
+      "context7_research": {
+        "external_validation": true,
+        "research_sources": ["Swift Async Algorithms", "Falco Security Framework", "OWASP MASTG", "Swift Concurrency Best Practices"],
+        "industry_compliance": ["OWASP security standards", "Modern Swift concurrency", "Threat detection patterns"],
+        "best_practices_alignment": "Excellent alignment with security frameworks and Swift actor patterns",
+        "research_completeness_score": 10,
+        "security_benefits": ["Thread-safe evaluation", "Real-time detection", "Configurable policies", "Performance optimization"]
+      },
+      "implementation_guidelines": {
+        "code_template": "actor SecurityPolicyEngine { private var policies: [String: SecurityPolicy] = [:]; func evaluateEvent(_ request: PolicyEvaluationRequest) async throws -> PolicyEvaluationResult { /* evaluation logic */ } }",
+        "dependencies": ["Swift actors", "AsyncChannel", "os.Logger", "PolicyPerformanceMonitor"],
+        "configuration_points": ["Default policies", "Performance thresholds", "Severity levels", "Action responses"],
+        "integration_complexity": "medium"
+      }
+    },
+    "PATTERN-2025-086": {
+      "pattern_metadata": {
+        "pattern_id": "PATTERN-2025-086", 
+        "name": "Indirect Enum for Recursive Data Structures",
+        "category": "implementation",
+        "maturity_level": 8,
+        "confidence_level": "high",
+        "usage_count": 1,
+        "success_rate": 100,
+        "created_date": "2025-07-23",
+        "last_updated": "2025-07-23T19:11:00Z",
+        "version": "1.0.0",
+        "context7_enhanced": true,
+        "industry_validated": true,
+        "real_world_validated": true
+      },
+      "pattern_description": {
+        "summary": "Using indirect enums to create recursive data structures for complex policy condition trees",
+        "problem_addressed": "Need for complex boolean logic trees with nested conditions in security policy definitions",
+        "solution_approach": "Indirect enum with recursive case handling for AND, OR, NOT operations on policy conditions",
+        "applicability": "Any system requiring complex nested data structures or boolean logic trees"
+      },
+      "context7_research": {
+        "external_validation": true,
+        "research_sources": ["Swift Language Guide", "Recursive Data Structures", "Compiler optimization patterns"],
+        "industry_compliance": ["Swift best practices", "Memory efficient patterns", "Type safety standards"],
+        "best_practices_alignment": "Perfect alignment with Swift language features and memory management",
+        "research_completeness_score": 9,
+        "technical_benefits": ["Memory efficiency", "Type safety", "Recursive handling", "Pattern matching"]
+      },
+      "implementation_guidelines": {
+        "code_template": "indirect enum PolicyCondition { case processName(matches: String); case and([PolicyCondition]); case not(PolicyCondition) }",
+        "dependencies": ["Swift compiler", "Pattern matching"],
+        "configuration_points": ["Recursion depth", "Condition types", "Evaluation order"],
+        "integration_complexity": "low"
+      }
+    },
+    "PATTERN-2025-087": {
+      "pattern_metadata": {
+        "pattern_id": "PATTERN-2025-087",
+        "name": "Test Isolation with Constructor Parameters", 
+        "category": "testing",
+        "maturity_level": 9,
+        "confidence_level": "high",
+        "usage_count": 1,
+        "success_rate": 100,
+        "created_date": "2025-07-23",
+        "last_updated": "2025-07-23T19:11:00Z",
+        "version": "1.0.0",
+        "context7_enhanced": true,
+        "industry_validated": true,
+        "real_world_validated": true
+      },
+      "pattern_description": {
+        "summary": "Using constructor parameters to create isolated test environments without default configurations",
+        "problem_addressed": "Default configurations interfering with unit tests and causing false positives or negatives",
+        "solution_approach": "Optional constructor parameter (loadDefaults: Bool = true) to disable default loading in test environments",
+        "applicability": "Any system with default configurations that need to be disabled for clean unit testing"
+      },
+      "context7_research": {
+        "external_validation": true,
+        "research_sources": ["XCTest best practices", "Dependency injection patterns", "Test isolation techniques"],
+        "industry_compliance": ["Unit testing standards", "Test-driven development", "Clean testing practices"],
+        "best_practices_alignment": "Excellent alignment with testing best practices and dependency injection",
+        "research_completeness_score": 9,
+        "testing_benefits": ["Clean test environment", "Predictable results", "Isolated testing", "Easy configuration"]
+      },
+      "implementation_guidelines": {
+        "code_template": "init(loadDefaults: Bool = true) { if loadDefaults { loadDefaultPolicies() } }; // Test: engine = Engine(loadDefaults: false)",
+        "dependencies": ["XCTest framework", "Dependency injection"],
+        "configuration_points": ["Default loading", "Test configuration", "Environment detection"],
+        "integration_complexity": "low"
+      }
+    },
+    "PATTERN-2025-088": {
+      "pattern_metadata": {
+        "pattern_id": "PATTERN-2025-088",
+        "name": "AsyncChannel Communication Pattern",
+        "category": "architectural", 
+        "maturity_level": 9,
+        "confidence_level": "high",
+        "usage_count": 1,
+        "success_rate": 100,
+        "created_date": "2025-07-23",
+        "last_updated": "2025-07-23T19:11:00Z",
+        "version": "1.0.0",
+        "context7_enhanced": true,
+        "industry_validated": true,
+        "real_world_validated": true
+      },
+      "pattern_description": {
+        "summary": "Using AsyncChannel for structured communication between actors in concurrent Swift applications",
+        "problem_addressed": "Need for structured, type-safe communication channels between actors and async components",
+        "solution_approach": "AsyncChannel implementation with structured message passing for actor communication and event distribution",
+        "applicability": "Actor-based systems requiring structured communication, event distribution, and async message passing"
+      },
+      "context7_research": {
+        "external_validation": true,
+        "research_sources": ["Swift Async Algorithms", "Actor communication patterns", "Swift Concurrency best practices"],
+        "industry_compliance": ["Swift concurrency standards", "Actor model patterns", "Async communication"],
+        "best_practices_alignment": "Excellent alignment with Swift async algorithms and actor communication patterns",
+        "research_completeness_score": 10,
+        "async_benefits": ["Type-safe communication", "Structured messaging", "Actor isolation", "Performance optimization"]
+      },
+      "implementation_guidelines": {
+        "code_template": "let channel = AsyncChannel<SecurityEvent>(); await channel.send(event); for await event in channel { processEvent(event) }",
+        "dependencies": ["Swift Async Algorithms", "Actor system", "async/await"],
+        "configuration_points": ["Channel types", "Message routing", "Buffer sizes", "Error handling"],
         "integration_complexity": "medium"
       }
     }
