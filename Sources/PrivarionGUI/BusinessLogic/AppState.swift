@@ -693,6 +693,8 @@ final class AppState: ObservableObject {
                 networkFilteringState.refresh()
             case .temporaryPermissions:
                 await temporaryPermissionState.refresh()
+            case .securityPolicy:
+                break
             case .analytics:
                 // Analytics view manages its own refresh
                 break
@@ -779,6 +781,7 @@ enum AppView: String, CaseIterable {
     case macAddress = "MAC Address"
     case networkFiltering = "Network Filtering"
     case temporaryPermissions = "Temporary Permissions"
+    case securityPolicy = "Security Policies"
     case analytics = "Analytics"
     case settings = "Settings"
     case logs = "Logs"

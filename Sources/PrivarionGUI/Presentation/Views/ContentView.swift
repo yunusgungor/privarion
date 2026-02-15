@@ -184,6 +184,13 @@ struct SidebarView: View {
                     }
                 }
                 
+                NavigationLink(value: AppView.securityPolicy) {
+                    HStack {
+                        Label("Security Policies", systemImage: "shield.checkered")
+                        Spacer()
+                    }
+                }
+                
                 NavigationLink(value: AppView.analytics) {
                     HStack {
                         Label("Network Analytics", systemImage: "chart.bar.xaxis")
@@ -238,6 +245,9 @@ struct DetailView: View {
                 .frame(minWidth: 800, minHeight: 600)
         case .temporaryPermissions:
             TemporaryPermissionsView()
+                .frame(minWidth: 800, minHeight: 600)
+        case .securityPolicy:
+            SecurityPolicyView()
                 .frame(minWidth: 800, minHeight: 600)
         case .analytics:
             AnalyticsView()
