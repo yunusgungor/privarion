@@ -49,7 +49,8 @@ let package = Package(
             dependencies: [
                 "PrivarionCore",
                 .product(name: "ArgumentParser", package: "swift-argument-parser")
-            ]
+            ],
+            exclude: ["AGENTS.md"]
         ),
         // Core library target
         .target(
@@ -63,7 +64,8 @@ let package = Package(
                 .product(name: "NIOFoundationCompat", package: "swift-nio"),
                 .product(name: "NIOHTTP1", package: "swift-nio"),
                 .product(name: "NIOWebSocket", package: "swift-nio")
-            ]
+            ],
+            exclude: ["AGENTS.md"]
         ),
         // Low-level C hook library
         .target(
@@ -78,12 +80,14 @@ let package = Package(
                 .product(name: "Logging", package: "swift-log"),
                 .product(name: "Collections", package: "swift-collections"),
                 .product(name: "KeyboardShortcuts", package: "KeyboardShortcuts")
-            ]
+            ],
+            exclude: ["AGENTS.md"]
         ),
         // Tests for core library
         .testTarget(
             name: "PrivarionCoreTests",
-            dependencies: ["PrivarionCore"]
+            dependencies: ["PrivarionCore"],
+            exclude: ["AGENTS.md"]
         ),
         // Tests for hook library
         .testTarget(

@@ -56,13 +56,13 @@ struct SystemOverviewCard: View {
                     
                     StatusMetric(
                         title: "Active Modules",
-                        value: "\\(appState.modules.filter { $0.isEnabled }.count)",
+                        value: "\(appState.modules.filter { $0.isEnabled }.count)",
                         color: .blue
                     )
                     
                     StatusMetric(
                         title: "Profiles",
-                        value: "\\(appState.profiles.count)",
+                        value: "\(appState.profiles.count)",
                         color: .purple
                     )
                     

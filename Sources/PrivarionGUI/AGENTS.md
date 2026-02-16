@@ -1,43 +1,65 @@
 # PrivarionGUI
 
-SwiftUI application with Clean Architecture.
+SwiftUI application using Clean Architecture pattern.
 
 ## OVERVIEW
 
-15+ SwiftUI views + MVVM pattern. BusinessLogic/Presentation/DataAccess structure.
+macOS GUI for privacy management. 15+ SwiftUI views with MVVM + Clean Architecture.
 
 ## STRUCTURE
 
 ```
 Sources/PrivarionGUI/
-├── BusinessLogic/     # ViewModels, state, navigation
-│   ├── AppState.swift        # Main app state (868 lines)
-│   ├── ViewModels/
-│   └── Interactors/
+├── BusinessLogic/
+│   ├── AppState.swift           # Global state (868 lines)
+│   ├── ViewModels/              # View models
+│   ├── Interactors/             # Business logic
+│   └── Search/                  # Search functionality
 ├── Presentation/
-│   └── Views/         # 15+ SwiftUI views
+│   └── Views/
+│       ├── ContentView.swift    # Main navigation
+│       ├── DashboardView.swift  # Status overview
+│       ├── MacAddressView.swift
+│       ├── NetworkFilteringView.swift
+│       ├── TemporaryPermissionsView.swift  # 1107 lines
+│       ├── AdvancedPreferencesView.swift   # 700 lines
+│       ├── SecondaryViews.swift            # 688 lines
+│       └── Components/          # Reusable components
 └── DataAccess/
-    └── Repositories/  # Data layer
+    └── Repositories/            # Data layer
 ```
 
-## KEY FILES
+## WHERE TO LOOK
 
-| File | Purpose |
-|------|---------|
-| `PrivarionGUIApp.swift` | @main entry point |
-| `ContentView.swift` | Main navigation |
-| `DashboardView.swift` | Status dashboard |
-| `AppState.swift` | Global state (CRITICAL: has force unwrap bug) |
+| Task | File | Notes |
+|------|------|-------|
+| App entry | `PrivarionGUIApp.swift` | @main, keyboard shortcuts |
+| Navigation | `ContentView.swift` | Main window, sidebar |
+| Dashboard | `DashboardView.swift` | System status, modules |
+| Global state | `AppState.swift` | 868 lines - needs refactoring |
+| MAC addresses | `MacAddressView.swift` | MAC spoofing UI |
+| Network | `NetworkFilteringView.swift` | Network controls |
+| Permissions | `TemporaryPermissionsView.swift` | 1107 lines - too large |
 
 ## CONVENTIONS
 
-- SwiftUI with `@StateObject` / `@Observable`
+- `@StateObject` / `@Observable` for state
 - Clean Architecture: BusinessLogic → Presentation → DataAccess
-- Use `@ViewBuilder` for conditional content
-- MVVM pattern for all views
+- MVVM for all views
+- `@ViewBuilder` for conditional content
 
 ## ANTI-PATTERNS
 
-- AppState.switchProfile has force unwrap causing crashes
-- 24 TODOs for unimplemented features
-- DON'T use force unwrap (`!`) - use `if let` / `guard`
+- **CRITICAL**: `AppState.switchProfile` force unwrap causes crashes
+- **24 TODOs** across GUI - unimplemented features
+- **Large views**: TemporaryPermissionsView (1107 lines), AdvancedPreferencesView (700 lines)
+- DON'T use `!` - use `if let` / `guard`
+
+## LARGE FILES (Refactor Targets)
+
+| File | Lines | Issue |
+|------|-------|-------|
+| `AppState.swift` | 868 | Too large |
+| `TemporaryPermissionsView.swift` | 1107 | Way too large |
+| `AdvancedPreferencesView.swift` | 700 | Too large |
+| `SecondaryViews.swift` | 688 | Too large |

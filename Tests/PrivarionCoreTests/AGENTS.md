@@ -2,41 +2,54 @@
 
 Unit tests for core library - 32 test files.
 
+## OVERVIEW
+
+Comprehensive XCTest suite for PrivarionCore. Tests cover identity spoofing, network filtering, MAC addresses, security policies, anomaly detection, and more.
+
 ## STRUCTURE
 
-```
-Tests/PrivarionCoreTests/
-├── IdentitySpoofingManagerTests.swift
-├── MacAddressSpoofingManagerTests.swift
-├── NetworkFilteringManagerTests.swift
-├── SecurityPolicyEngineTests.swift
-├── AnomalyDetectionEngineTests.swift
-└── ... (27 more)
-```
+Flat directory - 32 test files mirroring core structure.
 
-## TESTING PATTERNS
+## WHERE TO LOOK
 
-- XCTest with `@testable import`
-- Mock interactors for system dependencies
-- Async testing with `async`/`await`
-- Performance benchmarks via `PerformanceBenchmark.swift`
-
-## KEY TEST FILES
-
-| File | Tests |
-|------|-------|
-| `AnomalyDetectionEngineTests.swift` | 624 lines |
-| `SecurityPolicyEngineTests.swift` | 592 lines |
-| `SecurityProfileManagerTests.swift` | 559 lines |
-| `AuditLoggerTests.swift` | 547 lines |
+| Component | Test File | Lines | Notes |
+|-----------|-----------|-------|-------|
+| Anomaly Detection | `AnomalyDetectionEngineTests.swift` | 624 | Complex ML-based tests |
+| Security Policy | `SecurityPolicyEngineTests.swift` | 592 | Policy enforcement tests |
+| Security Profiles | `SecurityProfileManagerTests.swift` | 559 | Profile CRUD tests |
+| Audit Logging | `AuditLoggerTests.swift` | 547 | Logging system tests |
+| MAC Addresses | `MacAddressSpoofingManagerTests.swift` | ~500 | MAC manipulation tests |
+| Network Filter | `NetworkFilteringManagerTests.swift` | ~450 | Traffic filtering tests |
+| Identity Spoof | `IdentitySpoofingManagerTests.swift` | ~400 | Hardware ID tests |
+| Sandbox | `SandboxManagerTests.swift` | ~350 | Sandbox config tests |
+| DNS Proxy | `DNSProxyServerTests.swift` | ~300 | DNS tests |
+| TCC Permissions | `TCCPermissionEngineTests.swift` | ~300 | Permission tests |
 
 ## CONVENTIONS
 
-- Test naming: `test<Operation><ExpectedResult>`
-- Uses `setUp()`/`tearDown()` lifecycle
-- Mocks: MockSystemInteractor, MockModuleInteractor, MockProfileInteractor
+- XCTest with `@testable import PrivarionCore`
+- Naming: `test<Operation><ExpectedResult>`
+- Use `setUp()` / `tearDown()` for lifecycle
+- Mock interactors: `MockSystemInteractor`, `MockModuleInteractor`, `MockProfileInteractor`
+- Async tests with `async` / `await`
+
+## TESTING PATTERNS
+
+```swift
+func testOperationSuccess() async throws {
+    // Given
+    let manager = TestableManager()
+    
+    // When
+    let result = try await manager.operation()
+    
+    // Then
+    XCTAssertTrue(result)
+}
+```
 
 ## ANTI-PATTERNS
 
-- Some tests disabled (TODO references)
-- Performance test baselines may need updating
+- Some tests have TODO comments (disabled)
+- Performance baselines may need updating
+- A few tests use force unwraps (should use XCTAssertNotNil)

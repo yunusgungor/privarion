@@ -4,7 +4,7 @@ import PrivarionCore
 
 @available(macOS 12.0, *)
 /// Permission management commands for TCC permission system
-struct PermissionCommands: ParsableCommand {
+struct PermissionCommands: AsyncParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "permission",
         abstract: "Manage TCC permissions and temporary grants",
