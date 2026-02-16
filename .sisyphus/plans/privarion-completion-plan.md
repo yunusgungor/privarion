@@ -348,7 +348,7 @@ Dalga 4 (Dalga 3'ten Sonra — entegrasyon + doğrulama):
 
 ### DALGA 2: ÖZELLİK GENİŞLETME
 
-- [ ] 8. Sandbox Manager Genişletme
+- [x] 8. Sandbox Manager Genişletme
 
   **Ne Yapılacak**:
   - GUI profilleyici görünümü oluştur - SwiftUI'de sandbox profili editor
@@ -365,7 +365,7 @@ Dalga 4 (Dalga 3'ten Sonra — entegrasyon + doğrulama):
   - [ ] Sandbox profili editor görünümü çalışıyor
   - [ ] Profil oluşturma/düzenleme işlevi çalışıyor
 
-- [ ] 9. TCC Manager Genişletme
+- [x] 9. TCC Manager Genişletme
 
   **Ne Yapılacak**:
   - Geçici izin verme sistemi oluştur (timeout-based)
@@ -376,7 +376,7 @@ Dalga 4 (Dalga 3'ten Sonra — entegrasyon + doğrulama):
   - [ ] Geçici izin verilebiliyor
   - [ ] Alert sistemi çalışıyor
 
-- [ ] 10. Snapshot Manager Genişletme
+- [x] 10. Snapshot Manager Genişletme
 
   **Ne Yapılacak**:
   - Pre-execution snapshot stratejisi implementasyonu
@@ -388,7 +388,7 @@ Dalga 4 (Dalga 3'ten Sonra — entegrasyon + doğrulama):
   - [ ] Uygulama öncesi snapshot oluşturulabiliyor
   - [ ] Uygulama sonrası restore çalışıyor
 
-- [ ] 11. Network Filtering Genişletme
+- [x] 11. Network Filtering Genişletme
 
   **Ne Yapılacak**:
   - Tor proxy entegrasyonu (SOCKS5 proxy wrapper)
@@ -400,7 +400,7 @@ Dalga 4 (Dalga 3'ten Sonra — entegrasyon + doğrulama):
   - [ ] Tor proxy üzerinden trafi yönlendirme çalışıyor
   - [ ] Bant genişliği sınırlama işlevi çalışıyor
 
-- [ ] 12. Açık TODO'ları Tamamlama (Kısmi)
+- [x] 12. Açık TODO'ları Tamamlama (Kısmi)
 
   **Ne Yapılacak**:
   - Profil oluşturma/düzenleme/silme → %50 tamamlanacak
@@ -411,7 +411,7 @@ Dalga 4 (Dalga 3'ten Sonra — entegrasyon + doğrulama):
   **Kabul Kriterleri**:
   - [ ] En az 10 TODO tamamlandı
 
-- [ ] 13. CLI Komutları Genişletme
+- [x] 13. CLI Komutları Genişletme
 
   **Ne Yapılacak**:
   - privacyctl profile create komutu
@@ -423,7 +423,7 @@ Dalga 4 (Dalga 3'ten Sonra — entegrasyon + doğrulama):
   - [ ] Tüm komutlar çalışıyor
   - [ ] --help çıktısı doğru
 
-- [ ] 14. Test Kapsamı Genişletme
+- [x] 14. Test Kapsamı Genişletme
 
   **Ne Yapılacak**:
   - Unit test coverage'ı %70'ten %85'e çıkar

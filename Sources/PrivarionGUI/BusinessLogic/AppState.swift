@@ -322,6 +322,52 @@ final class AppState: ObservableObject {
         }
     }
     
+    /// Start the privacy protection system
+    func startSystem() async {
+        logger.info("Starting system")
+        
+        do {
+            setLoading("system", true)
+            try await systemInteractor.startSystem()
+            systemStatus = .running
+            setLoading("system", false)
+            logger.info("System started successfully")
+            
+            // Refresh all data
+            await initialize()
+            
+        } catch {
+            setLoading("system", false)
+            let privarionError = PrivarionError.systemStartFailed(reason: error.localizedDescription)
+            handleError(privarionError, context: "AppState.startSystem", operation: "system start")
+        }
+    }
+    
+    /// Stop the privacy protection system
+    func stopSystem() async {
+        logger.info("Stopping system")
+        
+        do {
+            setLoading("system", true)
+            try await systemInteractor.stopSystem()
+            systemStatus = .stopped
+            setLoading("system", false)
+            logger.info("System stopped successfully")
+            
+            // Refresh all data
+            await initialize()
+            
+        } catch {
+            setLoading("system", false)
+            let privarionError = PrivarionError.systemStopFailed(reason: error.localizedDescription)
+            handleError(privarionError, context: "AppState.stopSystem", operation: "system stop")
+        }
+    }
+    
+    func showSystemDetails() {
+        logger.info("Showing system details")
+    }
+    
     /// Switch to a different configuration profile
     func switchProfile(_ profileId: String) async {
         logger.info("Switching to profile: \\(profileId)")
@@ -691,6 +737,8 @@ final class AppState: ObservableObject {
                 await macAddressState.loadInterfaces()
             case .networkFiltering:
                 networkFilteringState.refresh()
+            case .sandboxProfiles:
+                break
             case .temporaryPermissions:
                 await temporaryPermissionState.refresh()
             case .securityPolicy:
@@ -780,6 +828,7 @@ enum AppView: String, CaseIterable {
     case profiles = "Profiles"
     case macAddress = "MAC Address"
     case networkFiltering = "Network Filtering"
+    case sandboxProfiles = "Sandbox Profiles"
     case temporaryPermissions = "Temporary Permissions"
     case securityPolicy = "Security Policies"
     case analytics = "Analytics"

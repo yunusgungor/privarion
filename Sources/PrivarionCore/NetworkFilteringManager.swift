@@ -54,6 +54,18 @@ public class NetworkFilteringManager {
     /// Application network rule engine
     private var ruleEngine: ApplicationNetworkRuleEngine?
     
+    /// Tor proxy manager
+    private var torProxyManager: TorProxyManager?
+    
+    /// Bandwidth throttler
+    private var bandwidthThrottler: BandwidthThrottler?
+    
+    /// Proxy chain manager
+    private var proxyChainManager: ProxyChainManager?
+    
+    /// DoH enforcement
+    private var dohEnforcement: DoHEnforcement?
+    
     /// Current filtering status
     private var isActive: Bool = false
     
@@ -82,6 +94,10 @@ public class NetworkFilteringManager {
         self.blocklistManager = BlocklistManager()
         self.trafficMonitor = TrafficMonitoringService()
         self.ruleEngine = ApplicationNetworkRuleEngine()
+        self.torProxyManager = TorProxyManager.shared
+        self.bandwidthThrottler = BandwidthThrottler.shared
+        self.proxyChainManager = ProxyChainManager.shared
+        self.dohEnforcement = DoHEnforcement.shared
     }
     
     // MARK: - Public Interface
@@ -107,6 +123,23 @@ public class NetworkFilteringManager {
             try startNetworkMonitoring(config: config.monitoring)
         }
         
+        if config.torProxy.enabled {
+            try startTorProxy(config: config.torProxy)
+        }
+        
+        if config.bandwidthThrottle.enabled {
+            try startBandwidthThrottling(config: config.bandwidthThrottle)
+        }
+        
+        if config.proxyChain.enabled {
+            try startProxyChain(config: config.proxyChain)
+        }
+        
+        if config.dohEnforcement.enabled {
+            try startDoHEnforcement(config: config.dohEnforcement)
+        }
+        
+        startTime = Date()
         isActive = true
         logger.info("Network filtering started successfully")
     }
@@ -122,7 +155,12 @@ public class NetworkFilteringManager {
         
         stopDNSProxy()
         stopNetworkMonitoring()
+        stopTorProxy()
+        stopBandwidthThrottling()
+        stopProxyChain()
+        stopDoHEnforcement()
         
+        startTime = nil
         isActive = false
         logger.info("Network filtering stopped")
     }
@@ -290,6 +328,54 @@ public class NetworkFilteringManager {
         logger.info("Stopping network monitoring")
         networkMonitor?.stop()
         networkMonitor = nil
+    }
+    
+    private func startTorProxy(config: TorProxyConfig) throws {
+        logger.info("Starting Tor proxy manager...")
+        torProxyManager?.updateConfig(config)
+        try torProxyManager?.start()
+        logger.info("Tor proxy manager started")
+    }
+    
+    private func stopTorProxy() {
+        logger.info("Stopping Tor proxy manager")
+        torProxyManager?.stop()
+    }
+    
+    private func startBandwidthThrottling(config: BandwidthThrottleConfig) throws {
+        logger.info("Starting bandwidth throttler...")
+        bandwidthThrottler?.updateConfig(config)
+        try bandwidthThrottler?.start()
+        logger.info("Bandwidth throttler started")
+    }
+    
+    private func stopBandwidthThrottling() {
+        logger.info("Stopping bandwidth throttler")
+        bandwidthThrottler?.stop()
+    }
+    
+    private func startProxyChain(config: ProxyChainConfig) throws {
+        logger.info("Starting proxy chain manager...")
+        proxyChainManager?.updateConfig(config)
+        try proxyChainManager?.start()
+        logger.info("Proxy chain manager started")
+    }
+    
+    private func stopProxyChain() {
+        logger.info("Stopping proxy chain manager")
+        proxyChainManager?.stop()
+    }
+    
+    private func startDoHEnforcement(config: DoHEnforcementConfig) throws {
+        logger.info("Starting DoH enforcement...")
+        dohEnforcement?.updateConfig(config)
+        try dohEnforcement?.start()
+        logger.info("DoH enforcement started")
+    }
+    
+    private func stopDoHEnforcement() {
+        logger.info("Stopping DoH enforcement")
+        dohEnforcement?.stop()
     }
     
     private func normalizeDomain(_ domain: String) -> String {

@@ -78,6 +78,9 @@ public final class EphemeralFileSystemManager: Sendable {
         case invalidConfiguration(String)
         case systemError(Int32, String)
         case securityViolation(String)
+        case snapshotNotFound(String)
+        case restoreFailed(String)
+        case scheduleFailed(String)
         
         public var errorDescription: String? {
             switch self {
@@ -97,7 +100,138 @@ public final class EphemeralFileSystemManager: Sendable {
                 return "System error \(code): \(message)"
             case .securityViolation(let details):
                 return "Security violation detected: \(details)"
+            case .snapshotNotFound(let name):
+                return "Snapshot not found: \(name)"
+            case .restoreFailed(let details):
+                return "Failed to restore snapshot: \(details)"
+            case .scheduleFailed(let details):
+                return "Failed to schedule snapshot: \(details)"
             }
+        }
+    }
+    
+    // MARK: - Snapshot Strategy Types
+    
+    /// Snapshot strategy for different use cases
+    public enum SnapshotStrategy: String, Sendable, Codable, CaseIterable {
+        case preExecution = "pre_execution"
+        case postExecution = "post_execution"
+        case incremental = "incremental"
+        case scheduled = "scheduled"
+        
+        public var displayName: String {
+            switch self {
+            case .preExecution:
+                return "Pre-Execution Snapshot"
+            case .postExecution:
+                return "Post-Execution Snapshot"
+            case .incremental:
+                return "Incremental Snapshot"
+            case .scheduled:
+                return "Scheduled Snapshot"
+            }
+        }
+        
+        public var description: String {
+            switch self {
+            case .preExecution:
+                return "Captures system state before application execution"
+            case .postExecution:
+                return "Restores system state after application execution"
+            case .incremental:
+                return "Captures only changed files since last snapshot"
+            case .scheduled:
+                return "Automatically captures snapshots at specified intervals"
+            }
+        }
+    }
+    
+    /// Snapshot metadata for tracking and restoration
+    public struct SnapshotMetadata: Sendable, Codable, Identifiable {
+        public let id: UUID
+        public let strategy: SnapshotStrategy
+        public let snapshotName: String
+        public let createdAt: Date
+        public let parentSnapshotId: UUID?
+        public let changedFiles: [String]
+        public let totalFiles: Int
+        public let sizeBytes: UInt64
+        public let applicationPath: String?
+        public let processId: Int32?
+        
+        public init(
+            id: UUID = UUID(),
+            strategy: SnapshotStrategy,
+            snapshotName: String,
+            createdAt: Date = Date(),
+            parentSnapshotId: UUID? = nil,
+            changedFiles: [String] = [],
+            totalFiles: Int = 0,
+            sizeBytes: UInt64 = 0,
+            applicationPath: String? = nil,
+            processId: Int32? = nil
+        ) {
+            self.id = id
+            self.strategy = strategy
+            self.snapshotName = snapshotName
+            self.createdAt = createdAt
+            self.parentSnapshotId = parentSnapshotId
+            self.changedFiles = changedFiles
+            self.totalFiles = totalFiles
+            self.sizeBytes = sizeBytes
+            self.applicationPath = applicationPath
+            self.processId = processId
+        }
+    }
+    
+    /// Schedule configuration for automatic snapshots
+    public struct SnapshotSchedule: Sendable, Codable {
+        public let intervalSeconds: TimeInterval
+        public let maxSnapshots: Int
+        public let retentionDays: Int
+        public let enabledStrategies: Set<SnapshotStrategy>
+        
+        public init(
+            intervalSeconds: TimeInterval = 3600,
+            maxSnapshots: Int = 10,
+            retentionDays: Int = 7,
+            enabledStrategies: Set<SnapshotStrategy> = Set(SnapshotStrategy.allCases)
+        ) {
+            self.intervalSeconds = intervalSeconds
+            self.maxSnapshots = maxSnapshots
+            self.retentionDays = retentionDays
+            self.enabledStrategies = enabledStrategies
+        }
+        
+        public static let `default` = SnapshotSchedule()
+    }
+    
+    /// Application execution context for pre/post snapshot management
+    public struct ExecutionContext: Sendable {
+        public let applicationPath: String
+        public let arguments: [String]
+        public let environment: [String: String]
+        public let processId: Int32
+        public let workingDirectory: String
+        public let preSnapshotId: UUID?
+        public let startTime: Date
+        
+        public init(
+            applicationPath: String,
+            arguments: [String] = [],
+            environment: [String: String] = [:],
+            processId: Int32,
+            workingDirectory: String = "/",
+            preSnapshotId: UUID? = nil,
+            startTime: Date = Date()
+        ) {
+            self.applicationPath = applicationPath
+            self.arguments = arguments
+            self.environment = environment
+            self.processId = processId
+            self.workingDirectory = workingDirectory
+            self.preSnapshotId = preSnapshotId
+            self.startTime = startTime
         }
     }
     
@@ -137,12 +271,86 @@ public final class EphemeralFileSystemManager: Sendable {
         }
     }
     
+    /// Actor for thread-safe management of snapshots
+    private actor SnapshotRegistry {
+        private var snapshots: [UUID: SnapshotMetadata] = [:]
+        private var executionContexts: [UUID: ExecutionContext] = [:]
+        private var scheduledTimers: [UUID: Timer] = [:]
+        private var lastIncrementalSnapshot: UUID?
+        private var schedule: SnapshotSchedule?
+        
+        func registerSnapshot(_ metadata: SnapshotMetadata) {
+            snapshots[metadata.id] = metadata
+            if metadata.strategy == .incremental {
+                lastIncrementalSnapshot = metadata.id
+            }
+        }
+        
+        func getSnapshot(_ id: UUID) -> SnapshotMetadata? {
+            return snapshots[id]
+        }
+        
+        func getAllSnapshots() -> [SnapshotMetadata] {
+            return Array(snapshots.values).sorted { $0.createdAt > $1.createdAt }
+        }
+        
+        func getSnapshotsByStrategy(_ strategy: SnapshotStrategy) -> [SnapshotMetadata] {
+            return snapshots.values.filter { $0.strategy == strategy }.sorted { $0.createdAt > $1.createdAt }
+        }
+        
+        func deleteSnapshot(_ id: UUID) {
+            snapshots.removeValue(forKey: id)
+        }
+        
+        func getLastIncrementalSnapshot() -> UUID? {
+            return lastIncrementalSnapshot
+        }
+        
+        func registerExecutionContext(_ context: ExecutionContext, forId id: UUID) {
+            executionContexts[id] = context
+        }
+        
+        func getExecutionContext(forId id: UUID) -> ExecutionContext? {
+            return executionContexts[id]
+        }
+        
+        func removeExecutionContext(forId id: UUID) {
+            executionContexts.removeValue(forKey: id)
+        }
+        
+        func setSchedule(_ schedule: SnapshotSchedule) {
+            self.schedule = schedule
+        }
+        
+        func getSchedule() -> SnapshotSchedule? {
+            return schedule
+        }
+        
+        func setScheduledTimer(_ id: UUID, timer: Timer) {
+            scheduledTimers[id] = timer
+        }
+        
+        func cancelScheduledTimer(_ id: UUID) {
+            scheduledTimers[id]?.invalidate()
+            scheduledTimers.removeValue(forKey: id)
+        }
+        
+        func cleanupOldSnapshots(olderThanDays days: Int) {
+            let cutoffDate = Calendar.current.date(byAdding: .day, value: -days, to: Date()) ?? Date()
+            let oldSnapshots = snapshots.filter { $0.value.createdAt < cutoffDate }
+            for (id, _) in oldSnapshots {
+                snapshots.removeValue(forKey: id)
+            }
+        }
+    }
+    
     // MARK: - Properties
     
     private let configuration: Configuration
     private let logger: Logger
     private let securityMonitor: SecurityMonitoringEngine?
     private let spaceRegistry: SpaceRegistry
+    private let snapshotRegistry: SnapshotRegistry
     
     // MARK: - Initialization
     
@@ -150,15 +358,13 @@ public final class EphemeralFileSystemManager: Sendable {
         configuration: Configuration = .default,
         securityMonitor: SecurityMonitoringEngine? = nil
     ) throws {
+        self.snapshotRegistry = SnapshotRegistry()
         self.configuration = configuration
         self.logger = Logger(subsystem: "com.privarion.core", category: "EphemeralFileSystem")
         self.securityMonitor = securityMonitor
         self.spaceRegistry = SpaceRegistry(maxSpaces: configuration.maxEphemeralSpaces)
         
-        // Validate configuration
         try validateConfiguration(configuration)
-        
-        // Ensure base directory exists
         try createBaseDirectory()
         
         logger.info("EphemeralFileSystemManager initialized with base path: \(configuration.basePath)")
@@ -604,7 +810,6 @@ public final class EphemeralFileSystemManager: Sendable {
     }
     
     private func cleanupFailedSpace(snapshotName: String, mountPath: String) async {
-        // Best effort cleanup on failure
         do {
             if FileManager.default.fileExists(atPath: mountPath) {
                 try FileManager.default.removeItem(atPath: mountPath)
@@ -617,6 +822,385 @@ public final class EphemeralFileSystemManager: Sendable {
         } catch {
             logger.error("Failed to cleanup failed space: \(error.localizedDescription)")
         }
+    }
+    
+    // MARK: - Pre-Execution Snapshot
+    
+    /// Creates a pre-execution snapshot before running an application
+    public func createPreExecutionSnapshot(
+        for applicationPath: String,
+        processId: Int32
+    ) async throws -> SnapshotMetadata {
+        
+        let snapshotId = UUID()
+        let snapshotName = "privarion_pre_\(snapshotId.uuidString.replacingOccurrences(of: "-", with: "_"))"
+        
+        logger.info("Creating pre-execution snapshot for: \(applicationPath)")
+        
+        try await createAPFSSnapshot(name: snapshotName)
+        
+        let metadata = SnapshotMetadata(
+            id: snapshotId,
+            strategy: .preExecution,
+            snapshotName: snapshotName,
+            applicationPath: applicationPath,
+            processId: processId
+        )
+        
+        await snapshotRegistry.registerSnapshot(metadata)
+        
+        logger.info("Pre-execution snapshot created: \(snapshotId)")
+        return metadata
+    }
+    
+    // MARK: - Post-Execution Snapshot & Restore
+    
+    /// Restores system state from a pre-execution snapshot after application completes
+    public func restoreFromPreExecution(
+        snapshotId: UUID,
+        killProcess: Bool = true
+    ) async throws {
+        
+        guard let snapshot = await snapshotRegistry.getSnapshot(snapshotId) else {
+            throw EphemeralError.snapshotNotFound(snapshotId.uuidString)
+        }
+        
+        logger.info("Restoring from pre-execution snapshot: \(snapshotId)")
+        
+        if killProcess, let processId = snapshot.processId {
+            try await terminateProcess(processId)
+        }
+        
+        try await restoreAPFSSnapshot(name: snapshot.snapshotName)
+        
+        await snapshotRegistry.deleteSnapshot(snapshotId)
+        
+        logger.info("Restored from pre-execution snapshot: \(snapshotId)")
+    }
+    
+    /// Creates a post-execution snapshot after application completes
+    public func createPostExecutionSnapshot(
+        preSnapshotId: UUID,
+        applicationPath: String,
+        processId: Int32
+    ) async throws -> SnapshotMetadata {
+        
+        let preSnapshot = await snapshotRegistry.getSnapshot(preSnapshotId)
+        
+        let snapshotId = UUID()
+        let snapshotName = "privarion_post_\(snapshotId.uuidString.replacingOccurrences(of: "-", with: "_"))"
+        
+        logger.info("Creating post-execution snapshot for: \(applicationPath)")
+        
+        let changedFiles = try await detectChangedFiles(since: preSnapshot?.snapshotName)
+        
+        try await createAPFSSnapshot(name: snapshotName)
+        
+        let metadata = SnapshotMetadata(
+            id: snapshotId,
+            strategy: .postExecution,
+            snapshotName: snapshotName,
+            parentSnapshotId: preSnapshotId,
+            changedFiles: changedFiles,
+            applicationPath: applicationPath,
+            processId: processId
+        )
+        
+        await snapshotRegistry.registerSnapshot(metadata)
+        
+        logger.info("Post-execution snapshot created: \(snapshotId) with \(changedFiles.count) changed files")
+        return metadata
+    }
+    
+    // MARK: - Incremental Snapshot Support
+    
+    /// Creates an incremental snapshot capturing only changed files
+    public func createIncrementalSnapshot(
+        targetPath: String? = nil,
+        applicationPath: String? = nil
+    ) async throws -> SnapshotMetadata {
+        
+        let snapshotId = UUID()
+        let snapshotName = "privarion_incr_\(snapshotId.uuidString.replacingOccurrences(of: "-", with: "_"))"
+        
+        logger.info("Creating incremental snapshot")
+        
+        let lastSnapshotId = await snapshotRegistry.getLastIncrementalSnapshot()
+        let lastSnapshotName: String? = await snapshotRegistry.getSnapshot(lastSnapshotId ?? UUID())?.snapshotName
+        
+        let changedFiles = try await detectChangedFiles(since: lastSnapshotName, targetPath: targetPath)
+        
+        try await createAPFSSnapshot(name: snapshotName)
+        
+        let totalFiles = try await countFiles(in: targetPath ?? "/")
+        let sizeBytes = try await calculateSnapshotSize(changedFiles)
+        
+        let metadata = SnapshotMetadata(
+            id: snapshotId,
+            strategy: .incremental,
+            snapshotName: snapshotName,
+            parentSnapshotId: lastSnapshotId,
+            changedFiles: changedFiles,
+            totalFiles: totalFiles,
+            sizeBytes: sizeBytes,
+            applicationPath: applicationPath
+        )
+        
+        await snapshotRegistry.registerSnapshot(metadata)
+        
+        logger.info("Incremental snapshot created: \(snapshotId) with \(changedFiles.count) changed files")
+        return metadata
+    }
+    
+    // MARK: - Scheduled Snapshot Support
+    
+    /// Configures and starts scheduled automatic snapshots
+    public func startScheduledSnapshots(
+        schedule: SnapshotSchedule,
+        targetPath: String? = nil,
+        applicationPath: String? = nil
+    ) async throws {
+        
+        logger.info("Starting scheduled snapshots with interval: \(schedule.intervalSeconds)s")
+        
+        await snapshotRegistry.setSchedule(schedule)
+        
+        let timerId = UUID()
+        
+        let timer = Timer.scheduledTimer(withTimeInterval: schedule.intervalSeconds, repeats: true) { [weak self] _ in
+            Task {
+                await self?.performScheduledSnapshot(
+                    schedule: schedule,
+                    targetPath: targetPath,
+                    applicationPath: applicationPath
+                )
+            }
+        }
+        
+        await snapshotRegistry.setScheduledTimer(timerId, timer: timer)
+        
+        await snapshotRegistry.cleanupOldSnapshots(olderThanDays: schedule.retentionDays)
+        
+        logger.info("Scheduled snapshots started")
+    }
+    
+    /// Stops scheduled automatic snapshots
+    public func stopScheduledSnapshots() async {
+        logger.info("Stopping scheduled snapshots")
+        
+        let snapshots = await snapshotRegistry.getAllSnapshots()
+        let scheduledSnapshots = snapshots.filter { $0.strategy == .scheduled }
+        
+        for snapshot in scheduledSnapshots {
+            await snapshotRegistry.deleteSnapshot(snapshot.id)
+        }
+        
+        logger.info("Scheduled snapshots stopped")
+    }
+    
+    /// Lists all snapshots
+    public func listSnapshots() async -> [SnapshotMetadata] {
+        return await snapshotRegistry.getAllSnapshots()
+    }
+    
+    /// Lists snapshots by strategy
+    public func listSnapshots(strategy: SnapshotStrategy) async -> [SnapshotMetadata] {
+        return await snapshotRegistry.getSnapshotsByStrategy(strategy)
+    }
+    
+    /// Gets a specific snapshot by ID
+    public func getSnapshot(_ id: UUID) async -> SnapshotMetadata? {
+        return await snapshotRegistry.getSnapshot(id)
+    }
+    
+    /// Deletes a snapshot
+    public func deleteSnapshot(_ id: UUID) async throws {
+        guard let snapshot = await snapshotRegistry.getSnapshot(id) else {
+            throw EphemeralError.snapshotNotFound(id.uuidString)
+        }
+        
+        try await deleteAPFSSnapshot(name: snapshot.snapshotName)
+        await snapshotRegistry.deleteSnapshot(id)
+        
+        logger.info("Deleted snapshot: \(id)")
+    }
+    
+    // MARK: - Private Helper Methods
+    
+    private func performScheduledSnapshot(
+        schedule: SnapshotSchedule,
+        targetPath: String?,
+        applicationPath: String?
+    ) async {
+        
+        guard schedule.enabledStrategies.contains(.scheduled) else {
+            return
+        }
+        
+        do {
+            let snapshotId = UUID()
+            let snapshotName = "privarion_sched_\(snapshotId.uuidString.replacingOccurrences(of: "-", with: "_"))"
+            
+            logger.info("Performing scheduled snapshot: \(snapshotId)")
+            
+            try await createAPFSSnapshot(name: snapshotName)
+            
+            let metadata = SnapshotMetadata(
+                id: snapshotId,
+                strategy: .scheduled,
+                snapshotName: snapshotName,
+                applicationPath: applicationPath
+            )
+            
+            await snapshotRegistry.registerSnapshot(metadata)
+            
+            await enforceSnapshotLimit(maxSnapshots: schedule.maxSnapshots)
+            
+            logger.info("Scheduled snapshot completed: \(snapshotId)")
+            
+        } catch {
+            logger.error("Scheduled snapshot failed: \(error.localizedDescription)")
+        }
+    }
+    
+    private func enforceSnapshotLimit(maxSnapshots: Int) async {
+        let snapshots = await snapshotRegistry.getAllSnapshots()
+        
+        if snapshots.count > maxSnapshots {
+            let sortedSnapshots = snapshots.sorted { $0.createdAt < $1.createdAt }
+            let toDelete = sortedSnapshots.prefix(snapshots.count - maxSnapshots)
+            
+            for snapshot in toDelete {
+                do {
+                    try await deleteAPFSSnapshot(name: snapshot.snapshotName)
+                    await snapshotRegistry.deleteSnapshot(snapshot.id)
+                    logger.info("Deleted old snapshot due to limit: \(snapshot.id)")
+                } catch {
+                    logger.warning("Failed to delete old snapshot: \(error.localizedDescription)")
+                }
+            }
+        }
+    }
+    
+    private func terminateProcess(_ processId: Int32) async throws {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/bin/kill")
+        process.arguments = ["-9", String(processId)]
+        
+        do {
+            try process.run()
+            process.waitUntilExit()
+            
+            logger.info("Terminated process: \(processId)")
+        } catch {
+            logger.warning("Failed to terminate process: \(error.localizedDescription)")
+        }
+    }
+    
+    private func restoreAPFSSnapshot(name: String) async throws {
+        logger.info("Restoring APFS snapshot: \(name)")
+        
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/sbin/diskutil")
+        process.arguments = ["apfs", "restore", name, "/", "-force"]
+        
+        let pipe = Pipe()
+        process.standardOutput = pipe
+        process.standardError = pipe
+        
+        do {
+            try process.run()
+            process.waitUntilExit()
+            
+            let data = pipe.fileHandleForReading.readDataToEndOfFile()
+            let output = String(data: data, encoding: .utf8) ?? ""
+            
+            guard process.terminationStatus == 0 else {
+                throw EphemeralError.restoreFailed("diskutil failed: \(output)")
+            }
+            
+            logger.info("Restored APFS snapshot: \(name)")
+        } catch let error as EphemeralError {
+            throw error
+        } catch {
+            throw EphemeralError.restoreFailed(error.localizedDescription)
+        }
+    }
+    
+    private func detectChangedFiles(since snapshotName: String?, targetPath: String? = nil) async throws -> [String] {
+        if configuration.isTestMode {
+            return ["test_file_1.txt", "test_file_2.txt"]
+        }
+        
+        guard snapshotName != nil else {
+            return []
+        }
+        
+        let path = targetPath ?? "/"
+        
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/tmutil")
+        process.arguments = ["listlocalsnapshots", path]
+        
+        let pipe = Pipe()
+        process.standardOutput = pipe
+        
+        do {
+            try process.run()
+            process.waitUntilExit()
+            
+            let data = pipe.fileHandleForReading.readDataToEndOfFile()
+            let output = String(data: data, encoding: .utf8) ?? ""
+            
+            let lines = output.components(separatedBy: .newlines)
+            return lines.filter { !$0.isEmpty }.prefix(100).map { String($0) }
+        } catch {
+            logger.warning("Failed to detect changed files: \(error.localizedDescription)")
+            return []
+        }
+    }
+    
+    private func countFiles(in path: String) async throws -> Int {
+        if configuration.isTestMode {
+            return 100
+        }
+        
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/find")
+        process.arguments = [path, "-type", "f"]
+        
+        let pipe = Pipe()
+        process.standardOutput = pipe
+        
+        try process.run()
+        process.waitUntilExit()
+        
+        let data = pipe.fileHandleForReading.readDataToEndOfFile()
+        let output = String(data: data, encoding: .utf8) ?? ""
+        
+        return output.components(separatedBy: .newlines).filter { !$0.isEmpty }.count
+    }
+    
+    private func calculateSnapshotSize(_ files: [String]) async throws -> UInt64 {
+        if configuration.isTestMode {
+            return UInt64(files.count * 4096)
+        }
+        
+        var totalSize: UInt64 = 0
+        
+        for file in files {
+            let url = URL(fileURLWithPath: file)
+            do {
+                let attributes = try FileManager.default.attributesOfItem(atPath: url.path)
+                if let size = attributes[.size] as? UInt64 {
+                    totalSize += size
+                }
+            } catch {
+                continue
+            }
+        }
+        
+        return totalSize
     }
 }
 

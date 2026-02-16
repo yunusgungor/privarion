@@ -97,6 +97,11 @@ struct ProfilesView: View {
     @EnvironmentObject private var appState: AppState
     private let logger = Logger(label: "ProfilesView")
     
+    @State private var showingCreateProfile = false
+    @State private var showingImportProfile = false
+    @State private var profileToDelete: ConfigurationProfile?
+    @State private var showingDeleteAlert = false
+    
     var body: some View {
         VStack {
             if appState.profiles.isEmpty {
@@ -118,11 +123,11 @@ struct ProfilesView: View {
             ToolbarItem(placement: .primaryAction) {
                 Menu {
                     Button("Create Profile") {
-                        // TODO: Implement profile creation
+                        showingCreateProfile = true
                     }
                     
                     Button("Import Profile") {
-                        // TODO: Implement profile import
+                        showingImportProfile = true
                     }
                     
                     Divider()
@@ -137,12 +142,46 @@ struct ProfilesView: View {
                 }
             }
         }
+        .sheet(isPresented: $showingCreateProfile) {
+            CreateProfileSheet()
+        }
+        .sheet(isPresented: $showingImportProfile) {
+            ImportProfileSheet()
+        }
+        .alert("Delete Profile", isPresented: $showingDeleteAlert) {
+            Button("Cancel", role: .cancel) {
+                profileToDelete = nil
+            }
+            Button("Delete", role: .destructive) {
+                if let profile = profileToDelete {
+                    Task {
+                        await deleteProfile(profile)
+                    }
+                }
+            }
+        } message: {
+            if let profile = profileToDelete {
+                Text("Are you sure you want to delete '\(profile.name)'? This action cannot be undone.")
+            }
+        }
+    }
+    
+    private func deleteProfile(_ profile: ConfigurationProfile) async {
+        do {
+            try await appState.profileInteractor.deleteProfile(profile.id)
+            await appState.initialize()
+            logger.info("Profile deleted: \(profile.name)")
+        } catch {
+            logger.error("Failed to delete profile: \(error.localizedDescription)")
+        }
     }
 }
 
 struct ProfileRowView: View {
     let profile: ConfigurationProfile
+    var onDelete: ((ConfigurationProfile) -> Void)?
     @EnvironmentObject private var appState: AppState
+    private let logger = Logger(label: "ProfileRowView")
     
     var body: some View {
         HStack {
@@ -191,12 +230,14 @@ struct ProfileRowView: View {
                 
                 Menu {
                     Button("Export") {
-                        // TODO: Export profile
+                        Task {
+                            await exportProfile(profile)
+                        }
                     }
                     
-                    if !profile.isActive {
+                    if !profile.isActive, let onDelete = onDelete {
                         Button("Delete", role: .destructive) {
-                            // TODO: Delete profile
+                            onDelete(profile)
                         }
                     }
                 } label: {
@@ -217,6 +258,177 @@ struct ProfileRowView: View {
         formatter.timeStyle = .short
         return formatter.string(from: date)
     }
+    
+    private func exportProfile(_ profile: ConfigurationProfile) async {
+        do {
+            let data = try await appState.profileInteractor.exportProfile(profile.id)
+            
+            let panel = NSSavePanel()
+            panel.title = "Export Profile"
+            panel.nameFieldStringValue = "\(profile.name).json"
+            panel.allowedContentTypes = [.json]
+            panel.canCreateDirectories = true
+            
+            panel.begin { response in
+                guard response == .OK, let url = panel.url else { return }
+                
+                do {
+                    try data.write(to: url)
+                    logger.info("Profile exported: \(profile.name) to \(url.path)")
+                } catch {
+                    logger.error("Failed to write profile: \(error.localizedDescription)")
+                }
+            }
+        } catch {
+            logger.error("Failed to export profile: \(error.localizedDescription)")
+        }
+    }
+}
+
+struct CreateProfileSheet: View {
+    @EnvironmentObject private var appState: AppState
+    @Environment(\.dismiss) private var dismiss
+    
+    @State private var profileName = ""
+    @State private var profileDescription = ""
+    @State private var isCreating = false
+    @State private var errorMessage: String?
+    
+    var body: some View {
+        VStack(spacing: 20) {
+            Text("Create New Profile")
+                .font(.headline)
+            
+            Form {
+                TextField("Profile Name", text: $profileName)
+                TextField("Description", text: $profileDescription)
+            }
+            .formStyle(.grouped)
+            
+            if let error = errorMessage {
+                Text(error)
+                    .foregroundColor(.red)
+                    .font(.caption)
+            }
+            
+            HStack {
+                Button("Cancel") {
+                    dismiss()
+                }
+                .keyboardShortcut(.cancelAction)
+                
+                Spacer()
+                
+                Button("Create") {
+                    createProfile()
+                }
+                .keyboardShortcut(.defaultAction)
+                .disabled(profileName.isEmpty || isCreating)
+            }
+        }
+        .padding()
+        .frame(width: 400, height: 250)
+    }
+    
+    private func createProfile() {
+        isCreating = true
+        errorMessage = nil
+        
+        let newProfile = ConfigurationProfile(
+            id: UUID().uuidString,
+            name: profileName,
+            description: profileDescription,
+            isActive: false,
+            settings: [:],
+            createdAt: Date(),
+            modifiedAt: Date()
+        )
+        
+        Task {
+            do {
+                try await appState.profileInteractor.createProfile(newProfile)
+                await MainActor.run {
+                    dismiss()
+                }
+            } catch {
+                await MainActor.run {
+                    errorMessage = error.localizedDescription
+                    isCreating = false
+                }
+            }
+        }
+    }
+}
+
+struct ImportProfileSheet: View {
+    @EnvironmentObject private var appState: AppState
+    @Environment(\.dismiss) private var dismiss
+    
+    @State private var isImporting = false
+    @State private var errorMessage: String?
+    
+    var body: some View {
+        VStack(spacing: 20) {
+            Text("Import Profile")
+                .font(.headline)
+            
+            Text("Select a profile file to import")
+                .foregroundColor(.secondary)
+            
+            if let error = errorMessage {
+                Text(error)
+                    .foregroundColor(.red)
+                    .font(.caption)
+            }
+            
+            HStack {
+                Button("Cancel") {
+                    dismiss()
+                }
+                .keyboardShortcut(.cancelAction)
+                
+                Spacer()
+                
+                Button("Select File") {
+                    importProfile()
+                }
+                .keyboardShortcut(.defaultAction)
+                .disabled(isImporting)
+            }
+        }
+        .padding()
+        .frame(width: 400, height: 150)
+    }
+    
+    private func importProfile() {
+        let panel = NSOpenPanel()
+        panel.title = "Import Profile"
+        panel.allowedContentTypes = [.json]
+        panel.allowsMultipleSelection = false
+        panel.canChooseDirectories = false
+        
+        panel.begin { response in
+            guard response == .OK, let url = panel.url else { return }
+            
+            isImporting = true
+            errorMessage = nil
+            
+            Task {
+                do {
+                    let data = try Data(contentsOf: url)
+                    let profile = try await appState.profileInteractor.importProfile(data)
+                    await MainActor.run {
+                        dismiss()
+                    }
+                } catch {
+                    await MainActor.run {
+                        errorMessage = error.localizedDescription
+                        isImporting = false
+                    }
+                }
+            }
+        }
+    }
 }
 
 // MARK: - Logs View
@@ -226,6 +438,8 @@ struct LogsView: View {
     
     @EnvironmentObject private var appState: AppState
     private let logger = Logger(label: "LogsView")
+    
+    @State private var showingClearAlert = false
     
     var body: some View {
         VStack {
@@ -254,17 +468,53 @@ struct LogsView: View {
                     }
                     
                     Button("Export Logs") {
-                        // TODO: Implement log export
+                        exportLogs()
                     }
                     
                     Button("Clear Logs") {
-                        // TODO: Implement log clearing
+                        showingClearAlert = true
                     }
                 } label: {
                     Image(systemName: "ellipsis.circle")
                 }
             }
         }
+        .alert("Clear Logs", isPresented: $showingClearAlert) {
+            Button("Cancel", role: .cancel) { }
+            Button("Clear", role: .destructive) {
+                clearLogs()
+            }
+        } message: {
+            Text("Are you sure you want to clear all activity logs? This action cannot be undone.")
+        }
+    }
+    
+    private func exportLogs() {
+        let panel = NSSavePanel()
+        panel.title = "Export Logs"
+        panel.nameFieldStringValue = "privarion-logs.json"
+        panel.allowedContentTypes = [.json]
+        panel.canCreateDirectories = true
+        
+        panel.begin { response in
+            guard response == .OK, let url = panel.url else { return }
+            
+            do {
+                let encoder = JSONEncoder()
+                encoder.dateEncodingStrategy = .iso8601
+                encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+                let data = try encoder.encode(appState.recentActivity)
+                try data.write(to: url)
+                logger.info("Logs exported to \(url.path)")
+            } catch {
+                logger.error("Failed to export logs: \(error.localizedDescription)")
+            }
+        }
+    }
+    
+    private func clearLogs() {
+        appState.recentActivity.removeAll()
+        logger.info("Activity logs cleared")
     }
 }
 
@@ -658,8 +908,23 @@ struct SettingsView: View {
     }
     
     private func clearCache() {
-        // TODO: Implement cache clearing
-        logger.info("Cache clearing requested")
+        let cacheURL = URL(fileURLWithPath: NSHomeDirectory())
+            .appendingPathComponent(".privarion/cache")
+        
+        do {
+            let fileManager = FileManager.default
+            if fileManager.fileExists(atPath: cacheURL.path) {
+                let contents = try fileManager.contentsOfDirectory(at: cacheURL, includingPropertiesForKeys: nil)
+                for file in contents {
+                    try fileManager.removeItem(at: file)
+                }
+                logger.info("Cache cleared successfully")
+            } else {
+                logger.info("Cache directory does not exist, nothing to clear")
+            }
+        } catch {
+            logger.error("Failed to clear cache: \(error.localizedDescription)")
+        }
     }
 }
 

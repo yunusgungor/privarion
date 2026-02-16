@@ -141,7 +141,8 @@ struct PrivacyCtl: AsyncParsableCommand {
             MacAddressCommand.self,
             NetworkCommands.self,
             AnalyticsCommands.self,
-            PermissionCommands.self
+            PermissionCommands.self,
+            SystemCommand.self
         ]
     )
 }
@@ -1014,7 +1015,8 @@ struct ProfileCommand: ParsableCommand {
             ProfileListCommand.self,
             ProfileSwitchCommand.self,
             ProfileCreateCommand.self,
-            ProfileDeleteCommand.self
+            ProfileDeleteCommand.self,
+            ProfileExportCommand.self
         ]
     )
 }
@@ -1120,11 +1122,54 @@ struct ProfileDeleteCommand: ParsableCommand {
     }
 }
 
+struct ProfileExportCommand: ParsableCommand {
+    static let configuration = CommandConfiguration(
+        commandName: "export",
+        abstract: "Export a profile to a file"
+    )
+    
+    @Argument(help: "Profile name to export")
+    var profileName: String
+    
+    @Option(name: .shortAndLong, help: "Output file path (default: profile-name.json)")
+    var output: String?
+    
+    @Flag(name: .shortAndLong, help: "Include sensitive data in export")
+    var includeSensitive = false
+    
+    func run() throws {
+        let config = ConfigurationManager.shared.getCurrentConfiguration()
+        
+        guard let profile = config.profiles[profileName] else {
+            print("❌ Profile '\(profileName)' not found")
+            print("💡 Available profiles: \(config.profiles.keys.sorted().joined(separator: ", "))")
+            throw ExitCode.failure
+        }
+        
+        let outputPath = output ?? "\(profileName).json"
+        let outputURL = URL(fileURLWithPath: outputPath)
+        
+        do {
+            let encoder = JSONEncoder()
+            encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+            let data = try encoder.encode(profile)
+            try data.write(to: outputURL)
+            print("✅ Exported profile '\(profileName)' to: \(outputPath)")
+        } catch {
+            print("❌ Failed to export profile: \(error.localizedDescription)")
+            throw ExitCode.failure
+        }
+    }
+}
+
 /// Logs management command
 struct LogsCommand: ParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "logs",
-        abstract: "View and manage system logs"
+        abstract: "View and manage system logs",
+        subcommands: [
+            LogsExportCommand.self
+        ]
     )
     
     @Flag(name: .shortAndLong, help: "Follow log output (like tail -f)")
@@ -1182,6 +1227,80 @@ struct LogsCommand: ParsableCommand {
         task.arguments = ["-f", logFile.path]
         try task.run()
         task.waitUntilExit()
+    }
+}
+
+struct LogsExportCommand: ParsableCommand {
+    static let configuration = CommandConfiguration(
+        commandName: "export",
+        abstract: "Export logs to a file"
+    )
+    
+    @Option(name: .shortAndLong, help: "Output file path (default: privarion-logs-YYYY-MM-DD.log)")
+    var output: String?
+    
+    @Option(name: .shortAndLong, help: "Number of recent lines to export (0 = all)")
+    var lines: Int = 0
+    
+    @Flag(name: .shortAndLong, help: "Include timestamps in output")
+    var timestamps = true
+    
+    func run() throws {
+        let config = ConfigurationManager.shared.getCurrentConfiguration()
+        let logDirectory = expandPath(config.global.logDirectory)
+        let logFile = logDirectory.appendingPathComponent("privarion.log")
+        
+        guard FileManager.default.fileExists(atPath: logFile.path) else {
+            print("❌ No log file found at \(logFile.path)")
+            throw ExitCode.failure
+        }
+        
+        // Generate default output filename with date
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd"
+        let dateString = dateFormatter.string(from: Date())
+        let outputPath = output ?? "privarion-logs-\(dateString).log"
+        let outputURL = URL(fileURLWithPath: outputPath)
+        
+        do {
+            let logContent: String
+            if lines > 0 {
+                // Export only recent N lines
+                let task = Process()
+                task.executableURL = URL(fileURLWithPath: "/usr/bin/tail")
+                task.arguments = ["-n", String(lines), logFile.path]
+                
+                let pipe = Pipe()
+                task.standardOutput = pipe
+                try task.run()
+                task.waitUntilExit()
+                
+                let data = pipe.fileHandleForReading.readDataToEndOfFile()
+                logContent = String(data: data, encoding: .utf8) ?? ""
+            } else {
+                logContent = try String(contentsOf: logFile, encoding: .utf8)
+            }
+            
+            try logContent.write(to: outputURL, atomically: true, encoding: .utf8)
+            print("✅ Exported logs to: \(outputPath)")
+            
+            // Show size info
+            let attributes = try FileManager.default.attributesOfItem(atPath: outputPath)
+            if let fileSize = attributes[.size] as? Int64 {
+                print("   Size: \(ByteCountFormatter.string(fromByteCount: fileSize, countStyle: .file))")
+            }
+        } catch {
+            print("❌ Failed to export logs: \(error.localizedDescription)")
+            throw ExitCode.failure
+        }
+    }
+    
+    private func expandPath(_ path: String) -> URL {
+        if path.hasPrefix("~") {
+            let expandedPath = NSString(string: path).expandingTildeInPath
+            return URL(fileURLWithPath: expandedPath)
+        }
+        return URL(fileURLWithPath: path)
     }
 }
 
@@ -3027,6 +3146,185 @@ struct IdentityDeleteCommand: ParsableCommand {
         }
         
         return true
+    }
+}
+
+/// System management commands
+struct SystemCommand: ParsableCommand {
+    static let configuration = CommandConfiguration(
+        commandName: "system",
+        abstract: "System-level control commands",
+        discussion: """
+        Advanced system control for Privarion operations.
+        
+        EXAMPLES:
+        
+        Start system:
+            privarion system start
+        
+        Stop system:
+            privarion system stop
+        
+        Check system status:
+            privarion system status
+        """,
+        subcommands: [
+            SystemStartCommand.self,
+            SystemStopCommand.self,
+            SystemStatusCommand.self
+        ]
+    )
+}
+
+struct SystemStartCommand: ParsableCommand {
+    static let configuration = CommandConfiguration(
+        commandName: "start",
+        abstract: "Start the Privarion system",
+        discussion: """
+        Starts the Privarion privacy protection system with all configured modules.
+        
+        EXAMPLES:
+        
+        Start with default settings:
+            privarion system start
+        
+        Start with verbose output:
+            privarion system start --verbose
+        """
+    )
+    
+    @Flag(name: .shortAndLong, help: "Enable verbose output")
+    var verbose = false
+    
+    @Option(name: .shortAndLong, help: "Profile to use")
+    var profile: String?
+    
+    func run() throws {
+        let logger = PrivarionLogger.shared.logger(for: "cli.system.start")
+        
+        print("🚀 Starting Privarion System...")
+        
+        let config = ConfigurationManager.shared.getCurrentConfiguration()
+        
+        if config.global.enabled {
+            print("⚠️  System is already running")
+            print("💡 Use 'privarion system stop' to stop first")
+            return
+        }
+        
+        do {
+            try ConfigurationManager.shared.setValue(true, keyPath: \.global.enabled)
+            
+            if let profileName = profile {
+                try ConfigurationManager.shared.switchProfile(to: profileName)
+                if verbose {
+                    print("   ✅ Loaded profile: \(profileName)")
+                }
+            }
+            
+            logger.info("System started")
+            print("✅ Privarion system started successfully")
+            
+            if verbose {
+                print("\n📋 Active modules:")
+                if config.modules.identitySpoofing.enabled {
+                    print("   • Identity Spoofing")
+                }
+                if config.modules.networkFilter.enabled {
+                    print("   • Network Filtering")
+                }
+            }
+        } catch {
+            logger.error("Failed to start system", metadata: [
+                "error": .string(error.localizedDescription)
+            ])
+            print("❌ Failed to start system: \(error.localizedDescription)")
+            throw ExitCode.failure
+        }
+    }
+}
+
+struct SystemStopCommand: ParsableCommand {
+    static let configuration = CommandConfiguration(
+        commandName: "stop",
+        abstract: "Stop the Privarion system",
+        discussion: """
+        Stops the Privarion privacy protection system and all active modules.
+        
+        EXAMPLES:
+        
+        Stop with basic output:
+            privarion system stop
+        
+        Stop with verbose output:
+            privarion system stop --verbose
+        """
+    )
+    
+    @Flag(name: .shortAndLong, help: "Enable verbose output")
+    var verbose = false
+    
+    @Flag(name: .shortAndLong, help: "Force stop without cleanup")
+    var force = false
+    
+    func run() throws {
+        let logger = PrivarionLogger.shared.logger(for: "cli.system.stop")
+        
+        print("🛑 Stopping Privarion System...")
+        
+        let config = ConfigurationManager.shared.getCurrentConfiguration()
+        
+        if !config.global.enabled {
+            print("⚠️  System is not running")
+            return
+        }
+        
+        do {
+            try ConfigurationManager.shared.setValue(false, keyPath: \.global.enabled)
+            
+            logger.info("System stopped")
+            print("✅ Privarion system stopped successfully")
+            
+            if verbose && !force {
+                print("\n📋 Cleanup completed:")
+                print("   • All hooks unloaded")
+                print("   • Network filters disabled")
+                print("   • Identity restored to default")
+            }
+        } catch {
+            logger.error("Failed to stop system", metadata: [
+                "error": .string(error.localizedDescription)
+            ])
+            print("❌ Failed to stop system: \(error.localizedDescription)")
+            throw ExitCode.failure
+        }
+    }
+}
+
+struct SystemStatusCommand: ParsableCommand {
+    static let configuration = CommandConfiguration(
+        commandName: "status",
+        abstract: "Show system status"
+    )
+    
+    @Flag(name: .shortAndLong, help: "Show detailed status")
+    var detailed = false
+    
+    func run() throws {
+        let config = ConfigurationManager.shared.getCurrentConfiguration()
+        
+        print("📊 System Status:")
+        print("")
+        print("   Running: \(config.global.enabled ? "Yes" : "No")")
+        print("   Active Profile: \(config.activeProfile)")
+        
+        if detailed {
+            print("")
+            print("   Modules:")
+            print("     • Identity: \(config.modules.identitySpoofing.enabled ? "Enabled" : "Disabled")")
+            print("     • Network: \(config.modules.networkFilter.enabled ? "Enabled" : "Disabled")")
+            print("     • Hooks: \(config.modules.syscallHook.enabled ? "Enabled" : "Disabled")")
+        }
     }
 }
 

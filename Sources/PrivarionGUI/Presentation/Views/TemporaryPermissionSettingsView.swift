@@ -128,7 +128,7 @@ struct TemporaryPermissionSettingsView: View {
                     }
                     
                     Button("Import Settings") {
-                        // TODO: Implement settings import
+                        importSettings()
                     }
                 }
             }
@@ -200,6 +200,34 @@ struct TemporaryPermissionSettingsView: View {
             }
         } catch {
             logger.error("Failed to encode settings: \(error)")
+        }
+    }
+    
+    private func importSettings() {
+        let openPanel = NSOpenPanel()
+        openPanel.allowedContentTypes = [.json]
+        openPanel.allowsMultipleSelection = false
+        
+        if openPanel.runModal() == .OK, let url = openPanel.url {
+            do {
+                let data = try Data(contentsOf: url)
+                let settings = try JSONDecoder().decode(TemporaryPermissionSettings.self, from: data)
+                
+                defaultDuration = settings.defaultDuration
+                autoRefreshEnabled = settings.autoRefreshEnabled
+                refreshInterval = settings.refreshInterval
+                showExpiryNotifications = settings.showExpiryNotifications
+                notificationAdvanceTime = settings.notificationAdvanceTime
+                autoRevokeExpired = settings.autoRevokeExpired
+                preferredExportFormat = settings.preferredExportFormat
+                sortOrder = settings.sortOrder
+                groupByApp = settings.groupByApp
+                showAdvancedDetails = settings.showAdvancedDetails
+                
+                logger.info("Settings imported successfully from: \(url.path)")
+            } catch {
+                logger.error("Failed to import settings: \(error)")
+            }
         }
     }
     

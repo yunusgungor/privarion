@@ -103,6 +103,110 @@ public struct IdentitySpoofingConfig: Codable {
     }
 }
 
+/// Tor proxy configuration for SOCKS5 proxy integration
+public struct TorProxyConfig: Codable {
+    public var enabled: Bool
+    public var socksPort: Int
+    public var controlPort: Int
+    public var controlPassword: String?
+    public var useTorBrowser: Bool
+    public var torBinaryPath: String?
+    public var customSocksProxy: String?
+    
+    public init() {
+        self.enabled = false
+        self.socksPort = 9050
+        self.controlPort = 9051
+        self.controlPassword = nil
+        self.useTorBrowser = false
+        self.torBinaryPath = nil
+        self.customSocksProxy = nil
+    }
+}
+
+/// Bandwidth throttling configuration
+public struct BandwidthThrottleConfig: Codable {
+    public var enabled: Bool
+    public var uploadLimitKBps: Int
+    public var downloadLimitKBps: Int
+    public var perAppThrottling: Bool
+    public var throttleBlocklist: [String]
+    
+    public init() {
+        self.enabled = false
+        self.uploadLimitKBps = 0
+        self.downloadLimitKBps = 0
+        self.perAppThrottling = false
+        self.throttleBlocklist = []
+    }
+}
+
+/// Proxy chain configuration for multi-hop routing
+public struct ProxyChainConfig: Codable {
+    public var enabled: Bool
+    public var proxies: [ProxyConfig]
+    public var chainMode: ProxyChainMode
+    
+    public init() {
+        self.enabled = false
+        self.proxies = []
+        self.chainMode = .sequential
+    }
+}
+
+/// Individual proxy configuration
+public struct ProxyConfig: Codable {
+    public var type: ProxyType
+    public var host: String
+    public var port: Int
+    public var username: String?
+    public var password: String?
+    
+    public init(type: ProxyType = .socks5, host: String = "", port: Int = 0) {
+        self.type = type
+        self.host = host
+        self.port = port
+        self.username = nil
+        self.password = nil
+    }
+}
+
+/// Proxy type enumeration
+public enum ProxyType: String, Codable, CaseIterable {
+    case socks4 = "socks4"
+    case socks5 = "socks5"
+    case http = "http"
+    case https = "https"
+}
+
+/// Proxy chain mode
+public enum ProxyChainMode: String, Codable, CaseIterable {
+    case sequential = "sequential"
+    case random = "random"
+    case failover = "failover"
+}
+
+/// DoH enforcement configuration
+public struct DoHEnforcementConfig: Codable {
+    public var enabled: Bool
+    public var enforceDoH: Bool
+    public var blockPlainDNS: Bool
+    public var dohServers: [String]
+    public var trustedDomains: [String]
+    
+    public init() {
+        self.enabled = false
+        self.enforceDoH = false
+        self.blockPlainDNS = false
+        self.dohServers = [
+            "https://dns.google/dns-query",
+            "https://cloudflare-dns.com/dns-query",
+            "https://dns.quad9.net/dns-query"
+        ]
+        self.trustedDomains = []
+    }
+}
+
 /// Network filter module configuration
 public struct NetworkFilterConfig: Codable {
     public var enabled: Bool
@@ -122,6 +226,18 @@ public struct NetworkFilterConfig: Codable {
     /// Traffic monitoring settings
     public var monitoring: NetworkMonitoringConfig
     
+    /// Tor proxy settings
+    public var torProxy: TorProxyConfig
+    
+    /// Bandwidth throttling settings
+    public var bandwidthThrottle: BandwidthThrottleConfig
+    
+    /// Proxy chain configuration
+    public var proxyChain: ProxyChainConfig
+    
+    /// DoH enforcement settings
+    public var dohEnforcement: DoHEnforcementConfig
+    
     public init() {
         self.enabled = false
         self.blockTelemetry = false
@@ -131,6 +247,10 @@ public struct NetworkFilterConfig: Codable {
         self.blockedDomains = []
         self.applicationRules = [:]
         self.monitoring = NetworkMonitoringConfig()
+        self.torProxy = TorProxyConfig()
+        self.bandwidthThrottle = BandwidthThrottleConfig()
+        self.proxyChain = ProxyChainConfig()
+        self.dohEnforcement = DoHEnforcementConfig()
     }
 }
 

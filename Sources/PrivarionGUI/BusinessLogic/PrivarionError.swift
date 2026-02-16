@@ -9,6 +9,8 @@ enum PrivarionError: LocalizedError {
     // MARK: - System Errors
     case systemInitializationFailed(reason: String)
     case systemStatusUnavailable
+    case systemStartFailed(reason: String)
+    case systemStopFailed(reason: String)
     case cliBackendNotResponding(timeout: TimeInterval)
     case permissionDenied(operation: String)
     
@@ -88,6 +90,10 @@ enum PrivarionError: LocalizedError {
             return "System initialization failed: \(reason)"
         case .systemStatusUnavailable:
             return "System status is currently unavailable"
+        case .systemStartFailed(let reason):
+            return "Failed to start system: \(reason)"
+        case .systemStopFailed(let reason):
+            return "Failed to stop system: \(reason)"
         case .cliBackendNotResponding(let timeout):
             return "CLI backend not responding (timeout: \(timeout)s)"
         case .permissionDenied(let operation):
@@ -272,7 +278,7 @@ enum PrivarionError: LocalizedError {
     /// Category of the error for routing to appropriate handlers
     var category: ErrorCategory {
         switch self {
-        case .systemInitializationFailed, .systemStatusUnavailable, .cliBackendNotResponding, .permissionDenied:
+        case .systemInitializationFailed, .systemStatusUnavailable, .systemStartFailed, .systemStopFailed, .cliBackendNotResponding, .permissionDenied:
             return .system
         case .moduleNotFound, .moduleToggleFailed, .moduleConfigurationInvalid, .moduleConflict:
             return .module

@@ -61,18 +61,22 @@ struct ContentView: View {
                 // System status with menu
                 Menu {
                     Button("System Details") {
-                        // TODO: Show system details
+                        appState.showSystemDetails()
                     }
                     
                     Divider()
                     
                     Button("Start System") {
-                        // TODO: Start system
+                        Task {
+                            await appState.startSystem()
+                        }
                     }
                     .disabled(appState.systemStatus == .running)
                     
                     Button("Stop System") {
-                        // TODO: Stop system
+                        Task {
+                            await appState.stopSystem()
+                        }
                     }
                     .disabled(appState.systemStatus == .stopped)
                 } label: {
@@ -159,11 +163,17 @@ struct SidebarView: View {
                     HStack {
                         Label("Network Filtering", systemImage: "shield.lefthalf.filled.slash")
                         Spacer()
-                        // Show status indicator
                         Circle()
                             .fill(appState.networkFilteringState.isActive ? Color.green : Color.gray)
                             .frame(width: 8, height: 8)
                             .opacity(0.8)
+                    }
+                }
+                
+                NavigationLink(value: AppView.sandboxProfiles) {
+                    HStack {
+                        Label("Sandbox Profiles", systemImage: "shield.checkered")
+                        Spacer()
                     }
                 }
                 
@@ -242,6 +252,9 @@ struct DetailView: View {
                 .frame(minWidth: 600, minHeight: 400)
         case .networkFiltering:
             NetworkFilteringView()
+                .frame(minWidth: 800, minHeight: 600)
+        case .sandboxProfiles:
+            SandboxProfilesView()
                 .frame(minWidth: 800, minHeight: 600)
         case .temporaryPermissions:
             TemporaryPermissionsView()
