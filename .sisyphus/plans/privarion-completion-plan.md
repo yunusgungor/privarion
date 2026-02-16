@@ -472,7 +472,7 @@ Dalga 4 (Dalga 3'ten Sonra — entegrasyon + doğrulama):
   - [ ] Process memory izolasyonu çalışıyor
   - [ ] Dışarıdan bellek erişimi engelleniyor
 
-- [ ] 17. GitHub Actions CI/CD Workflow
+- [x] 17. GitHub Actions CI/CD Workflow
 
   **Ne Yapılacak**:
   - .github/workflows/test.yml oluştur
