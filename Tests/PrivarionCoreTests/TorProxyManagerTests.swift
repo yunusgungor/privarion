@@ -127,13 +127,13 @@ final class TorProxyManagerTests: XCTestCase {
         do {
             try manager.start()
         } catch {
-            // Expected to fail
         }
         
-        // Stop should work regardless of running state
-        XCTAssertNoThrow({
-            self.manager.stop()
-        }, "Stop should not throw")
+        Thread.sleep(forTimeInterval: 0.1)
+        
+        manager.stop()
+        
+        Thread.sleep(forTimeInterval: 0.1)
         
         XCTAssertFalse(manager.running, "Manager should not be running after stop")
     }

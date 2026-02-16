@@ -438,7 +438,7 @@ Dalga 4 (Dalga 3'ten Sonra — entegrasyon + doğrulama):
 
 ### DALGA 3: YENİ MODÜLLER + ALTYAPI
 
-- [ ] 15. Browser Fingerprint Protection MVP
+- [x] 15. Browser Fingerprint Protection MVP
 
   **Ne Yapılacak**:
   - User-Agent sahteleme modülü oluştur
@@ -460,7 +460,7 @@ Dalga 4 (Dalga 3'ten Sonra — entegrasyon + doğrulama):
   - [ ] Canvas fingerprint her çağrıda farklı hash üretiyor
   - [ ] swift test BrowserProtectionTest → PASS
 
-- [ ] 16. Memory Protection MVP
+- [x] 16. Memory Protection MVP
 
   **Ne Yapılacak**:
   - Process memory isolation oluştur
