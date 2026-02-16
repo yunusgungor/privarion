@@ -174,6 +174,7 @@ public class BenchmarkFramework {
     private let logger = os.Logger(subsystem: "com.privarion.core", category: "benchmark")
     private var results: [BenchmarkResult] = []
     private let reportQueue = DispatchQueue(label: "benchmark.reports", qos: .utility)
+    private let baselineManager = BenchmarkBaselineManager.shared
     
     public static let shared = BenchmarkFramework()
     
@@ -342,6 +343,47 @@ public class BenchmarkFramework {
         return try? JSONSerialization.data(withJSONObject: reportData, options: .prettyPrinted)
     }
     
+    // MARK: - Baseline Management
+    
+    public func saveCurrentAsBaseline(for testName: String? = nil) {
+        let targetResults = testName != nil 
+            ? results.filter { $0.testName == testName }
+            : results
+        
+        for result in targetResults {
+            baselineManager.saveBaseline(result)
+        }
+        
+        logger.info("Saved \(targetResults.count) baselines")
+    }
+    
+    public func checkForRegressions(thresholds: RegressionDetector.RegressionThresholds = .init()) -> [(testName: String, hasRegression: Bool, baseline: BenchmarkResult?, current: BenchmarkResult)] {
+        var regressionResults: [(String, Bool, BenchmarkResult?, BenchmarkResult)] = []
+        
+        for result in results {
+            let (hasRegression, baseline) = baselineManager.detectRegression(for: result, thresholds: thresholds)
+            regressionResults.append((result.testName, hasRegression, baseline, result))
+            
+            if hasRegression {
+                logger.warning("Regression detected for \(result.testName)")
+            }
+        }
+        
+        return regressionResults
+    }
+    
+    public func getBaseline(for testName: String) -> BenchmarkResult? {
+        return baselineManager.getBaseline(for: testName)
+    }
+    
+    public func exportBaselines() -> Data? {
+        return baselineManager.exportBaselines()
+    }
+    
+    public func importBaselines(from data: Data) throws {
+        try baselineManager.importBaselines(from: data)
+    }
+    
     private func generateSummary() -> [String: Any] {
         let totalTests = results.count
         let passedTests = results.filter { $0.status == .passed }.count
@@ -444,6 +486,168 @@ public class RegressionDetector {
         }
         
         return hasRegression
+    }
+}
+
+// MARK: - Benchmark Baseline Manager
+
+public class BenchmarkBaselineManager {
+    private let logger = os.Logger(subsystem: "com.privarion.core", category: "baseline")
+    private let baselinesFilePath: URL
+    private var baselines: [String: BenchmarkResult] = [:]
+    private let queue = DispatchQueue(label: "baseline.manager", qos: .utility)
+    
+    public static let shared = BenchmarkBaselineManager()
+    
+    private init() {
+        // Store baselines in application support directory
+        let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
+        let privarionDir = appSupport.appendingPathComponent("Privarion", isDirectory: true)
+        
+        // Create directory if needed
+        try? FileManager.default.createDirectory(at: privarionDir, withIntermediateDirectories: true)
+        
+        baselinesFilePath = privarionDir.appendingPathComponent("benchmarks_baseline.json")
+        loadBaselines()
+    }
+    
+    // MARK: - Baseline Management
+    
+    public func saveBaseline(_ result: BenchmarkResult) {
+        queue.sync {
+            baselines[result.testName] = result
+            persistBaselines()
+            logger.info("Saved baseline for: \(result.testName)")
+        }
+    }
+    
+    public func getBaseline(for testName: String) -> BenchmarkResult? {
+        return queue.sync { baselines[testName] }
+    }
+    
+    public func getAllBaselines() -> [BenchmarkResult] {
+        return queue.sync { Array(baselines.values) }
+    }
+    
+    public func removeBaseline(for testName: String) {
+        queue.sync {
+            baselines.removeValue(forKey: testName)
+            persistBaselines()
+            logger.info("Removed baseline for: \(testName)")
+        }
+    }
+    
+    public func clearAllBaselines() {
+        queue.sync {
+            baselines.removeAll()
+            persistBaselines()
+            logger.info("Cleared all baselines")
+        }
+    }
+    
+    // MARK: - Regression Detection with Baselines
+    
+    public func detectRegression(for current: BenchmarkResult, thresholds: RegressionDetector.RegressionThresholds = .init()) -> (hasRegression: Bool, baseline: BenchmarkResult?) {
+        guard let baseline = getBaseline(for: current.testName) else {
+            logger.info("No baseline found for \(current.testName), skipping regression detection")
+            return (false, nil)
+        }
+        
+        let detector = RegressionDetector(thresholds: thresholds)
+        let hasRegression = detector.detectRegression(baseline: baseline, current: current)
+        
+        return (hasRegression, baseline)
+    }
+    
+    // MARK: - Import/Export
+    
+    public func exportBaselines() -> Data? {
+        let data = queue.sync {
+            return baselines.map { (key, value) -> [String: Any] in
+                return [
+                    "testName": value.testName,
+                    "duration": value.duration,
+                    "status": value.status.rawValue,
+                    "iterations": value.iterations,
+                    "timestamp": value.metrics.timestamp,
+                    "cpuUsage": value.metrics.cpuUsage,
+                    "memoryUsageMB": value.metrics.memoryUsageMB,
+                    "renderTimeMs": value.metrics.renderTimeMs as Any
+                ]
+            }
+        }
+        
+        return try? JSONSerialization.data(withJSONObject: data, options: .prettyPrinted)
+    }
+    
+    public func importBaselines(from data: Data) throws {
+        guard let array = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]] else {
+            throw NSError(domain: "BenchmarkBaselineManager", code: 1, userInfo: [NSLocalizedDescriptionKey: "Invalid baseline data format"])
+        }
+        
+        queue.sync {
+            for item in array {
+                guard let testName = item["testName"] as? String,
+                      let duration = item["duration"] as? Double,
+                      let statusRaw = item["status"] as? String,
+                      let iterations = item["iterations"] as? Int,
+                      let timestamp = item["timestamp"] as? Double,
+                      let cpuUsage = item["cpuUsage"] as? Double,
+                      let memoryUsageMB = item["memoryUsageMB"] as? Double else {
+                    continue
+                }
+                
+                let status = BenchmarkResult.BenchmarkStatus(rawValue: statusRaw) ?? .passed
+                let metrics = PerformanceMetrics(
+                    timestamp: timestamp,
+                    cpuUsage: cpuUsage,
+                    memoryUsageMB: memoryUsageMB,
+                    renderTimeMs: item["renderTimeMs"] as? Double,
+                    operationName: testName
+                )
+                
+                let result = BenchmarkResult(
+                    testName: testName,
+                    duration: duration,
+                    metrics: metrics,
+                    status: status,
+                    iterations: iterations
+                )
+                
+                baselines[testName] = result
+            }
+        }
+        
+        persistBaselines()
+        logger.info("Imported \(array.count) baselines")
+    }
+    
+    // MARK: - Private Methods
+    
+    private func loadBaselines() {
+        guard FileManager.default.fileExists(atPath: baselinesFilePath.path) else {
+            logger.info("No existing baseline file found")
+            return
+        }
+        
+        do {
+            let data = try Data(contentsOf: baselinesFilePath)
+            try importBaselines(from: data)
+            let count = self.baselines.count
+            logger.info("Loaded \(count) baselines from storage")
+        } catch {
+            logger.error("Failed to load baselines: \(error.localizedDescription)")
+        }
+    }
+    
+    private func persistBaselines() {
+        guard let data = exportBaselines() else { return }
+        
+        do {
+            try data.write(to: baselinesFilePath)
+        } catch {
+            logger.error("Failed to persist baselines: \(error.localizedDescription)")
+        }
     }
 }
 

@@ -500,7 +500,7 @@ Dalga 4 (Dalga 3'ten Sonra — entegrasyon + doğrulama):
   - [ ] Dependabot etkin
   - [ ] SwiftLint yapılandırılmış
 
-- [ ] 19. Performance Benchmark Entegrasyonu
+- [x] 19. Performance Benchmark Entegrasyonu
 
   **Ne Yapılacak**:
   - Mevcut benchmark testlerini çalıştır
@@ -511,7 +511,7 @@ Dalga 4 (Dalga 3'ten Sonra — entegrasyon + doğrulama):
   - [ ] Benchmark sonuçları kaydediliyor
   - [ ] Regresyon tespit ediliyor
 
-- [ ] 20. Refactor Büyük Dosyalar (Kısmi)
+- [x] 20. Refactor Büyük Dosyalar (Kısmi)
 
   **Ne Yapılacak**:
   - AuditLogger.swift (1659 satır) → modüler yapıya böl
