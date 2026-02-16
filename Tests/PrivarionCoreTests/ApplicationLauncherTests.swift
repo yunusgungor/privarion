@@ -652,8 +652,7 @@ final class ApplicationLauncherTests: XCTestCase {
         _ = try await applicationLauncher.terminateProcess(handle.id)
     }
     
-    // Temporarily disabled due to concurrency crash - TODO: Fix for STORY-2025-016
-    func testConcurrentLaunches_DISABLED() async throws {
+    func testConcurrentLaunches() async throws {
         let numberOfLaunches = 5
         
         let startTime = DispatchTime.now()

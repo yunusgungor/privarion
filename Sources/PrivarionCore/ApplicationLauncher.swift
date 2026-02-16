@@ -166,16 +166,20 @@ public final class ApplicationLauncher: Sendable {
     private let securityMonitor: SecurityMonitoringEngine?
     private let logger: Logger
     
+    /// Lock for thread-safe Process access
+    private let processLock = NSLock()
+    
     /// Actor for thread-safe process management
     private actor ProcessRegistry {
         private var runningProcesses: [UUID: ProcessInfo] = [:]
         private var processTimers: [UUID: Timer] = [:]
         
-        func registerProcess(_ handle: ProcessHandle, process: Process) {
+        func registerProcess(_ handle: ProcessHandle, process: Process, lock: NSLock) {
             let processInfo = ProcessInfo(
                 handle: handle,
                 process: process,
-                startTime: Date()
+                startTime: Date(),
+                lock: lock
             )
             runningProcesses[handle.id] = processInfo
         }
@@ -198,10 +202,11 @@ public final class ApplicationLauncher: Sendable {
             processTimers[id] = timer
         }
         
-        struct ProcessInfo {
+        struct ProcessInfo: Sendable {
             let handle: ProcessHandle
             let process: Process
             let startTime: Date
+            let lock: NSLock
             var resourceUsage: ResourceUsage?
         }
     }
@@ -299,7 +304,7 @@ public final class ApplicationLauncher: Sendable {
             )
             
             // Register process
-            await processRegistry.registerProcess(updatedHandle, process: process)
+            await processRegistry.registerProcess(updatedHandle, process: process, lock: processLock)
             
             // Set up process monitoring
             await setupProcessMonitoring(handle: updatedHandle, process: process)
@@ -363,14 +368,52 @@ public final class ApplicationLauncher: Sendable {
         
         logger.info("Terminating process: \(processId)")
         
+        // Get process info - handle case where process already terminated
         guard let processInfo = await processRegistry.getProcess(processId) else {
-            logger.warning("Attempted to terminate non-existent process: \(processId)")
+            // Process already terminated and cleaned up - this can happen in concurrent scenarios
+            // where the termination handler fired before we could terminate the process
+            logger.info("Process already terminated: \(processId)")
+            // Return a minimal result indicating the process is gone
             throw LaunchError.processTerminationFailed(-1)
         }
         
         let startTime = Date()
         let process = processInfo.process
         let handle = processInfo.handle
+        let lock = processInfo.lock
+        
+        // Use lock to safely check and terminate process
+        lock.lock()
+        defer { lock.unlock() }
+        
+        // Check if process is still running before attempting termination
+        // This prevents calling terminate on an already terminated process
+        guard process.isRunning else {
+            // Process already terminated - clean up ephemeral space and return
+            logger.info("Process already terminated (not running): \(processId)")
+            
+            // Clean up ephemeral space
+            do {
+                try await ephemeralManager.destroyEphemeralSpace(handle.ephemeralSpaceId)
+            } catch {
+                logger.error("Failed to cleanup ephemeral space: \(error.localizedDescription)")
+            }
+            
+            // Unregister the process
+            await processRegistry.unregisterProcess(processId)
+            
+            // Return result for already terminated process
+            let result = ProcessResult(
+                handle: handle,
+                exitCode: process.terminationStatus,
+                executionTime: Date().timeIntervalSince(processInfo.startTime),
+                standardOutput: nil,
+                standardError: nil,
+                resourceUsage: nil
+            )
+            
+            return result
+        }
         
         // Terminate process gracefully
         process.terminate()
@@ -528,7 +571,11 @@ public final class ApplicationLauncher: Sendable {
         let timer = Timer.scheduledTimer(withTimeInterval: TimeInterval(handle.configuration.maxExecutionTimeSeconds), repeats: false) { _ in
             Task {
                 self.logger.warning("Process execution timeout for: \(handle.id)")
-                _ = try? await self.terminateProcess(handle.id)
+                do {
+                    _ = try await self.terminateProcess(handle.id)
+                } catch {
+                    self.logger.warning("Failed to terminate timed-out process: \(error.localizedDescription)")
+                }
             }
         }
         

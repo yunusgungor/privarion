@@ -1,0 +1,76 @@
+# Tracking Domains Blocklist
+# Contains known tracking, ad, and fingerprinting domains
+# Format: one domain per line, lines starting with # are comments
+
+# Google Advertising & Tracking
+doubleclick.net
+googlesyndication.com
+googleadservices.com
+google-analytics.com
+googletagmanager.com
+googletagservices.com
+adservice.google.com
+pagead2.googlesyndication.com
+
+# Facebook/Meta Tracking
+connect.facebook.net
+pixel.facebook.com
+an.facebook.com
+graph.facebook.com
+
+# Amazon Advertising
+amazon-adsystem.com
+aax.amazon.com
+fls-na.amazon.com
+fls-na.amazon-adsystem.com
+
+# Microsoft Advertising
+ads.msn.com
+adnxs.com
+adnexus.net
+adnxs.com
+
+# Twitter/X Tracking
+ads-twitter.com
+static.ads-twitter.com
+
+# LinkedIn Tracking
+px.ads.linkedin.com
+snap.licdn.com
+
+# Adobe Advertising
+advertising.com
+adform.net
+criteo.com
+criteo.net
+outbrain.com
+taboola.com
+
+# Fingerprinting Services
+fingerprintjs.com
+iovation.com
+threatmetrix.com
+bluecava.com
+deviceatlas.com
+
+# Other Ad Networks
+adcolony.com
+admob.com
+adsrvr.org
+adtechus.com
+appnexus.com
+bidswitch.net
+casalemedia.com
+contextweb.com
+lijit.com
+moatads.com
+openx.net
+pubmatic.com
+rubiconproject.com
+smartadserver.com
+spotxchange.com
+taboola.com
+teads.tv
+thetradedesk.com
+triplelift.com
+yieldmo.com

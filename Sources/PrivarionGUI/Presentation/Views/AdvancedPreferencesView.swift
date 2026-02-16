@@ -356,7 +356,11 @@ struct AdvancedPreferencesView: View {
             // Export the actual settings asynchronously
             Task { @MainActor in
                 if let data = userSettings.exportSettings() {
-                    try? data.write(to: url)
+                    do {
+                        try data.write(to: url)
+                    } catch {
+                        print("Failed to export settings: \(error.localizedDescription)")
+                    }
                 }
             }
         case .failure(let error):

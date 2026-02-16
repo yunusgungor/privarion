@@ -1,0 +1,74 @@
+{
+  "name": "default",
+  "description": "Basic privacy protection with minimal system impact",
+  "modules": {
+    "identitySpoofing": {
+      "enabled": false,
+      "spoofHostname": false,
+      "spoofMACAddress": false,
+      "spoofUserInfo": false,
+      "spoofSystemInfo": false
+    },
+    "networkFilter": {
+      "enabled": true,
+      "blockTelemetry": true,
+      "blockAnalytics": false,
+      "useDNSFiltering": false,
+      "dnsProxy": {
+        "proxyPort": 5353,
+        "upstreamServers": ["8.8.8.8", "8.8.4.4", "1.1.1.1"],
+        "cacheTTL": 300,
+        "maxCacheSize": 1000,
+        "queryTimeout": 5.0
+      },
+      "blockedDomains": [],
+      "applicationRules": {},
+      "monitoring": {
+        "enabled": true,
+        "logDNSQueries": false,
+        "logBlockedRequests": true,
+        "collectMetrics": false,
+        "metricsInterval": 60.0,
+        "maxEventsInMemory": 500
+      }
+    },
+    "networkAnalytics": {
+      "enabled": false,
+      "realTimeProcessing": false,
+      "dataRetentionDays": 7,
+      "aggregationIntervals": [60.0, 300.0, 3600.0],
+      "maxEventsInMemory": 1000,
+      "bandwidthAnalytics": false,
+      "connectionAnalytics": false,
+      "dnsAnalytics": false,
+      "applicationAnalytics": false,
+      "storageBackend": "inMemory",
+      "export": {
+        "enabled": false,
+        "format": "json",
+        "intervalSeconds": 3600.0,
+        "exportPath": "~/.privarion/analytics",
+        "maxFileSizeMB": 50
+      }
+    },
+    "sandboxManager": {
+      "enabled": false,
+      "strictMode": false
+    },
+    "snapshotManager": {
+      "enabled": false,
+      "autoSnapshot": false
+    },
+    "syscallHook": {
+      "enabled": false,
+      "debugMode": false
+    },
+    "syscallMonitoring": {
+      "enabled": false,
+      "debugMode": false,
+      "logLevel": "info",
+      "maxRules": 1000,
+      "realTimeProcessing": true
+    }
+  }
+}

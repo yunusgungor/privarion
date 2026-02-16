@@ -357,7 +357,11 @@ public class MacAddressSpoofingManager {
         )
         
         // Clean up any partial state
-        try? repository.removeBackup(interface: operation.interface)
+        do {
+            try repository.removeBackup(interface: operation.interface)
+        } catch {
+            logger.warning("Failed to remove backup during emergency rollback: \(error.localizedDescription)")
+        }
     }
     
     private func restoreIncompleteOperations() {

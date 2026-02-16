@@ -126,7 +126,10 @@ public class IdentityBackupManager {
             }
             
             currentSession = BackupSession(sessionName: name, persistent: persistent)
-            let sessionId = currentSession!.sessionId
+            guard let session = currentSession else {
+                throw BackupError.sessionNotFound(UUID())
+            }
+            let sessionId = session.sessionId
             
             logger.info("Started backup session",
                        metadata: ["session_id": sessionId.uuidString,

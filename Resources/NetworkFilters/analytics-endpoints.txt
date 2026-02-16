@@ -1,0 +1,91 @@
+# Analytics Endpoints Blocklist
+# Contains known analytics and user tracking service endpoints
+# Format: one domain per line, lines starting with # are comments
+
+# Google Analytics
+ssl.google-analytics.com
+www.google-analytics.com
+analytics.google.com
+stats.g.doubleclick.net
+
+# Adobe Analytics
+demdex.net
+omtrdc.net
+2o7.net
+adobedtm.com
+tt.omtrdc.net
+
+# Mixpanel
+api.mixpanel.com
+cdn.mxpnl.com
+api-1.mixpanel.com
+
+# Segment
+api.segment.io
+cdn.segment.com
+api-1.segment.io
+
+# Amplitude
+api.amplitude.com
+cdn.amplitude.com
+api2.amplitude.com
+
+# Heap
+heapanalytics.com
+heap.io
+api.heap.io
+
+# Hotjar
+script.hotjar.com
+static.hotjar.com
+hotjar.com
+
+# FullStory
+rs.fullstory.com
+fullstory.com
+api.fullstory.com
+
+# Pendo
+cdn.pendo.io
+app.pendo.io
+
+# Customer.io
+track.customer.io
+api.customer.io
+
+# Intercom
+widget.intercom.io
+api.intercom.io
+messenger.intercom.io
+
+# Optimizely
+cdn.optimizely.com
+log.optimizely.com
+
+# Crazy Egg
+script.crazyegg.com
+crazyegg.com
+
+# Mouseflow
+mouseflow.com
+cdn.mouseflow.com
+
+# Smartlook
+rec.smartlook.com
+api.smartlook.com
+
+# Lucky Orange
+cdn.luckyorange.com
+luckyorange.com
+
+# ClickTale
+cdn.clicktale.net
+clicktale.net
+
+# New Relic
+js-agent.newrelic.com
+bam.nr-data.net
+
+# Datadog
+browser-intake-datadoghq.com
+datadoghq.com

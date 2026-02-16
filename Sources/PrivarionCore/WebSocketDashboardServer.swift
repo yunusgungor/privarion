@@ -310,7 +310,11 @@ internal final class WebSocketDashboardServer: @unchecked Sendable {
         
         // Close server channel
         if let serverChannel = serverChannel {
-            try? await serverChannel.close()
+            do {
+                try await serverChannel.close()
+            } catch {
+                logger.warning("Failed to close server channel: \(error.localizedDescription)")
+            }
         }
         
         // Cancel network event subscription

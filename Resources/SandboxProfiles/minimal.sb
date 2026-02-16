@@ -1,0 +1,32 @@
+; Minimal Sandbox Profile
+; Provides basic system resources only - no network, minimal file access
+; Designed for maximum privacy protection
+
+(version 1)
+
+(deny default)
+
+; Allow basic process operations needed for app functionality
+(allow process-fork)
+(allow process-exec)
+
+; Allow reading system libraries required for app startup
+(allow file-read*
+    (subpath "/System/Library/Frameworks")
+    (subpath "/usr/lib")
+)
+
+; Allow reading app's own container
+(allow file-read*
+    (subpath "$APP_CONTTAINER")
+)
+
+; Allow reading system preferences needed for basic operation
+(allow file-read-metadata
+    (path "/")
+    (path "/private")
+    (path "/tmp")
+)
+
+; Deny all network access
+(deny network*)

@@ -150,7 +150,11 @@ final class AnalyticsViewState: ObservableObject {
         newConfig.modules.networkAnalytics.realTimeProcessing = realTimeProcessing
         newConfig.modules.networkAnalytics.dataRetentionDays = retentionDays
         
-        try? ConfigurationManager.shared.updateConfiguration(newConfig)
+        do {
+            try ConfigurationManager.shared.updateConfiguration(newConfig)
+        } catch {
+            logger.error("Failed to save analytics settings: \(error.localizedDescription)")
+        }
         
         // Restart timer with new interval if needed
         if updateTimer != nil {

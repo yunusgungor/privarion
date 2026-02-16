@@ -1,0 +1,36 @@
+; Network Isolated Sandbox Profile
+; Completely denies all network access - maximum isolation
+; No network connections allowed whatsoever
+
+(version 1)
+
+(deny default)
+
+; Allow basic process operations
+(allow process-fork)
+(allow process-exec)
+
+; Allow reading system libraries for basic functionality
+(allow file-read*
+    (subpath "/System/Library/Frameworks")
+    (subpath "/usr/lib")
+    (subpath "/bin")
+    (subpath "/usr/bin")
+)
+
+; Allow reading app container
+(allow file-read*
+    (subpath "$APP_CONTAINER")
+)
+
+; Allow reading system metadata
+(allow file-read-metadata
+    (path "/")
+    (path "/private")
+    (path "/tmp")
+)
+
+; CRITICAL: Deny all network access - no exceptions
+(deny network*)
+(deny network-inbound)
+(deny network-outbound)

@@ -186,8 +186,9 @@ public class TimeSeriesStorage {
         )
         
         // Initialize file system storage manager
-        self.storageFileURL = storageDirectory.appendingPathComponent("analytics_data.json")
-        self.fileSystemStorage = FileSystemStorageManager(fileURL: storageFileURL!)
+        let fileURL = storageDirectory.appendingPathComponent("analytics_data.json")
+        self.storageFileURL = fileURL
+        self.fileSystemStorage = FileSystemStorageManager(fileURL: fileURL)
         
         // Load existing data if available
         try loadExistingData()

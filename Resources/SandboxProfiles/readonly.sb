@@ -1,0 +1,48 @@
+; Read-Only Sandbox Profile
+; Allows reading from filesystem but denies all write operations
+; Suitable for applications that only need to read data
+
+(version 1)
+
+(deny default)
+
+; Allow basic process operations
+(allow process-fork)
+(allow process-exec)
+
+; Allow reading system libraries
+(allow file-read*
+    (subpath "/System/Library")
+    (subpath "/usr/lib")
+    (subpath "/usr/share")
+    (subpath "/bin")
+    (subpath "/usr/bin")
+)
+
+; Allow reading app container
+(allow file-read*
+    (subpath "$APP_CONTAINER")
+)
+
+; Allow reading standard user directories
+(allow file-read*
+    (subpath "$HOME/Documents")
+    (subpath "$HOME/Downloads")
+    (subpath "$HOME/Desktop")
+)
+
+; Allow reading system metadata
+(allow file-read-metadata
+    (path "/")
+    (path "/private")
+    (path "/tmp")
+)
+
+; Allow network access for reading (e.g., fetching data)
+(allow network*)
+
+; Deny all file write operations
+(deny file-write*)
+(deny file-write-data)
+(deny file-write-remove)
+(deny file-write-setugid)

@@ -70,6 +70,17 @@ public class PrivarionLogger {
                 rotationCount: config.global.logRotationCount
             )
             
+            // Capture handler in local variable to avoid force unwrap issues
+            guard let fileHandler = logFileHandler else {
+                // Fallback to console logging if handler creation failed
+                LoggingSystem.bootstrap { label in
+                    var handler = StreamLogHandler.standardOutput(label: label)
+                    handler.logLevel = config.global.logLevel.swiftLogLevel
+                    return handler
+                }
+                return
+            }
+            
             // Setup unified logging system with both console and file output
             LoggingSystem.bootstrap { label in
                 var consoleHandler = StreamLogHandler.standardOutput(label: label)
@@ -79,7 +90,7 @@ public class PrivarionLogger {
                     consoleHandler,
                     PrivarionFileLogHandler(
                         label: label,
-                        fileHandler: self.logFileHandler!
+                        fileHandler: fileHandler
                     )
                 ])
             }
@@ -253,20 +264,32 @@ private class LogFileHandler {
             let nextFile = directory.appendingPathComponent("privarion.log.\(i + 1)")
             
             if FileManager.default.fileExists(atPath: currentFile.path) {
-                try? FileManager.default.moveItem(at: currentFile, to: nextFile)
+                do {
+                    try FileManager.default.moveItem(at: currentFile, to: nextFile)
+                } catch {
+                    // Log rotation failure - continue with other files
+                }
             }
         }
         
         // Move current log to .1
         let firstRotatedFile = directory.appendingPathComponent("privarion.log.1")
         if FileManager.default.fileExists(atPath: currentLogFile.path) {
-            try? FileManager.default.moveItem(at: currentLogFile, to: firstRotatedFile)
+            do {
+                try FileManager.default.moveItem(at: currentLogFile, to: firstRotatedFile)
+            } catch {
+                // Log rotation failure - continue
+            }
         }
         
         // Remove oldest file if exists
         let oldestFile = directory.appendingPathComponent("privarion.log.\(rotationCount)")
         if FileManager.default.fileExists(atPath: oldestFile.path) {
-            try? FileManager.default.removeItem(at: oldestFile)
+            do {
+                try FileManager.default.removeItem(at: oldestFile)
+            } catch {
+                // Log removal failure - continue
+            }
         }
         
         // Open new current log file

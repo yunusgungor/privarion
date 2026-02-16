@@ -519,7 +519,11 @@ public final class EphemeralFileSystemManager: Sendable {
             logger.error("Failed to mount APFS snapshot \(snapshotName): \(error.localizedDescription)")
             
             // Cleanup mount directory on failure
-            try? FileManager.default.removeItem(atPath: mountPath)
+            do {
+                try FileManager.default.removeItem(atPath: mountPath)
+            } catch {
+                logger.warning("Failed to cleanup mount directory: \(error.localizedDescription)")
+            }
             
             throw EphemeralError.mountOperationFailed(error.localizedDescription)
         }
@@ -539,7 +543,11 @@ public final class EphemeralFileSystemManager: Sendable {
             
             // Clean up directory if it exists
             if FileManager.default.fileExists(atPath: mountPath) {
-                try? FileManager.default.removeItem(atPath: mountPath)
+                do {
+                    try FileManager.default.removeItem(atPath: mountPath)
+                } catch {
+                    logger.warning("Failed to cleanup test directory: \(error.localizedDescription)")
+                }
             }
             
             let duration = DispatchTime.now().uptimeNanoseconds - startTime.uptimeNanoseconds
@@ -584,7 +592,11 @@ public final class EphemeralFileSystemManager: Sendable {
     private func scheduleCleanup(for space: EphemeralSpace) async {
         let timer = Timer.scheduledTimer(withTimeInterval: TimeInterval(configuration.cleanupTimeoutSeconds), repeats: false) { _ in
             Task {
-                try? await self.destroyEphemeralSpace(space.id)
+                do {
+                    try await self.destroyEphemeralSpace(space.id)
+                } catch {
+                    self.logger.warning("Failed to cleanup ephemeral space: \(error.localizedDescription)")
+                }
             }
         }
         

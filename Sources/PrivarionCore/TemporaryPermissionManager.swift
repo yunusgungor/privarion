@@ -111,7 +111,11 @@ public actor TemporaryPermissionManager {
             .appendingPathComponent("Privarion")
         let persistenceDir = persistenceDirectory ?? defaultDir
         
-        try? FileManager.default.createDirectory(at: persistenceDir, withIntermediateDirectories: true)
+        do {
+            try FileManager.default.createDirectory(at: persistenceDir, withIntermediateDirectories: true)
+        } catch {
+            logger.error("Failed to create persistence directory: \(error.localizedDescription)")
+        }
         self.persistenceURL = persistenceDir.appendingPathComponent("temporary_permissions.json")
         
         // Start background tasks

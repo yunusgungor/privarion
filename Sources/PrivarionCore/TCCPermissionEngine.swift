@@ -263,8 +263,12 @@ actor TCCPermissionEngine {
         defer { sqlite3_finalize(statement) }
         
         while sqlite3_step(statement) == SQLITE_ROW {
+            guard let currentStatement = statement else {
+                logger.warning("Statement is nil during iteration")
+                continue
+            }
             do {
-                let permission = try parsePermissionRow(statement: statement!)
+                let permission = try parsePermissionRow(statement: currentStatement)
                 permissions.append(permission)
             } catch {
                 logger.warning("Failed to parse permission row: \(error)")

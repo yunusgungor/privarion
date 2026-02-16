@@ -149,7 +149,11 @@ internal class SwiftNIONetworkMonitoringEngine: @unchecked Sendable {
     deinit {
         stop()
         // Implement PATTERN-2025-074: EventLoop Group Lifecycle Management
-        try? eventLoopGroup.syncShutdownGracefully()
+        do {
+            try eventLoopGroup.syncShutdownGracefully()
+        } catch {
+            // Cannot throw from deinit
+        }
     }
     
     // MARK: - Public Interface

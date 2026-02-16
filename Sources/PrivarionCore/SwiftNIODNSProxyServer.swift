@@ -54,7 +54,11 @@ internal class SwiftNIODNSProxyServer {
     deinit {
         let eventLoopGroup = self.eventLoopGroup
         Task.detached {
-            try? await eventLoopGroup.shutdownGracefully()
+            do {
+                try await eventLoopGroup.shutdownGracefully()
+            } catch {
+                // Log but don't throw from deinit
+            }
         }
     }
     
@@ -121,11 +125,19 @@ internal class SwiftNIODNSProxyServer {
         
         // Close the server channel
         if let serverChannel = self.serverChannel {
-            try? await serverChannel.close()
+            do {
+                try await serverChannel.close()
+            } catch {
+                logger.warning("Failed to close server channel: \(error.localizedDescription)")
+            }
         }
         
         // Shutdown event loop group
-        try? await eventLoopGroup.shutdownGracefully()
+        do {
+            try await eventLoopGroup.shutdownGracefully()
+        } catch {
+            logger.warning("Failed to shutdown event loop group: \(error.localizedDescription)")
+        }
         
         _isRunning = false
         asyncChannel = nil
@@ -273,7 +285,11 @@ internal class SwiftNIODNSProxyServer {
                     // Send server failure response
                     let errorResponse = createDNSErrorResponse(for: query.id, errorCode: 2) // SERVFAIL
                     let envelope = AddressedEnvelope(remoteAddress: clientAddress, data: errorResponse)
-                    try? await outbound.write(envelope)
+                    do {
+                        try await outbound.write(envelope)
+                    } catch {
+                        logger.warning("Failed to send error response: \(error.localizedDescription)")
+                    }
                 }
             }
             
@@ -282,7 +298,11 @@ internal class SwiftNIODNSProxyServer {
             // Send server failure response
             let errorResponse = createDNSErrorResponse(for: query.id, errorCode: 2) // SERVFAIL
             let envelope = AddressedEnvelope(remoteAddress: clientAddress, data: errorResponse)
-            try? await outbound.write(envelope)
+            do {
+                try await outbound.write(envelope)
+            } catch {
+                logger.warning("Failed to send error response: \(error.localizedDescription)")
+            }
         }
     }
     

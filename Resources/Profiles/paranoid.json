@@ -1,0 +1,84 @@
+{
+  "name": "paranoid",
+  "description": "Maximum privacy protection with comprehensive spoofing enabled",
+  "modules": {
+    "identitySpoofing": {
+      "enabled": true,
+      "spoofHostname": true,
+      "spoofMACAddress": true,
+      "spoofUserInfo": true,
+      "spoofSystemInfo": true
+    },
+    "networkFilter": {
+      "enabled": true,
+      "blockTelemetry": true,
+      "blockAnalytics": true,
+      "useDNSFiltering": true,
+      "dnsProxy": {
+        "proxyPort": 5353,
+        "upstreamServers": ["1.1.1.1", "1.0.0.1", "9.9.9.9"],
+        "cacheTTL": 600,
+        "maxCacheSize": 2000,
+        "queryTimeout": 10.0
+      },
+      "blockedDomains": [
+        "*.telemetry.*",
+        "*.analytics.*",
+        "*.tracking.*",
+        "*.ads.*",
+        "*.ad.*",
+        "*.metrics.*",
+        "*.log.*",
+        "*.cdn.*",
+        "*.cloudflare.*"
+      ],
+      "applicationRules": {},
+      "monitoring": {
+        "enabled": true,
+        "logDNSQueries": true,
+        "logBlockedRequests": true,
+        "collectMetrics": true,
+        "metricsInterval": 30.0,
+        "maxEventsInMemory": 5000
+      }
+    },
+    "networkAnalytics": {
+      "enabled": true,
+      "realTimeProcessing": true,
+      "dataRetentionDays": 30,
+      "aggregationIntervals": [60.0, 300.0, 3600.0, 86400.0],
+      "maxEventsInMemory": 10000,
+      "bandwidthAnalytics": true,
+      "connectionAnalytics": true,
+      "dnsAnalytics": true,
+      "applicationAnalytics": true,
+      "storageBackend": "fileSystem",
+      "export": {
+        "enabled": true,
+        "format": "jsonl",
+        "intervalSeconds": 1800.0,
+        "exportPath": "~/.privarion/analytics",
+        "maxFileSizeMB": 100
+      }
+    },
+    "sandboxManager": {
+      "enabled": true,
+      "strictMode": true
+    },
+    "snapshotManager": {
+      "enabled": true,
+      "autoSnapshot": true
+    },
+    "syscallHook": {
+      "enabled": true,
+      "debugMode": false
+    },
+    "syscallMonitoring": {
+      "enabled": true,
+      "debugMode": false,
+      "logLevel": "debug",
+      "maxRules": 1000,
+      "realTimeProcessing": true
+    }
+  }
+}

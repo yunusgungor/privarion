@@ -433,7 +433,7 @@ privarion/
 
 ## 7. Teknik Gereksinimler ve Bağımlılıklar
 ### 7.1 Sistem Gereksinimleri
-- **macOS**: 12.0 (Monterey) ve üzeri
+- **macOS**: 13.0 (Ventura) ve üzeri
 - **Xcode**: 14.0+ (Swift 5.7+)
 - **RAM**: Minimum 8GB, Önerilen 16GB
 - **Disk**: 2GB boş alan (snapshot'lar için ek alan)

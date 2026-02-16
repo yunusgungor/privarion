@@ -1,0 +1,100 @@
+# Telemetry and Crash Reporting Hosts Blocklist
+# Contains known telemetry, crash reporting, and usage tracking endpoints
+# Format: one domain per line, lines starting with # are comments
+
+# Microsoft Telemetry
+vortex.data.microsoft.com
+settings-win.data.microsoft.com
+watson.telemetry.microsoft.com
+oca.telemetry.microsoft.com
+sqm.telemetry.microsoft.com
+telemetry.microsoft.com
+win10.ms telemetry.microsoft.com
+
+# Apple Telemetry (Optional - may affect functionality)
+iosapps.itunes.apple.com
+metrics.apple.com
+suicideapps.itunes.apple.com
+
+# Adobe Telemetry
+creativecloud.adobe.com
+ims-na1.adobelogin.com
+cc-api-storage.adobe.io
+
+# Sentry (Crash Reporting)
+sentry.io
+o1.ingest.sentry.io
+o2.ingest.sentry.io
+o3.ingest.sentry.io
+sentry-cdn.prod.monitoring.cloud.sentry.io
+
+# Bugsnag (Crash Reporting)
+bugsnag.com
+notify.bugsnag.com
+api.bugsnag.com
+
+# Crashlytics (Firebase)
+firebase.google.com
+crashlytics.com
+update.crashlytics.com
+firebase.googleusercontent.com
+
+# Raygun (Crash Monitoring)
+raygun.com
+api.raygun.com
+
+# Rollbar
+rollbar.com
+api.rollbar.com
+
+# Splunk (Enterprise Telemetry)
+splunk.com
+prd-t.splunk.com
+inputs1.hec.splunk.com
+
+# New Relic (APM Telemetry)
+newrelic.com
+nr-data.net
+bam.nr-data.net
+
+# Microsoft Visual Studio Telemetry
+visualstudio.com
+app.vssps.visualstudio.com
+vortex.data.microsoft.com
+
+# Unity Analytics
+unity3d.com
+apps-analytics.unity3d.com
+config.unity3d.com
+
+# Amazon Web Services Telemetry
+aws.amazon.com
+fls.amazonaws.com
+
+# GitHub Telemetry
+api.github.com
+github.com
+
+# Atlassian Telemetry
+atlassian.com
+analytics.atlassian.com
+
+# Slack Telemetry
+slack.com
+slackb.com
+
+# Discord Telemetry
+discord.com
+status.discord.com
+
+# Spotify Telemetry
+spotify.com
+download.spotify.com
+
+# NVIDIA Telemetry
+nvidia.com
+geforce.com
+
+# Steam Telemetry
+steampowered.com
+api.steampowered.com

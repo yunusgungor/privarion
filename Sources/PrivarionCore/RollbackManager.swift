@@ -197,7 +197,11 @@ public class RollbackManager {
             rollbackPoints.removeValue(forKey: rollbackID)
             
             let rollbackFile = storageDirectory.appendingPathComponent("\(rollbackID).json")
-            try? FileManager.default.removeItem(at: rollbackFile)
+            do {
+                try FileManager.default.removeItem(at: rollbackFile)
+            } catch {
+                logger.warning("Failed to delete rollback file: \(error.localizedDescription)")
+            }
         }
         
         logger.info("Deleted rollback point: \(rollbackID)")

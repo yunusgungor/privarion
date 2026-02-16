@@ -27,7 +27,9 @@ public class MacAddressRepository: @unchecked Sendable {
         }
         
         private static func calculateChecksum(interface: String, mac: String, timestamp: Int64) -> String {
-            let data = "\(interface):\(mac):\(timestamp)".data(using: .utf8)!
+            guard let data = "\(interface):\(mac):\(timestamp)".data(using: .utf8) else {
+                return ""
+            }
             let hash = SHA256.hash(data: data)
             return hash.compactMap { String(format: "%02x", $0) }.joined()
         }
@@ -72,7 +74,10 @@ public class MacAddressRepository: @unchecked Sendable {
         if let customURL = customStorageURL {
             return customURL
         }
-        let appSupportDir = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
+        guard let appSupportDir = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first else {
+            logger.error("Failed to get application support directory")
+            return URL(fileURLWithPath: "/tmp/privarion_mac_backup.json")
+        }
         let privarionDir = appSupportDir.appendingPathComponent("Privarion")
         return privarionDir.appendingPathComponent("mac_backup.json")
     }
@@ -81,7 +86,10 @@ public class MacAddressRepository: @unchecked Sendable {
         if let customURL = customBackupURL {
             return customURL
         }
-        let appSupportDir = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
+        guard let appSupportDir = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first else {
+            logger.error("Failed to get application support directory")
+            return URL(fileURLWithPath: "/tmp/privarion_mac_backup_legacy.json")
+        }
         let privarionDir = appSupportDir.appendingPathComponent("Privarion")
         return privarionDir.appendingPathComponent("mac_backup_legacy.json")
     }

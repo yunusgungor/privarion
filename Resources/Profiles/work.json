@@ -1,0 +1,80 @@
+{
+  "name": "work",
+  "description": "Work and business profile with balanced privacy protection",
+  "modules": {
+    "identitySpoofing": {
+      "enabled": true,
+      "spoofHostname": true,
+      "spoofMACAddress": false,
+      "spoofUserInfo": false,
+      "spoofSystemInfo": true
+    },
+    "networkFilter": {
+      "enabled": true,
+      "blockTelemetry": true,
+      "blockAnalytics": true,
+      "useDNSFiltering": true,
+      "dnsProxy": {
+        "proxyPort": 5353,
+        "upstreamServers": ["8.8.8.8", "8.8.4.4", "1.1.1.1"],
+        "cacheTTL": 300,
+        "maxCacheSize": 1000,
+        "queryTimeout": 5.0
+      },
+      "blockedDomains": [
+        "*.telemetry.*",
+        "*.analytics.*",
+        "*.tracking.*",
+        "*.ads.*",
+        "*.ad.*"
+      ],
+      "applicationRules": {},
+      "monitoring": {
+        "enabled": true,
+        "logDNSQueries": true,
+        "logBlockedRequests": true,
+        "collectMetrics": true,
+        "metricsInterval": 60.0,
+        "maxEventsInMemory": 1000
+      }
+    },
+    "networkAnalytics": {
+      "enabled": true,
+      "realTimeProcessing": true,
+      "dataRetentionDays": 14,
+      "aggregationIntervals": [60.0, 300.0, 3600.0],
+      "maxEventsInMemory": 3000,
+      "bandwidthAnalytics": true,
+      "connectionAnalytics": true,
+      "dnsAnalytics": true,
+      "applicationAnalytics": false,
+      "storageBackend": "inMemory",
+      "export": {
+        "enabled": false,
+        "format": "json",
+        "intervalSeconds": 3600.0,
+        "exportPath": "~/.privarion/analytics",
+        "maxFileSizeMB": 50
+      }
+    },
+    "sandboxManager": {
+      "enabled": false,
+      "strictMode": false
+    },
+    "snapshotManager": {
+      "enabled": true,
+      "autoSnapshot": false
+    },
+    "syscallHook": {
+      "enabled": true,
+      "debugMode": false
+    },
+    "syscallMonitoring": {
+      "enabled": true,
+      "debugMode": false,
+      "logLevel": "info",
+      "maxRules": 500,
+      "realTimeProcessing": true
+    }
+  }
+}

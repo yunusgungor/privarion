@@ -233,7 +233,11 @@ public class ConfigurationProfileManager {
     private func ensureDefaultProfiles() {
         for profile in defaultProfiles {
             if profileCache[profile.name] == nil {
-                try? saveProfile(profile, overwrite: false)
+                do {
+                    try saveProfile(profile, overwrite: false)
+                } catch {
+                    // Silently continue if default profile cannot be saved
+                }
             }
         }
     }

@@ -1,0 +1,78 @@
+{
+  "name": "gaming",
+  "description": "Gaming-focused profile with low latency and minimal interference",
+  "modules": {
+    "identitySpoofing": {
+      "enabled": false,
+      "spoofHostname": false,
+      "spoofMACAddress": false,
+      "spoofUserInfo": false,
+      "spoofSystemInfo": false
+    },
+    "networkFilter": {
+      "enabled": true,
+      "blockTelemetry": true,
+      "blockAnalytics": false,
+      "useDNSFiltering": false,
+      "dnsProxy": {
+        "proxyPort": 5353,
+        "upstreamServers": ["8.8.8.8", "1.1.1.1"],
+        "cacheTTL": 60,
+        "maxCacheSize": 500,
+        "queryTimeout": 2.0
+      },
+      "blockedDomains": [
+        "*.telemetry.*",
+        "*.analytics.*",
+        "*.tracking.*"
+      ],
+      "applicationRules": {},
+      "monitoring": {
+        "enabled": false,
+        "logDNSQueries": false,
+        "logBlockedRequests": false,
+        "collectMetrics": false,
+        "metricsInterval": 60.0,
+        "maxEventsInMemory": 100
+      }
+    },
+    "networkAnalytics": {
+      "enabled": false,
+      "realTimeProcessing": false,
+      "dataRetentionDays": 1,
+      "aggregationIntervals": [60.0],
+      "maxEventsInMemory": 100,
+      "bandwidthAnalytics": false,
+      "connectionAnalytics": false,
+      "dnsAnalytics": false,
+      "applicationAnalytics": false,
+      "storageBackend": "inMemory",
+      "export": {
+        "enabled": false,
+        "format": "json",
+        "intervalSeconds": 3600.0,
+        "exportPath": "~/.privarion/analytics",
+        "maxFileSizeMB": 50
+      }
+    },
+    "sandboxManager": {
+      "enabled": false,
+      "strictMode": false
+    },
+    "snapshotManager": {
+      "enabled": false,
+      "autoSnapshot": false
+    },
+    "syscallHook": {
+      "enabled": false,
+      "debugMode": false
+    },
+    "syscallMonitoring": {
+      "enabled": false,
+      "debugMode": false,
+      "logLevel": "error",
+      "maxRules": 100,
+      "realTimeProcessing": false
+    }
+  }
+}

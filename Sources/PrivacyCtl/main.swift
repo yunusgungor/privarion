@@ -297,7 +297,11 @@ struct StartCommand: ParsableCommand {
         let configDir = homeDir.appendingPathComponent(".privarion")
         
         if !FileManager.default.fileExists(atPath: configDir.path) {
-            try? FileManager.default.createDirectory(at: configDir, withIntermediateDirectories: true)
+            do {
+                try FileManager.default.createDirectory(at: configDir, withIntermediateDirectories: true)
+            } catch {
+                throw PrivarionCLIError.insufficientPermissions(directory: configDir.path)
+            }
         }
         
         // Verify write permissions

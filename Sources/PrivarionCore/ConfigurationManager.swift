@@ -34,11 +34,15 @@ public class ConfigurationManager {
             let privarionDirectory = customPath.deletingLastPathComponent()
             
             // Create directory if it doesn't exist
-            try? FileManager.default.createDirectory(
-                at: privarionDirectory,
-                withIntermediateDirectories: true,
-                attributes: [.posixPermissions: 0o700]
-            )
+            do {
+                try FileManager.default.createDirectory(
+                    at: privarionDirectory,
+                    withIntermediateDirectories: true,
+                    attributes: [.posixPermissions: 0o700]
+                )
+            } catch {
+                logger.error("Failed to create configuration directory: \(error.localizedDescription)")
+            }
         } else {
             // Setup configuration directory using current HOME
             let homeDirectory: URL
@@ -50,11 +54,15 @@ public class ConfigurationManager {
             let privarionDirectory = homeDirectory.appendingPathComponent(".privarion")
             
             // Create directory if it doesn't exist
-            try? FileManager.default.createDirectory(
-                at: privarionDirectory,
-                withIntermediateDirectories: true,
-                attributes: [.posixPermissions: 0o700]
-            )
+            do {
+                try FileManager.default.createDirectory(
+                    at: privarionDirectory,
+                    withIntermediateDirectories: true,
+                    attributes: [.posixPermissions: 0o700]
+                )
+            } catch {
+                logger.error("Failed to create configuration directory: \(error.localizedDescription)")
+            }
             
             self.configPath = privarionDirectory.appendingPathComponent("config.json")
         }
@@ -73,12 +81,20 @@ public class ConfigurationManager {
                     "path": .string(configPath.path)
                 ])
                 self.config = PrivarionConfig()
-                try? saveConfiguration()
+                do {
+                    try saveConfiguration()
+                } catch {
+                    logger.error("Failed to save default configuration: \(error.localizedDescription)")
+                }
             }
         } else {
             logger.info("Creating new configuration file")
             self.config = PrivarionConfig()
-            try? saveConfiguration()
+            do {
+                try saveConfiguration()
+            } catch {
+                logger.error("Failed to save new configuration: \(error.localizedDescription)")
+            }
         }
         
         // Start monitoring configuration file changes (skip in test environment)
