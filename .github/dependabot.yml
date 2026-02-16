@@ -1,0 +1,45 @@
+# Dependabot configuration for dependency security scanning
+# Docs: https://docs.github.com/en/code-security/dependabot
+
+version: 2
+
+updates:
+  # Enable version updates for GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 10
+
+  # Enable version updates for Swift Package Manager
+  - package-ecosystem: "swift"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 10
+    # Review Swift package dependencies for vulnerabilities
+    versioning-strategy: increase
+
+  # Enable security updates for GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "daily"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "security"
+    labels:
+      - "security"
+      - "dependencies"
+
+  # Enable security updates for Swift Package Manager
+  - package-ecosystem: "swift"
+    directory: "/"
+    schedule:
+      interval: "daily"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "security"
+    labels:
+      - "security"
+      - "dependencies"

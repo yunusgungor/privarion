@@ -489,7 +489,7 @@ Dalga 4 (Dalga 3'ten Sonra — entegrasyon + doğrulama):
   - [ ] Workflow dosyası var
   - [ ] PR'da testler otomatik çalışıyor
 
-- [ ] 18. Güvenlik Tarama Altyapısı
+- [x] 18. Güvenlik Tarama Altyapısı
 
   **Ne Yapılacak**:
   - Dependency güvenlik taraması (Dependabot)

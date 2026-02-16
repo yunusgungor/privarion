@@ -1,0 +1,65 @@
+disabled_rules:
+  - trailing_whitespace
+  - line_length
+
+opt_in_rules:
+  - empty_count
+  - empty_string
+  - closure_spacing
+  - explicit_init
+  - first_where
+  - sorted_last_then
+  - redundant_nil_coalescing
+  - contains_over_first_not_nil
+  - fatal_error_message
+  - multiline_parameters
+  - unneeded_parentheses_in_closure_argument
+
+excluded:
+  - .build
+  - .swiftpm
+  - Tests
+  - Sources/PrivarionHook
+
+identifier_name:
+  min_length:
+    warning: 2
+  max_length:
+    warning: 40
+    error: 60
+  excluded:
+    - id
+    - i
+    - j
+    - k
+    - x
+    - y
+    - z
+
+type_name:
+  min_length: 3
+  max_length: 50
+
+function_body_length:
+  warning: 60
+  error: 100
+
+file_length:
+  warning: 500
+  error: 1000
+
+type_body_length:
+  warning: 300
+  error: 500
+
+cyclomatic_complexity:
+  warning: 15
+  error: 25
+
+nesting:
+  type_level:
+    warning: 2
+  statement_level:
+    warning: 5
+
+reporter: "xcode"
