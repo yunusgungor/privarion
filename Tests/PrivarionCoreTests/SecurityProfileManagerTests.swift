@@ -9,6 +9,7 @@ final class SecurityProfileManagerTests: XCTestCase {
     override func setUp() {
         super.setUp()
         profileManager = SecurityProfileManager.shared
+        profileManager.resetForTesting()
     }
     
     override func tearDown() {

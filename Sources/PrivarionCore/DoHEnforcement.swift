@@ -62,11 +62,9 @@ public class DoHEnforcement {
     }
     
     public func resetForTesting() {
-        if isRunning {
-            stop()
-        }
-        config = DoHEnforcementConfig()
         isRunning = false
+        dohServerConnections.removeAll()
+        config = DoHEnforcementConfig()
     }
     
     public func shouldUseDoH(for domain: String) -> Bool {

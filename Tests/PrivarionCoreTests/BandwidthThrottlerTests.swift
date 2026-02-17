@@ -56,6 +56,8 @@ final class BandwidthThrottlerTests: XCTestCase {
     }
     
     func testStartWithLimits() {
+        throttler.resetForTesting()
+        
         var config = BandwidthThrottleConfig()
         config.enabled = true
         config.uploadLimitKBps = 100
@@ -63,13 +65,9 @@ final class BandwidthThrottlerTests: XCTestCase {
         
         throttler.updateConfig(config)
         
-        print("[TEST] Before start(), running = \(throttler.running)")
-        
         XCTAssertNoThrow({
             try self.throttler.start()
         }, "Starting with limits should not throw")
-        
-        print("[TEST] After start(), running = \(throttler.running)")
         
         XCTAssertTrue(throttler.running, "Throttler should be running with enabled config")
         
@@ -167,6 +165,8 @@ final class BandwidthThrottlerTests: XCTestCase {
     }
     
     func testShouldThrottleConnectionInBlocklist() {
+        throttler.resetForTesting()
+        
         var config = BandwidthThrottleConfig()
         config.enabled = true
         config.uploadLimitKBps = 100
@@ -187,6 +187,8 @@ final class BandwidthThrottlerTests: XCTestCase {
     }
     
     func testShouldThrottleConnectionNotInBlocklist() {
+        throttler.resetForTesting()
+        
         var config = BandwidthThrottleConfig()
         config.enabled = true
         config.uploadLimitKBps = 100
@@ -252,6 +254,8 @@ final class BandwidthThrottlerTests: XCTestCase {
     }
     
     func testThrottleUpload() {
+        throttler.resetForTesting()
+        
         var config = BandwidthThrottleConfig()
         config.enabled = true
         config.uploadLimitKBps = 1000
@@ -275,6 +279,8 @@ final class BandwidthThrottlerTests: XCTestCase {
     }
     
     func testThrottleDownload() {
+        throttler.resetForTesting()
+        
         var config = BandwidthThrottleConfig()
         config.enabled = true
         config.uploadLimitKBps = 1000

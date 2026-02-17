@@ -494,6 +494,13 @@ public class SecurityProfileManager {
         loadCustomProfiles()
     }
     
+    public func resetForTesting() {
+        profilesQueue.sync(flags: .barrier) {
+            self.profiles.removeAll()
+        }
+        activeProfileId = "default"
+    }
+    
     // MARK: - Public Interface
     
     /// Get security profile by ID

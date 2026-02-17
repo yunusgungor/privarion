@@ -34,9 +34,6 @@ public class BandwidthThrottler {
     }
     
     public func start() throws {
-        print("[DEBUG] BandwidthThrottler.start() called: isRunning=\(isRunning), config.enabled=\(self.config.enabled), upload=\(config.uploadLimitKBps), download=\(config.downloadLimitKBps)")
-        fflush(stdout)
-        logger.info("start() called: isRunning=\(isRunning), config.enabled=\(config.enabled), upload=\(config.uploadLimitKBps), download=\(config.downloadLimitKBps)")
         guard !isRunning else {
             logger.warning("Bandwidth throttler is already running")
             return
@@ -82,6 +79,11 @@ public class BandwidthThrottler {
         isRunning = false
         activeConnections.removeAll()
         perAppBuckets.removeAll()
+    }
+    
+    // Test helper to check config state
+    func getConfigForTesting() -> BandwidthThrottleConfig {
+        return config
     }
     
     public func getCurrentStats() -> BandwidthStats {

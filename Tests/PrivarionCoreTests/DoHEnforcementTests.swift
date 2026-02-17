@@ -9,6 +9,7 @@ final class DoHEnforcementTests: XCTestCase {
     override func setUp() {
         super.setUp()
         enforcement = DoHEnforcement.shared
+        enforcement.resetForTesting()
     }
     
     override func tearDown() {
@@ -64,9 +65,11 @@ final class DoHEnforcementTests: XCTestCase {
         
         enforcement.updateConfig(config)
         
-        XCTAssertNoThrow({
-            try self.enforcement.start()
-        }, "Starting with enforceDoH should not throw")
+        do {
+            try enforcement.start()
+        } catch {
+            XCTFail("Starting with enforceDoH should not throw: \(error)")
+        }
         
         XCTAssertTrue(enforcement.running, "Enforcement should be running")
         
@@ -152,9 +155,11 @@ final class DoHEnforcementTests: XCTestCase {
         
         enforcement.updateConfig(config)
         
-        XCTAssertNoThrow({
-            try self.enforcement.start()
-        }, "Start should not throw")
+        do {
+            try enforcement.start()
+        } catch {
+            XCTFail("Start should not throw: \(error)")
+        }
         
         let shouldUse = enforcement.shouldUseDoH(for: "example.com")
         
@@ -172,9 +177,11 @@ final class DoHEnforcementTests: XCTestCase {
         
         enforcement.updateConfig(config)
         
-        XCTAssertNoThrow({
-            try self.enforcement.start()
-        }, "Start should not throw")
+        do {
+            try enforcement.start()
+        } catch {
+            XCTFail("Start should not throw: \(error)")
+        }
         
         let shouldUseForUntrusted = enforcement.shouldUseDoH(for: "untrusted.com")
         let shouldUseForTrusted = enforcement.shouldUseDoH(for: "trusted.example.com")

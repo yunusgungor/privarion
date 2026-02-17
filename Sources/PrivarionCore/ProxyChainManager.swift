@@ -65,6 +65,15 @@ public class ProxyChainManager {
         return isRunning
     }
     
+    public func resetForTesting() {
+        if isRunning {
+            stop()
+        }
+        config = ProxyChainConfig()
+        isRunning = false
+        activeConnections.removeAll()
+    }
+    
     public func createChainedConnection(to host: String, port: UInt16) -> NWConnection? {
         guard isRunning else {
             logger.warning("Cannot create chained connection - manager not running")
