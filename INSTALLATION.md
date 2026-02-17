@@ -171,4 +171,4 @@ rm -rf ~/.privarion
 
 ---
 
-For more help, see the [User Manual](docs/USER_MANUAL.md)
+For more help, see the [FAQ](FAQ.md) or check the GitHub discussions.

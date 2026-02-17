@@ -1,47 +1,45 @@
-# Privarion: macOS için Kapsamlı Gizlilik Koruma Sistemi
+# Privarion: Comprehensive Privacy Protection System for macOS
 
-![Privarion Logo](https://user-images.githubusercontent.com/12345/67890.png) <!-- Placeholder, gerçek logo ile değiştirilecek -->
-
-**Privarion**, macOS işletim sisteminde çalışan uygulamaların sizi ve cihazınızı tanımasını (fingerprinting) engelleyen, açık kaynaklı ve modüler bir gizlilik koruma aracıdır. Amacımız, kullanıcıların dijital kimliklerini koruyarak onlara gizlilik odaklı bir bilgisayar kullanım deneyimi sunmaktır.
+**Privarion** is an open-source, modular privacy protection tool for macOS that prevents applications from fingerprinting your device and collecting personal information. Our goal is to provide users with a privacy-focused computing experience by protecting their digital identity.
 
 ---
 
-## ✨ Temel Özellikler
+## Key Features
 
-- **Kimlik Sahteleme (Identity Spoofing):** Donanım ve yazılım tabanlı tanımlayıcıları (MAC adresi, seri numarası, disk UUID'si vb.) rastgele veya belirli profillere göre değiştirir.
-- **Ağ Filtreleme:** Telemetri, reklam ve izleme sunucularına giden ağ trafiğini engeller.
-- **Sistem Kancaları (Syscall Hooking):** Düşük seviyeli sistem çağrılarını yakalayarak uygulamaların hassas bilgilere erişimini manipüle eder.
-- **Modüler Mimari:** Her bir koruma mekanizması bağımsız bir modül olarak çalışır ve isteğe bağlı olarak etkinleştirilebilir.
-- **Merkezi Yönetim:** Hem komut satırı arayüzü (CLI) hem de kullanıcı dostu bir SwiftUI tabanlı arayüz (GUI) sunar.
-- **Profiller:** Farklı gizlilik senaryoları için önceden yapılandırılmış veya özel olarak oluşturulmuş profiller arasında kolayca geçiş yapın.
-- **Geri Alma (Rollback):** Yapılan tüm değişikliklerin güvenli bir şekilde geri alınmasını sağlayan anlık görüntü (snapshot) sistemi.
+- **Identity Spoofing**: Randomizes or spoofs hardware and software-based identifiers (MAC address, serial number, disk UUID, etc.) based on profiles.
+- **Network Filtering**: Blocks network traffic to telemetry, advertising, and tracking servers.
+- **System Hooks (Syscall Hooking)**: Intercepts low-level system calls to manipulate how applications access sensitive information.
+- **Modular Architecture**: Each protection mechanism operates as an independent module and can be enabled as needed.
+- **Centralized Management**: Provides both a command-line interface (CLI) and a user-friendly SwiftUI-based graphical interface (GUI).
+- **Profiles**: Easily switch between pre-configured or custom-created profiles for different privacy scenarios.
+- **Rollback**: Snapshot system that ensures all changes can be safely reverted.
 
 ---
 
-## 🏗️ Sistem Mimarisi
+## System Architecture
 
-Privarion, katmanlı ve modüler bir mimari üzerine inşa edilmiştir. Bu yapı, esneklik, genişletilebilirlik ve bakım kolaylığı sağlar.
+Privarion is built on a layered and modular architecture. This structure provides flexibility, extensibility, and ease of maintenance.
 
 ```mermaid
 graph TD
-    subgraph "Kullanıcı Arayüzü"
+    subgraph "User Interface"
         A_CLI["privacyctl (CLI)"]
         A_GUI["PrivarionGUI (GUI)"]
     end
 
-    subgraph "Çekirdek (PrivarionCore)"
+    subgraph "Core (PrivarionCore)"
         B_Config["Config Manager"]
         B_Profile["Profile Manager"]
         B_Logger["Logger"]
     end
 
-    subgraph "Modül Katmanı"
+    subgraph "Module Layer"
         C_Identity["Identity Spoof"]
         C_Network["Network Filter"]
         C_Syscall["Syscall Hook Mgr"]
     end
 
-    subgraph "Sistem Entegrasyonu"
+    subgraph "System Integration"
         D_DYLD["DYLD Injection"]
         D_NetExt["NetworkExtension"]
     end
@@ -56,41 +54,41 @@ graph TD
     C_Syscall --> D_DYLD;
 ```
 
-- **Kullanıcı Arayüzü:** `privacyctl` (CLI) ve `PrivarionGUI` (GUI) olmak üzere iki ana bileşenden oluşur.
-- **PrivarionCore:** Tüm modüllerin ve ayarların yönetildiği merkezi mantık katmanıdır.
-- **Modüller:** Kimlik sahteleme, ağ filtreleme gibi özel görevleri yerine getiren bağımsız birimlerdir.
-- **Sistem Entegrasyonu:** macOS'in düşük seviyeli API'leri ile etkileşim kurarak koruma mekanizmalarını uygular.
+- **User Interface**: Consists of two main components: `privacyctl` (CLI) and `PrivarionGUI` (GUI).
+- **PrivarionCore**: The central logic layer where all modules and settings are managed.
+- **Modules**: Independent units that perform specific tasks such as identity spoofing and network filtering.
+- **System Integration**: Implements protection mechanisms by interacting with macOS's low-level APIs.
 
 ---
 
-## 🚀 Kurulum
+## Installation
 
-Projeyi derlemek ve çalıştırmak için aşağıdaki adımları izleyin:
+Follow these steps to build and run the project:
 
-**Gereksinimler:**
-- macOS 13.0 (Ventura) veya üstü
-- Xcode 14.3 veya üstü
+**Requirements:**
+- macOS 13.0 (Ventura) or later
+- Xcode 14.3 or later
 - Swift 5.9
 
-**Derleme Adımları:**
+**Build Steps:**
 
-1.  **Projeyi klonlayın:**
+1.  **Clone the project:**
     ```sh
-    git clone https://github.com/your-username/privarion.git
+    git clone https://github.com/privarion/privarion.git
     cd privarion
     ```
 
-2.  **Bağımlılıkları yükleyin:**
-    Swift Package Manager, bağımlılıkları otomatik olarak çözecektir.
+2.  **Install dependencies:**
+    Swift Package Manager will automatically resolve dependencies.
 
-3.  **Projeyi derleyin:**
+3.  **Build the project:**
     ```sh
     swift build -c release
     ```
-    Bu komut, hem `privacyctl` CLI aracını hem de `PrivarionGUI.app` uygulamasını derleyecektir.
+    This will build both the `privacyctl` CLI tool and the `PrivarionGUI.app` application.
 
-4.  **Uygulamayı yükleyin (opsiyonel):**
-    Derlenen ürünleri `/usr/local/bin` ve `/Applications` dizinine kopyalayabilirsiniz.
+4.  **Install the application (optional):**
+    You can copy the built products to `/usr/local/bin` and `/Applications`:
     ```sh
     cp .build/release/privacyctl /usr/local/bin/
     cp -R .build/release/PrivarionGUI.app /Applications/
@@ -98,105 +96,105 @@ Projeyi derlemek ve çalıştırmak için aşağıdaki adımları izleyin:
 
 ---
 
-## 🛠️ Kullanım
+## Usage
 
-Privarion'u hem komut satırından hem de grafik arayüzden yönetebilirsiniz.
+You can manage Privarion from both the command line and the graphical interface.
 
-### Komut Satırı Arayüzü (CLI)
+### Command-Line Interface (CLI)
 
-`privacyctl` aracı, tüm özellikleri yönetmek için güçlü bir arayüz sunar.
+The `privacyctl` tool provides a powerful interface to manage all features.
 
-**Temel Komutlar:**
+**Basic Commands:**
 
-- **Durumu kontrol et:**
+- **Check status:**
   ```sh
   sudo privacyctl status
   ```
 
-- **Kimlik sahteleme işlemini başlat:**
+- **Start identity spoofing:**
   ```sh
   sudo privacyctl spoof --all
   ```
 
-- **Belirli bir profili etkinleştir:**
+- **Enable a specific profile:**
   ```sh
   sudo privacyctl profile switch --name "work-profile"
   ```
 
-- **Tüm profilleri listele:**
+- **List all profiles:**
   ```sh
   privacyctl profile list
   ```
 
-- **Ağ filtrelemeyi etkinleştir:**
+- **Enable network filtering:**
   ```sh
   sudo privacyctl network enable
   ```
 
-- **Yardım:**
+- **Help:**
   ```sh
   privacyctl --help
   ```
 
-### Grafik Kullanıcı Arayüzü (GUI)
+### Graphical User Interface (GUI)
 
-`PrivarionGUI.app` uygulaması, tüm özellikleri görsel bir arayüz üzerinden yönetmenizi sağlar. Uygulamayı `/Applications` dizininden başlatın.
+The `PrivarionGUI.app` application allows you to manage all features through a visual interface. Launch the app from `/Applications`.
 
-- **Dashboard:** Sistemin genel durumunu ve aktif korumaları gösterir.
-- **Modüller:** Her bir koruma modülünü ayrı ayrı yapılandırın.
-- **Profiller:** Profilleri yönetin, yeni profiller oluşturun ve aralarında geçiş yapın.
-- **Loglar:** Sistem loglarını gerçek zamanlı olarak izleyin.
+- **Dashboard**: Shows overall system status and active protections.
+- **Modules**: Configure each protection module individually.
+- **Profiles**: Manage profiles, create new ones, and switch between them.
+- **Logs**: Monitor system logs in real-time.
 
 ---
 
-## 👨‍💻 Geliştirme
+## Development
 
-Projeye katkıda bulunmak isterseniz, aşağıdaki adımları izleyebilirsiniz.
+If you'd like to contribute to the project, follow these steps.
 
-1.  **Projeyi Xcode'da açın:**
+1.  **Open the project in Xcode:**
     ```sh
     xed .
     ```
-    veya
+    or
     ```sh
     open Package.swift
     ```
 
-2.  **Şema seçimi:**
-    - `privacyctl` üzerinde çalışmak için `PrivacyCtl` şemasını seçin.
-    - GUI üzerinde çalışmak için `PrivarionGUI` şemasını seçin.
+2.  **Select a scheme:**
+    - Select the `PrivacyCtl` scheme to work on the CLI.
+    - Select the `PrivarionGUI` scheme to work on the GUI.
 
-3.  **Testleri çalıştırın:**
-    Projedeki tüm testleri çalıştırmak için:
+3.  **Run tests:**
+    To run all tests in the project:
     ```sh
     swift test
     ```
 
 ---
 
-## ✅ Testler
+## Tests
 
-Proje, birim ve entegrasyon testleri ile yüksek kod kalitesini hedefler.
+The project aims for high code quality with unit and integration tests.
 
-- **PrivarionCoreTests:** Çekirdek kütüphanenin mantığını test eder.
-- **PrivacyCtlTests:** CLI komutlarının doğruluğunu test eder.
-- **PrivarionGUITests:** GUI bileşenlerinin davranışlarını test eder.
-- **PrivarionHookTests:** Düşük seviyeli C kancalarının işlevselliğini doğrular.
-
----
-
-## 🤝 Katkıda Bulunma
-
-Katkılarınızı bekliyoruz! Lütfen `CONTRIBUTING.md` dosyasını inceleyin. (Bu dosya henüz oluşturulmadı)
-
-1.  Projeyi fork'layın.
-2.  Yeni bir özellik dalı oluşturun (`git checkout -b feature/yeni-ozellik`).
-3.  Değişikliklerinizi commit'leyin (`git commit -am 'Yeni özellik eklendi'`).
-4.  Dalınızı push'layın (`git push origin feature/yeni-ozellik`).
-5.  Bir Pull Request oluşturun.
+- **PrivarionCoreTests**: Tests the core library logic.
+- **PrivacyCtlTests**: Tests CLI command correctness.
+- **PrivarionGUITests**: Tests GUI component behaviors.
+- **PrivarionHookTests**: Validates the functionality of low-level C hooks.
 
 ---
 
-## 📄 Lisans
+## Contributing
 
-Bu proje **MIT Lisansı** ile lisanslanmıştır. Detaylar için `LICENSE` dosyasına bakın. (Bu dosya henüz oluşturulmadı)
+We welcome contributions! Please see the [CONTRIBUTING.md](CONTRIBUTING.md) file for guidelines.
+
+1.  Fork the project.
+2.  Create a feature branch (`git checkout -b feature/amazing-feature`).
+3.  Commit your changes (`git commit -am 'Add amazing feature'`).
+4.  Push to the branch (`git push origin feature/amazing-feature`).
+5.  Create a Pull Request.
+
+---
+
+## License
+
+This project is licensed under the MIT License. See the project repository for details.

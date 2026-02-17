@@ -1,4 +1,5 @@
 // swift-tools-version: 5.9
+// Package version: 1.0.0-beta.1
 // The swift-tools-version declares the minimum version of Swift required to build this package.
 
 import PackageDescription

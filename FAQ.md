@@ -163,4 +163,4 @@ See the [Contributing Guide](CONTRIBUTING.md)
 
 ## License
 
-Privarion is licensed under the [MIT License](LICENSE).
+Privarion is licensed under the MIT License. See the project repository for details.

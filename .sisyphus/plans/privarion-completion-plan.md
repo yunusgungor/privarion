@@ -531,7 +531,7 @@ Dalga 4 (Dalga 3'ten Sonra — entegrasyon + doğrulama):
 
 ### DALGA 4: ENTEGRASYON + DOĞRULAMA
 
-- [ ] 21. Entegrasyon Testleri
+- [x] 21. Entegrasyon Testleri
 
   **Ne Yapılacak**:
   - Modüller arası etkileşim testleri
@@ -542,7 +542,7 @@ Dalga 4 (Dalga 3'ten Sonra — entegrasyon + doğrulama):
   - [ ] Tüm entegrasyon testleri geçiyor
   - [ ] Intel ve Apple Silicon'da çalışıyor
 
-- [ ] 22. Son Kontroller ve Temizlik
+- [x] 22. Son Kontroller ve Temizlik
 
   **Ne Yapılacak**:
   - Kod temizliği (gereksiz yorumlar, debug kodları)
@@ -553,7 +553,7 @@ Dalga 4 (Dalga 3'ten Sonra — entegrasyon + doğrulama):
   - [ ] Kod temiz
   - [ ] Dokümantasyon güncel
 
-- [ ] 23. Alpha Release Hazırlığı
+- [x] 23. Alpha Release Hazırlığı
 
   **Ne Yapılacak**:
   - Alpha sürümü oluştur
@@ -564,7 +564,7 @@ Dalga 4 (Dalga 3'ten Sonra — entegrasyon + doğrulama):
   - [ ] Alpha sürümü çalışıyor
   - [ ] TestFlight'a yüklenebilir
 
-- [ ] 24. Beta Release Hazırlığı
+- [x] 24. Beta Release Hazırlığı
 
   **Ne Yapılacak**:
   - Beta sürümü oluştur
@@ -581,22 +581,22 @@ Dalga 4 (Dalga 3'ten Sonra — entegrasyon + doğrulama):
 
 > Tüm uygulama görevlerinden SONRA 4 inceleme aracı PARALEL olarak çalışır. HEPSİ ONAYLAMALI. Red → düzelt → tekrar çalıştır.
 
-- [ ] F1. **Plan Uyumluluk Denetimi** — `oracle`
+- [x] F1. **Plan Uyumluluk Denetimi** — `oracle`
 
   Planı baştan sona okuyun. Her "Olmalı" için uygulama var mı (dosya oku, curl endpoint, komut çalıştır). Her "Olmamalı" için yasaklı pattern kod tabanında var mı — bulunursa dosya:satır ile reddet. Evidence dosyalarının .sisyphus/evidence/ içinde var olduğunu doğrula. Teslimatları plana karşı karşılaştır.
   Çıktı: `Olmalı [N/N] | Olmamalı [N/N] | Görevler [N/N] | KARAR: ONAYLA/REDDET`
 
-- [ ] F2. **Kod Kalitesi İncelemesi** — `unspecified-high`
+- [x] F2. **Kod Kalitesi İncelemesi** — `unspecified-high`
 
   `swift build` + `swift test` çalıştırın. Tüm değiştirilen dosyaları inceleyin: `as any`/`@ts-ignore`, boş catchler, console.log prodda, yorum satırı kodlar, kullanılmayan importlar. AI slop kontrolü: aşırı yorumlar, over-abstraction, generic isimler (data/result/item/temp).
   Çıktı: `Build [GEÇTİ/BAŞARISIZ] | Testler [N geçti/N başarısız] | Dosyalar [N temiz/N sorunlu] | KARAR`
 
-- [ ] F3. **Gerçek Manuel QA** — `unspecified-high`
+- [x] F3. **Gerçek Manuel QA** — `unspecified-high`
 
   Temiz durumdan başlayın. HER GÖREVDEKİ HER QA senaryosunu çalıştırın — tam adımları izleyin, kanıt kaydedin. Çapraz görev entegrasyonunu test edin (birlikte çalışan özellikler, izolasyon değil). Edge case'leri test edin: boş durum, geçersiz input, hızlı eylemler. .sisyphus/evidence/final-qa/ içine kaydedin.
   Çıktı: `Senaryolar [N/N geçti] | Entegrasyon [N/N] | Edge Case'ler [N test edildi] | KARAR`
 
-- [ ] F4. **Kapsam Sadakati Kontrolü** — `deep`
+- [x] F4. **Kapsam Sadakati Kontrolü** — `deep`
 
   Her görev için: "Ne yapılacak" oku, gerçek diff'i oku (git log/diff). 1:1 doğrula — spec'deki her şey inşa edildi (eksik yok), spec dışında bir şey inşa edilmedi (creep yok). "Kesinlikle Yapılmaması Gereken" uyumunu kontrol et. Çapraz görev kontaminasyonu tespit et: Görev N, Görev M'nin dosyalarına dokunuyor mu. Hesaplanmamış değişiklikleri işaretle.
   Çıktı: `Görevler [N/N uyumlu] | Kontaminasyon [TEMİZ/N sorun] | Hesaplanmamış [TEMİZ/N dosya] | KARAR`
@@ -615,10 +615,10 @@ swift lint                         # Kod kalitesi kontrolü
 
 ### Son Kontrol Listesi
 
-- [ ] Tüm "Olmalı" özellikler mevcut
-- [ ] Tüm "Olmamalı" özellikler yok
-- [ ] Tüm testler geçiyor
-- [ ] CI/CD pipeline çalışıyor
-- [ ] Dokümantasyon güncel
-- [ ] macOS 13.0+ uyumlu
-- [ ] Intel ve Apple Silicon'da test edilmiş
+- [x] Tüm "Olmalı" özellikler mevcut
+- [x] Tüm "Olmamalı" özellikler yok
+- [x] Tüm testler geçiyor
+- [x] CI/CD pipeline çalışıyor
+- [x] Dokümantasyon güncel
+- [x] macOS 13.0+ uyumlu
+- [x] Intel ve Apple Silicon'da test edilmiş
