@@ -173,6 +173,7 @@ public final class ApplicationLauncher: Sendable {
     private actor ProcessRegistry {
         private var runningProcesses: [UUID: ProcessInfo] = [:]
         private var processTimers: [UUID: Timer] = [:]
+        private var completedProcesses: [UUID: ProcessResult] = [:]
         
         func registerProcess(_ handle: ProcessHandle, process: Process, lock: NSLock) {
             let processInfo = ProcessInfo(
@@ -200,6 +201,18 @@ public final class ApplicationLauncher: Sendable {
         
         func setTimer(_ id: UUID, timer: Timer) {
             processTimers[id] = timer
+        }
+        
+        func storeCompletedProcess(_ id: UUID, result: ProcessResult) {
+            completedProcesses[id] = result
+        }
+        
+        func getCompletedProcess(_ id: UUID) -> ProcessResult? {
+            return completedProcesses[id]
+        }
+        
+        func removeCompletedProcess(_ id: UUID) {
+            completedProcesses.removeValue(forKey: id)
         }
         
         struct ProcessInfo: Sendable {
@@ -367,6 +380,12 @@ public final class ApplicationLauncher: Sendable {
     public func terminateProcess(_ processId: UUID) async throws -> ProcessResult {
         
         logger.info("Terminating process: \(processId)")
+        
+        // First check if process already completed and we have the result stored
+        if let completedResult = await processRegistry.getCompletedProcess(processId) {
+            await processRegistry.removeCompletedProcess(processId)
+            return completedResult
+        }
         
         // Get process info - handle case where process already terminated
         guard let processInfo = await processRegistry.getProcess(processId) else {
@@ -568,22 +587,39 @@ public final class ApplicationLauncher: Sendable {
     }
     
     private func setupExecutionTimeout(for handle: ProcessHandle) async {
-        let timer = Timer.scheduledTimer(withTimeInterval: TimeInterval(handle.configuration.maxExecutionTimeSeconds), repeats: false) { _ in
-            Task {
+        let timeoutSeconds = handle.configuration.maxExecutionTimeSeconds
+        
+        Task {
+            do {
+                try await Task.sleep(nanoseconds: UInt64(timeoutSeconds) * 1_000_000_000)
                 self.logger.warning("Process execution timeout for: \(handle.id)")
-                do {
-                    _ = try await self.terminateProcess(handle.id)
-                } catch {
-                    self.logger.warning("Failed to terminate timed-out process: \(error.localizedDescription)")
-                }
+                _ = try await self.terminateProcess(handle.id)
+            } catch {
+                self.logger.warning("Failed to terminate timed-out process or already terminated: \(error.localizedDescription)")
             }
         }
-        
-        await processRegistry.setTimer(handle.id, timer: timer)
     }
     
     private func handleProcessTermination(handle: ProcessHandle, process: Process) async {
         logger.info("Process terminated: PID \(handle.processId), exit code: \(process.terminationStatus)")
+        
+        // Get process start time from registry if available
+        let startTime = await processRegistry.getProcess(handle.id)?.startTime ?? Date()
+        let executionTime = Date().timeIntervalSince(startTime)
+        
+        // Collect resource usage
+        let resourceUsage = await collectResourceUsage(for: handle)
+        
+        // Store the result before unregistering so tests can still get result after process ends
+        let result = ProcessResult(
+            handle: handle,
+            exitCode: process.terminationStatus,
+            executionTime: executionTime,
+            standardOutput: nil,
+            standardError: nil,
+            resourceUsage: resourceUsage
+        )
+        await processRegistry.storeCompletedProcess(handle.id, result: result)
         
         // Clean up process registration
         await processRegistry.unregisterProcess(handle.id)

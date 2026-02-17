@@ -61,6 +61,14 @@ public class DoHEnforcement {
         return isRunning
     }
     
+    public func resetForTesting() {
+        if isRunning {
+            stop()
+        }
+        config = DoHEnforcementConfig()
+        isRunning = false
+    }
+    
     public func shouldUseDoH(for domain: String) -> Bool {
         guard isRunning, config.enforceDoH else {
             return false

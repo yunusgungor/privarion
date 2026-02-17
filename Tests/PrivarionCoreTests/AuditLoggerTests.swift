@@ -23,6 +23,7 @@ final class AuditLoggerTests: XCTestCase {
         }
         
         auditLogger = AuditLogger.shared
+        auditLogger.resetTestStore()
     }
     
     override func tearDown() {

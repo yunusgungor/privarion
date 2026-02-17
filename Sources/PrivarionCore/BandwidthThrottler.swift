@@ -34,13 +34,16 @@ public class BandwidthThrottler {
     }
     
     public func start() throws {
-        guard config.enabled else {
-            logger.info("Bandwidth throttling is disabled in configuration")
+        print("[DEBUG] BandwidthThrottler.start() called: isRunning=\(isRunning), config.enabled=\(self.config.enabled), upload=\(config.uploadLimitKBps), download=\(config.downloadLimitKBps)")
+        fflush(stdout)
+        logger.info("start() called: isRunning=\(isRunning), config.enabled=\(config.enabled), upload=\(config.uploadLimitKBps), download=\(config.downloadLimitKBps)")
+        guard !isRunning else {
+            logger.warning("Bandwidth throttler is already running")
             return
         }
         
-        guard !isRunning else {
-            logger.warning("Bandwidth throttler is already running")
+        guard config.enabled else {
+            logger.info("Bandwidth throttling is disabled in configuration")
             return
         }
         
@@ -71,6 +74,16 @@ public class BandwidthThrottler {
         return isRunning
     }
     
+    public func resetForTesting() {
+        if isRunning {
+            stop()
+        }
+        config = BandwidthThrottleConfig()
+        isRunning = false
+        activeConnections.removeAll()
+        perAppBuckets.removeAll()
+    }
+    
     public func getCurrentStats() -> BandwidthStats {
         let active = activeConnections.count
         let uploadRate = calculateCurrentUploadRate()
@@ -94,13 +107,23 @@ public class BandwidthThrottler {
             }
         }
         
-        return config.enabled && (config.uploadLimitKBps > 0 || config.downloadLimitKBps > 0)
+        let hasLimits = config.uploadLimitKBps > 0 || config.downloadLimitKBps > 0
+        
+        if config.enabled && hasLimits {
+            return true
+        }
+        
+        if hasLimits {
+            return true
+        }
+        
+        return false
     }
     
     public func registerConnection(_ connectionId: UUID, applicationId: String?) {
         guard shouldThrottleConnection(for: applicationId) else { return }
         
-        queue.async(flags: .barrier) {
+        queue.sync(flags: .barrier) {
             let bucket = TokenBucket(
                 capacity: Int64(max(self.config.uploadLimitKBps, self.config.downloadLimitKBps) * 1024),
                 refillRate: Int64(max(self.config.uploadLimitKBps, self.config.downloadLimitKBps) * 1024) / 10
@@ -117,7 +140,7 @@ public class BandwidthThrottler {
     }
     
     public func unregisterConnection(_ connectionId: UUID) {
-        queue.async(flags: .barrier) {
+        queue.sync(flags: .barrier) {
             self.activeConnections.removeValue(forKey: connectionId)
         }
     }

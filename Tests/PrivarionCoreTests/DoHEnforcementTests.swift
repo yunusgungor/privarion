@@ -237,9 +237,7 @@ final class DoHEnforcementTests: XCTestCase {
         
         enforcement.updateConfig(config)
         
-        XCTAssertNoThrow({
-            try self.enforcement.start()
-        }, "Start should not throw")
+        try! self.enforcement.start()
         
         let server = enforcement.getDoHServer(for: "example.com")
         

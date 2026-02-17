@@ -270,9 +270,18 @@ public class AuditLogger {
     /// Rotation management
     private var rotationTimer: DispatchSourceTimer?
     
+    /// Test event wrapper to store events with timestamps
+    private struct TestEventWrapper: Sendable {
+        let timestamp: Date
+        let event: Any
+    }
+    
     /// Test interface compatibility - simple event store
-    private var testEventStore: [String: Any] = [:]
+    private var testEventStore: [String: TestEventWrapper] = [:]
     private let testStoreQueue = DispatchQueue(label: "privarion.audit.teststore", attributes: .concurrent)
+    
+    /// Test configuration storage for getCurrentConfiguration
+    private var testConfiguration: Configuration?
     
     // MARK: - Initialization
     
@@ -1311,13 +1320,14 @@ extension AuditLogger {
         
         logEvent(auditEvent)
         let logEntryID = UUID().uuidString
+        let timestamp = Date()
         
         // Store for test retrieval - use sync for immediate availability
         testStoreQueue.sync(flags: .barrier) {
-            self.testEventStore[logEntryID] = event
+            self.testEventStore[logEntryID] = TestEventWrapper(timestamp: timestamp, event: event)
         }
         
-        return OperationResult(success: true, logEntryID: logEntryID, timestamp: Date())
+        return OperationResult(success: true, logEntryID: logEntryID, timestamp: timestamp)
     }
     
     /// Log system event - test interface compatibility
@@ -1333,13 +1343,14 @@ extension AuditLogger {
         
         logEvent(auditEvent)
         let logEntryID = UUID().uuidString
+        let timestamp = Date()
         
         // Store for test retrieval - use sync for immediate availability
         testStoreQueue.sync(flags: .barrier) {
-            self.testEventStore[logEntryID] = event
+            self.testEventStore[logEntryID] = TestEventWrapper(timestamp: timestamp, event: event)
         }
         
-        return OperationResult(success: true, logEntryID: logEntryID, timestamp: Date())
+        return OperationResult(success: true, logEntryID: logEntryID, timestamp: timestamp)
     }
     
     /// Log user event - test interface compatibility
@@ -1355,13 +1366,14 @@ extension AuditLogger {
         
         logEvent(auditEvent)
         let logEntryID = UUID().uuidString
+        let timestamp = Date()
         
         // Store for test retrieval - use sync for immediate availability
         testStoreQueue.sync(flags: .barrier) {
-            self.testEventStore[logEntryID] = event
+            self.testEventStore[logEntryID] = TestEventWrapper(timestamp: timestamp, event: event)
         }
         
-        return OperationResult(success: true, logEntryID: logEntryID, timestamp: Date())
+        return OperationResult(success: true, logEntryID: logEntryID, timestamp: timestamp)
     }
     
     /// Log compliance event - test interface compatibility
@@ -1392,10 +1404,11 @@ extension AuditLogger {
         
         logEvent(auditEvent)
         let logEntryID = UUID().uuidString
+        let timestamp = Date()
         
         // Store for test retrieval - use sync for immediate availability
         testStoreQueue.sync(flags: .barrier) {
-            self.testEventStore[logEntryID] = event
+            self.testEventStore[logEntryID] = TestEventWrapper(timestamp: timestamp, event: event)
         }
         
         return OperationResult(success: true, logEntryID: logEntryID, timestamp: Date())
@@ -1403,30 +1416,75 @@ extension AuditLogger {
     
     /// Query audit logs - test interface compatibility
     public func queryAuditLogs(parameters: QueryParameters) -> [QueryResult] {
-        // For test compatibility, return mock results
-        // In a real implementation, this would query the actual log storage
         var results: [QueryResult] = []
         
-        // Mock implementation for testing
-        if parameters.sources?.contains("specific_component") == true {
-            results.append(QueryResult(
-                source: "specific_component",
-                severity: .medium,
-                timestamp: Date(),
-                details: [:]
-            ))
+        testStoreQueue.sync {
+            for (_, wrapper) in testEventStore {
+                // Check if it's a SecurityEvent
+                if let securityEvent = wrapper.event as? SecurityEvent {
+                    let eventTimestamp = wrapper.timestamp
+                    
+                    // Filter by time range
+                    if eventTimestamp >= parameters.startTime && eventTimestamp <= parameters.endTime {
+                        // Filter by source if specified
+                        if let sources = parameters.sources, !sources.isEmpty {
+                            if !sources.contains(securityEvent.source) {
+                                continue
+                            }
+                        }
+                        
+                        // Filter by severity if specified
+                        if let severityLevels = parameters.severityLevels, !severityLevels.isEmpty {
+                            // Compare raw values directly since SecurityEvent.Severity and QueryParameters.Severity are different types
+                            let eventSeverityRaw = securityEvent.severity.rawValue
+                            let matches = severityLevels.contains { $0.rawValue == eventSeverityRaw }
+                            if !matches {
+                                continue
+                            }
+                        }
+                        
+                        results.append(QueryResult(
+                            source: securityEvent.source,
+                            severity: securityEvent.severity,
+                            timestamp: eventTimestamp,
+                            details: securityEvent.details,
+                            type: securityEvent.type,
+                            component: nil,
+                            operation: nil
+                        ))
+                    }
+                }
+                // Check if it's a SystemEvent
+                else if let systemEvent = wrapper.event as? SystemEvent {
+                    let eventTimestamp = wrapper.timestamp
+                    
+                    if eventTimestamp >= parameters.startTime && eventTimestamp <= parameters.endTime {
+                        if let sources = parameters.sources, !sources.isEmpty {
+                            if !sources.contains(systemEvent.component) {
+                                continue
+                            }
+                        }
+                        
+                        results.append(QueryResult(
+                            source: systemEvent.component,
+                            severity: .medium,
+                            timestamp: eventTimestamp,
+                            details: systemEvent.details,
+                            type: nil,
+                            component: systemEvent.component,
+                            operation: systemEvent.operation
+                        ))
+                    }
+                }
+            }
         }
         
-        if parameters.severityLevels?.contains(.high) == true {
-            results.append(QueryResult(
-                source: "high_severity_source",
-                severity: .high,
-                timestamp: Date(),
-                details: [:]
-            ))
-        }
+        // Apply limit and offset
+        let sortedResults = results.sorted { $0.timestamp < $1.timestamp }
+        let startIndex = min(parameters.offset, sortedResults.count)
+        let endIndex = min(parameters.offset + parameters.limit, sortedResults.count)
         
-        return results
+        return Array(sortedResults[startIndex..<endIndex])
     }
     
     /// Get audit statistics - test interface compatibility
@@ -1441,20 +1499,21 @@ extension AuditLogger {
         var systemEvents = 0
         
         for (_, eventData) in testEventStore {
+            let event = eventData.event
             // Check if it's a SecurityEvent
-            if let securityEvent = eventData as? SecurityEvent {
+            if let securityEvent = event as? SecurityEvent {
                 let eventType = "SECURITY_\(securityEvent.type.rawValue.uppercased())"
                 eventsByType[eventType, default: 0] += 1
                 securityEvents += 1
             }
             // Check if it's a SystemEvent
-            else if let systemEvent = eventData as? SystemEvent {
+            else if let systemEvent = event as? SystemEvent {
                 let eventType = "SYSTEM_\(systemEvent.type.rawValue.uppercased())"
                 eventsByType[eventType, default: 0] += 1
                 systemEvents += 1
             }
             // Check if it's a UserEvent
-            else if eventData is UserEvent {
+            else if event is UserEvent {
                 let eventType = "USER_ACTIVITY"
                 eventsByType[eventType, default: 0] += 1
             }
@@ -1500,6 +1559,10 @@ extension AuditLogger {
             auditConfig.encryptionEnabled = config.encryptionEnabled
             
             try configure(auditConfig)
+            
+            // Store test configuration for getCurrentConfiguration
+            self.testConfiguration = config
+            
             return OperationResult(success: true, message: "Configuration updated successfully")
         } catch {
             return OperationResult(success: false, error: error)
@@ -1508,6 +1571,11 @@ extension AuditLogger {
     
     /// Get current configuration - test interface compatibility
     public func getCurrentConfiguration() -> Configuration {
+        // Return stored test configuration if available
+        if let testConfig = testConfiguration {
+            return testConfig
+        }
+        
         let auditConfig = configuration
         
         return Configuration(
@@ -1535,14 +1603,22 @@ extension AuditLogger {
         return OperationResult(success: true, message: "Logs flushed successfully")
     }
     
+    /// Reset test store - clears all test events
+    public func resetTestStore() {
+        testStoreQueue.sync(flags: .barrier) {
+            self.testEventStore.removeAll()
+        }
+    }
+    
     /// Get log entry by ID - test interface compatibility
     public func getLogEntry(entryID: String) -> QueryResult? {
         return testStoreQueue.sync {
-            guard let storedEvent = testEventStore[entryID] else {
+            guard let storedEventWrapper = testEventStore[entryID] else {
                 return nil
             }
             
-            let timestamp = Date()
+            let storedEvent = storedEventWrapper.event
+            let timestamp = storedEventWrapper.timestamp
             
             if let securityEvent = storedEvent as? SecurityEvent {
                 return QueryResult(

@@ -9,12 +9,11 @@ final class BandwidthThrottlerTests: XCTestCase {
     override func setUp() {
         super.setUp()
         throttler = BandwidthThrottler.shared
+        throttler.resetForTesting()
     }
     
     override func tearDown() {
-        if throttler.running {
-            throttler.stop()
-        }
+        throttler.resetForTesting()
         super.tearDown()
     }
     
@@ -64,9 +63,13 @@ final class BandwidthThrottlerTests: XCTestCase {
         
         throttler.updateConfig(config)
         
+        print("[TEST] Before start(), running = \(throttler.running)")
+        
         XCTAssertNoThrow({
             try self.throttler.start()
         }, "Starting with limits should not throw")
+        
+        print("[TEST] After start(), running = \(throttler.running)")
         
         XCTAssertTrue(throttler.running, "Throttler should be running with enabled config")
         
@@ -204,6 +207,8 @@ final class BandwidthThrottlerTests: XCTestCase {
     }
     
     func testRegisterConnection() {
+        throttler.resetForTesting()
+        
         var config = BandwidthThrottleConfig()
         config.enabled = true
         config.uploadLimitKBps = 100
@@ -211,9 +216,7 @@ final class BandwidthThrottlerTests: XCTestCase {
         
         throttler.updateConfig(config)
         
-        XCTAssertNoThrow({
-            try self.throttler.start()
-        }, "Start should not throw")
+        try! self.throttler.start()
         
         let connectionId = UUID()
         throttler.registerConnection(connectionId, applicationId: "com.test.app")
@@ -353,6 +356,8 @@ final class BandwidthThrottlerTests: XCTestCase {
     }
     
     func testMultipleConnections() {
+        throttler.resetForTesting()
+        
         var config = BandwidthThrottleConfig()
         config.enabled = true
         config.uploadLimitKBps = 1000
@@ -360,9 +365,7 @@ final class BandwidthThrottlerTests: XCTestCase {
         
         throttler.updateConfig(config)
         
-        XCTAssertNoThrow({
-            try self.throttler.start()
-        }, "Start should not throw")
+        try! self.throttler.start()
         
         let id1 = UUID()
         let id2 = UUID()
