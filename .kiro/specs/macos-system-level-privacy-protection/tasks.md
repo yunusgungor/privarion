@@ -203,24 +203,24 @@ The implementation is organized into discrete, incremental tasks that build upon
     - Implement thread-safe concurrent event handling
     - _Requirements: 2.5-2.8, 18.1_
 
-  - [~] 6.3 Integrate with ProtectionPolicyEngine
+  - [x] 6.3 Integrate with ProtectionPolicyEngine
     - Query ProtectionPolicyEngine for policy matching in handleProcessExecution
     - Apply protection rules based on policy (allow, deny, require VM isolation)
     - Log policy application decisions
     - _Requirements: 2.6-2.7, 11.7_
 
-  - [~] 6.4 Implement SecurityEventHandler protocol
+  - [x] 6.4 Implement SecurityEventHandler protocol
     - Create protocol with canHandle(_:) and handle(_:) methods
     - Allow pluggable event handlers for extensibility
     - _Requirements: 2.5_
 
-  - [~] 6.5 Implement event logging
+  - [x] 6.5 Implement event logging
     - Log all subscribed events with timestamp, process ID, event type, and action taken
     - Write logs to /var/log/privarion/system-extension.log
     - Include executable path and result in log entries
     - _Requirements: 2.10, 17.4_
 
-  - [~] 6.6 Write unit tests for Endpoint Security Manager
+  - [ ] 6.6 Write unit tests for Endpoint Security Manager
     - Test ES client initialization with mock client
     - Test event subscription
     - Test process execution event handling
@@ -228,18 +228,18 @@ The implementation is organized into discrete, incremental tasks that build upon
     - Test event processing latency (<100ms)
     - _Requirements: 20.1-20.2_
 
-  - [~] 6.7 Write integration tests for Endpoint Security
+  - [ ] 6.7 Write integration tests for Endpoint Security
     - Test complete flow: process launch → policy evaluation → protection application
     - Test with various applications (Safari, Chrome, native apps)
     - Test error handling for Full Disk Access denial
     - _Requirements: 20.2, 20.8_
 
 
-- [ ] 7. Checkpoint - Verify core system extension functionality
+- [x] 7. Checkpoint - Verify core system extension functionality
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 8. Implement DNS filtering and proxy
-  - [ ] 8.1 Create DNSFilter class
+- [x] 8. Implement DNS filtering and proxy
+  - [x] 8.1 Create DNSFilter class
     - Implement filterDNSQuery(_:) to process DNS queries
     - Implement isBlocked(_:) to check domain against blocklist
     - Implement isFingerprintingDomain(_:) to detect fingerprinting domains
@@ -248,21 +248,21 @@ The implementation is organized into discrete, incremental tasks that build upon
     - Return fake IP addresses for fingerprinting domains
     - _Requirements: 4.1-4.12_
 
-  - [ ] 8.2 Implement DNSCache
+  - [x] 8.2 Implement DNSCache
     - Create DNSCacheProtocol with get, set, clear methods
     - Implement in-memory cache with TTL support (300 seconds default)
     - Implement cache eviction for expired entries
     - Thread-safe cache access using actors or locks
     - _Requirements: 4.9, 18.9_
 
-  - [ ] 8.3 Implement BlocklistManager
+  - [x] 8.3 Implement BlocklistManager
     - Load blocklist from configuration (tracking domains, fingerprinting domains)
     - Support pattern matching for domains (*.analytics.*, *.telemetry.*, *.tracking.*)
     - Implement addToBlocklist and removeFromBlocklist methods
     - Persist blocklist changes to configuration
     - _Requirements: 4.3-4.4, 10.1_
 
-  - [ ] 8.4 Implement DNS proxy server
+  - [x] 8.4 Implement DNS proxy server
     - Bind to localhost port 53 for DNS query interception
     - Parse incoming DNS queries to extract domain name
     - Forward allowed queries to upstream DNS server
@@ -270,19 +270,19 @@ The implementation is organized into discrete, incremental tasks that build upon
     - Implement connection pooling for upstream DNS connections
     - _Requirements: 4.1-4.2, 4.7-4.8, 18.8_
 
-  - [ ] 8.5 Implement DNS query logging
+  - [x] 8.5 Implement DNS query logging
     - Log blocked domains with timestamp and requesting process
     - Write logs to /var/log/privarion/network-extension.log
     - _Requirements: 4.10, 17.3, 17.5_
 
-  - [ ] 8.6 Write property test for DNS filtering idempotence
+  - [x] 8.6 Write property test for DNS filtering idempotence
     - **Property 2: DNS Filtering Idempotence**
     - **Validates: Requirements 4.3-4.6**
     - Test that filtering a query twice produces same result as filtering once
     - Use swift-check with minimum 100 iterations
     - _Requirements: 20.12_
 
-  - [ ] 8.7 Write unit tests for DNS filter
+  - [x] 8.7 Write unit tests for DNS filter
     - Test tracking domain blocking (return NXDOMAIN)
     - Test fingerprinting domain faking (return fake IP)
     - Test allowed domain forwarding

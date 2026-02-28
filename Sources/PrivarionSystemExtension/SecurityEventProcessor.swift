@@ -6,6 +6,7 @@ import Foundation
 import CEndpointSecurity
 import Logging
 import PrivarionSharedModels
+import PrivarionCore
 
 /// Processes incoming Endpoint Security events with thread-safe concurrent handling
 /// Responds to AUTH events within 100ms to avoid system slowdown
@@ -15,18 +16,28 @@ public actor SecurityEventProcessor {
     /// Logger for event processing
     private let logger: Logger
     
+    /// File logger for comprehensive event logging
+    private let fileLogger: FileLogger
+    
     /// Event processing timeout (100ms as per requirements)
     private let processingTimeout: TimeInterval = 0.1
     
     /// Event handler for extensibility
     private var eventHandlers: [SecurityEventHandler] = []
     
+    /// Protection policy engine for policy evaluation
+    private let policyEngine: ProtectionPolicyEngine
+    
     // MARK: - Initialization
     
     /// Initialize the Security Event Processor
-    /// - Parameter logger: Optional logger instance
-    public init(logger: Logger? = nil) {
+    /// - Parameters:
+    ///   - policyEngine: Protection policy engine for policy evaluation
+    ///   - logger: Optional logger instance
+    public init(policyEngine: ProtectionPolicyEngine, logger: Logger? = nil) {
+        self.policyEngine = policyEngine
         self.logger = logger ?? Logger(label: "com.privarion.eventprocessor")
+        self.fileLogger = FileLogger(logFilePath: "/var/log/privarion/system-extension.log")
     }
     
     // MARK: - Public Methods
@@ -47,6 +58,10 @@ public actor SecurityEventProcessor {
         let startTime = Date()
         let eventType = message.pointee.event_type
         let actionType = message.pointee.action_type
+        
+        // Extract process ID for logging
+        let process = message.pointee.process
+        let processID = audit_token_to_pid(process.pointee.audit_token)
         
         logger.debug("Processing event: type=\(eventType), action=\(actionType)")
         
@@ -75,6 +90,14 @@ public actor SecurityEventProcessor {
         if actionType == ES_ACTION_TYPE_AUTH {
             let esResult = result.toESAuthResult()
             _ = es_respond_auth_result(client, message, esResult, false)
+            
+            // Log the event with comprehensive details (Requirement 2.10, 17.4)
+            logSecurityEvent(
+                eventType: eventType,
+                processID: processID,
+                action: result,
+                message: message
+            )
             
             // Check processing time
             let processingTime = Date().timeIntervalSince(startTime)
@@ -120,19 +143,93 @@ public actor SecurityEventProcessor {
         
         logger.info("Process execution: pid=\(processID), path=\(executablePath)")
         
+        // Query protection policy engine for policy matching
+        let policy = policyEngine.evaluatePolicy(for: executablePath)
+        logger.debug("Policy evaluated: identifier=\(policy.identifier), level=\(policy.protectionLevel), vmIsolation=\(policy.requiresVMIsolation)")
+        
+        // Apply protection rules based on policy
+        let result = applyProtectionPolicy(policy, for: event)
+        
+        // Log policy application decision
+        logPolicyDecision(policy: policy, event: event, result: result)
+        
         // Check registered handlers
         for handler in eventHandlers {
             if handler.canHandle(.processExecution) {
-                let result = await handler.handleProcessExecution(event)
-                if result != .allow {
+                let handlerResult = await handler.handleProcessExecution(event)
+                if handlerResult != .allow {
                     logger.info("Handler denied process execution: \(executablePath)")
-                    return result
+                    return handlerResult
                 }
             }
         }
         
-        // Default to allow
-        return .allow
+        return result
+    }
+    
+    /// Apply protection policy to process execution event
+    /// - Parameters:
+    ///   - policy: Protection policy to apply
+    ///   - event: Process execution event
+    /// - Returns: Authorization result based on policy
+    private func applyProtectionPolicy(_ policy: ProtectionPolicy, for event: ProcessExecutionEvent) -> ESAuthResult {
+        // Check if VM isolation is required
+        if policy.requiresVMIsolation {
+            logger.info("VM isolation required for: \(event.executablePath)")
+            // For now, we deny execution and expect the caller to launch in VM
+            // In a full implementation, this would trigger VM creation and app installation
+            // TODO: Integrate with VMManager to launch application in isolated VM
+            return .deny
+        }
+        
+        // Apply protection level rules
+        switch policy.protectionLevel {
+        case .none:
+            // No protection, allow execution
+            return .allow
+            
+        case .basic:
+            // Basic protection, allow with monitoring
+            return .allow
+            
+        case .standard:
+            // Standard protection, allow with filtering
+            return .allow
+            
+        case .strict:
+            // Strict protection, check network filtering rules
+            if policy.networkFiltering.action == .block {
+                logger.info("Strict policy blocks execution: \(event.executablePath)")
+                return .deny
+            }
+            return .allow
+            
+        case .paranoid:
+            // Paranoid protection, deny by default unless explicitly allowed
+            if policy.networkFiltering.action == .allow && !policy.networkFiltering.allowedDomains.isEmpty {
+                return .allow
+            }
+            logger.info("Paranoid policy denies execution: \(event.executablePath)")
+            return .deny
+        }
+    }
+    
+    /// Log policy application decision
+    /// - Parameters:
+    ///   - policy: Applied protection policy
+    ///   - event: Process execution event
+    ///   - result: Authorization result
+    private func logPolicyDecision(policy: ProtectionPolicy, event: ProcessExecutionEvent, result: ESAuthResult) {
+        let action = result == .allow ? "ALLOW" : "DENY"
+        logger.info("""
+            Policy Decision: \(action)
+            - Process: \(event.executablePath) (PID: \(event.processID))
+            - Policy: \(policy.identifier)
+            - Protection Level: \(policy.protectionLevel)
+            - VM Isolation: \(policy.requiresVMIsolation)
+            - Network Action: \(policy.networkFiltering.action)
+            - Hardware Spoofing: \(policy.hardwareSpoofing)
+            """)
     }
     
     /// Handle file access events (ES_EVENT_TYPE_AUTH_OPEN)
@@ -205,6 +302,73 @@ public actor SecurityEventProcessor {
         default:
             logger.debug("Notify event: type=\(eventType.rawValue), pid=\(processID)")
         }
+        
+        // Log NOTIFY events with comprehensive details (Requirement 2.10, 17.4)
+        logSecurityEvent(
+            eventType: eventType,
+            processID: processID,
+            action: .allow, // NOTIFY events are informational
+            message: message
+        )
+    }
+    
+    /// Log security event with comprehensive details
+    /// Requirements: 2.10, 17.4
+    /// - Parameters:
+    ///   - eventType: The type of security event
+    ///   - processID: The process ID
+    ///   - action: The action taken (allow/deny)
+    ///   - message: The ES message pointer for extracting additional details
+    private func logSecurityEvent(
+        eventType: es_event_type_t,
+        processID: pid_t,
+        action: ESAuthResult,
+        message: UnsafePointer<es_message_t>
+    ) {
+        let timestamp = ISO8601DateFormatter().string(from: Date())
+        let process = message.pointee.process
+        let executablePath = extractExecutablePath(from: process) ?? "unknown"
+        
+        // Determine event type string
+        let eventTypeString: String
+        switch eventType {
+        case ES_EVENT_TYPE_AUTH_EXEC:
+            eventTypeString = "EXEC"
+        case ES_EVENT_TYPE_AUTH_OPEN:
+            eventTypeString = "OPEN"
+        case ES_EVENT_TYPE_NOTIFY_WRITE:
+            eventTypeString = "WRITE"
+        case ES_EVENT_TYPE_NOTIFY_EXIT:
+            eventTypeString = "EXIT"
+        default:
+            eventTypeString = "UNKNOWN(\(eventType.rawValue))"
+        }
+        
+        // Determine action string
+        let actionString: String
+        switch action {
+        case .allow:
+            actionString = "ALLOW"
+        case .deny:
+            actionString = "DENY"
+        case .allowWithModification:
+            actionString = "ALLOW_MODIFIED"
+        }
+        
+        // Format comprehensive log entry
+        // Format: [timestamp] [event_type] pid=<pid> path=<executable_path> action=<action> result=<result>
+        let logMessage = "[\(timestamp)] [\(eventTypeString)] pid=\(processID) path=\(executablePath) action=\(actionString) result=\(actionString)"
+        
+        // Write to file log
+        fileLogger.log(logMessage)
+        
+        // Also log to structured logger for debugging
+        logger.info("Security event logged", metadata: [
+            "event_type": .string(eventTypeString),
+            "process_id": .stringConvertible(processID),
+            "executable_path": .string(executablePath),
+            "action": .string(actionString)
+        ])
     }
     
     /// Extract executable path from process
@@ -288,7 +452,7 @@ public protocol SecurityEventHandler {
     /// Handle network event
     /// - Parameter event: Network event
     /// - Returns: Authorization result
-    func handleNetworkEvent(_ event: NetworkEvent) async -> ESAuthResult
+    func handleNetworkEvent(_ event: PrivarionSharedModels.NetworkEvent) async -> ESAuthResult
 }
 
 // MARK: - ESAuthResult Extensions

@@ -24,6 +24,11 @@ internal class SwiftNIODNSProxyServer {
     private let blocklistManager: BlocklistManager
     private let trafficMonitor: TrafficMonitoringService
     
+    // MARK: - DoH and Connection Pooling (Requirements: 4.8, 18.8)
+    private let dohClient: DoHClient?
+    private let connectionPool: DNSConnectionPool
+    private let enableDoH: Bool
+    
     // MARK: - Async Channel Management (PATTERN-2025-067: SwiftNIO Async Channel Pattern)
     private var asyncChannel: NIOAsyncChannel<AddressedEnvelope<ByteBuffer>, AddressedEnvelope<ByteBuffer>>?
     
@@ -35,20 +40,36 @@ internal class SwiftNIODNSProxyServer {
     }
     
     // MARK: - Initialization
-    internal init(port: Int, upstreamServers: [String], queryTimeout: Double) {
+    internal init(port: Int, upstreamServers: [String], queryTimeout: Double, enableDoH: Bool = false) {
         self.configuration = ConfigurationManager.shared.getCurrentConfiguration().modules.networkFilter
         self.logger = Logger(label: "privarion.swiftnio.dns.proxy")
         self.dnsPort = port
         self.upstreamServers = upstreamServers
         self.queryTimeout = queryTimeout
+        self.enableDoH = enableDoH
         self.ruleEngine = ApplicationNetworkRuleEngine()
         self.blocklistManager = BlocklistManager()
         self.trafficMonitor = TrafficMonitoringService()
         
+        // Initialize DoH client if enabled (Requirement 4.8)
+        if enableDoH {
+            self.dohClient = DoHClient(timeout: queryTimeout)
+            logger.info("DoH (DNS over HTTPS) enabled")
+        } else {
+            self.dohClient = nil
+        }
+        
+        // Initialize connection pool (Requirement 18.8)
+        self.connectionPool = DNSConnectionPool(
+            maxPoolSize: 10,
+            connectionTimeout: queryTimeout,
+            idleTimeout: 60.0
+        )
+        
         // PATTERN-2025-068: Optimal CPU utilization with core count detection
         self.eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: System.coreCount)
         
-        logger.info("SwiftNIO DNS Proxy Server initialized with \(System.coreCount) threads")
+        logger.info("SwiftNIO DNS Proxy Server initialized with \(System.coreCount) threads, DoH: \(enableDoH)")
     }
     
     deinit {
@@ -232,10 +253,44 @@ internal class SwiftNIODNSProxyServer {
         via outbound: NIOAsyncChannelOutboundWriter<AddressedEnvelope<ByteBuffer>>,
         startTime: Date
     ) async {
+        // Try DoH first if enabled (Requirement 4.8)
+        if enableDoH, let dohClient = dohClient {
+            do {
+                // Convert ByteBuffer to Data
+                let requestData = requestBuffer.withUnsafeReadableBytes { Data($0) }
+                let responseData = try await dohClient.queryRaw(requestData)
+                
+                // Convert response data to ByteBuffer
+                var responseBuffer = ByteBufferAllocator().buffer(capacity: responseData.count)
+                responseBuffer.writeBytes(responseData)
+                
+                // Send response to client
+                let envelope = AddressedEnvelope(remoteAddress: clientAddress, data: responseBuffer)
+                try await outbound.write(envelope)
+                
+                let latency = Date().timeIntervalSince(startTime)
+                logger.info("Forwarded query via DoH for \(query.domain), latency: \(String(format: "%.3f", latency * 1000))ms")
+                
+                return
+            } catch {
+                logger.warning("DoH query failed for \(query.domain), falling back to UDP: \(error)")
+                // Fall through to UDP forwarding
+            }
+        }
+        
+        // Use connection pool for UDP forwarding (Requirement 18.8)
         let upstreamServer = upstreamServers.first ?? "8.8.8.8"
         
         do {
-            // Create upstream connection using SwiftNIO
+            // Get connection from pool
+            let pooledConnection = try connectionPool.getConnection(host: upstreamServer, port: 53)
+            defer {
+                connectionPool.returnConnection(pooledConnection)
+            }
+            
+            pooledConnection.markUsed()
+            
+            // Create upstream channel using the pooled connection
             let upstreamChannel = try await DatagramBootstrap(group: eventLoopGroup)
                 .connect(host: upstreamServer, port: 53) { channel in
                     return channel.eventLoop.makeCompletedFuture {
@@ -276,9 +331,7 @@ internal class SwiftNIODNSProxyServer {
                     try await outbound.write(envelope)
                     
                     let latency = Date().timeIntervalSince(startTime)
-                    logger.info("Forwarded query for \(query.domain), latency: \(latency)ms")
-                    
-                    logger.debug("Forwarded DNS response for \(query.domain) to \(clientAddress), latency: \(String(format: "%.3f", latency * 1000))ms")
+                    logger.info("Forwarded query for \(query.domain), latency: \(String(format: "%.3f", latency * 1000))ms")
                     
                 } catch {
                     logger.error("Failed to forward DNS query for \(query.domain): \(error)")
@@ -294,7 +347,7 @@ internal class SwiftNIODNSProxyServer {
             }
             
         } catch {
-            logger.error("Failed to create upstream connection for \(query.domain): \(error)")
+            logger.error("Failed to forward DNS query for \(query.domain): \(error)")
             // Send server failure response
             let errorResponse = createDNSErrorResponse(for: query.id, errorCode: 2) // SERVFAIL
             let envelope = AddressedEnvelope(remoteAddress: clientAddress, data: errorResponse)

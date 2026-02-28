@@ -17,33 +17,37 @@ internal class DNSProxyServerFactory {
     ///   - upstreamServers: List of upstream DNS servers
     ///   - queryTimeout: Query timeout in seconds
     ///   - useSwiftNIO: Force SwiftNIO backend (nil for auto-detection)
+    ///   - enableDoH: Enable DNS over HTTPS for upstream queries
     /// - Returns: DNS proxy server instance
     internal func createDNSProxyServer(
         port: Int = 53,
         upstreamServers: [String] = ["8.8.8.8", "1.1.1.1"],
         queryTimeout: Double = 5.0,
-        useSwiftNIO: Bool? = nil
+        useSwiftNIO: Bool? = nil,
+        enableDoH: Bool = false
     ) -> DNSProxyServerProtocol {
         
         let shouldUseSwiftNIO = useSwiftNIO ?? determineOptimalBackend()
         
         if shouldUseSwiftNIO && Foundation.ProcessInfo.processInfo.operatingSystemVersion.majorVersion >= 11 {
-            logger.info("Creating SwiftNIO DNS proxy server for high-performance networking")
+            logger.info("Creating SwiftNIO DNS proxy server for high-performance networking (DoH: \(enableDoH))")
             if #available(macOS 10.15, *) {
                 let swiftNIOServer = SwiftNIODNSProxyServer(
                     port: port,
                     upstreamServers: upstreamServers,
-                    queryTimeout: queryTimeout
+                    queryTimeout: queryTimeout,
+                    enableDoH: enableDoH
                 )
                 return DNSProxyServerAdapter(swiftNIOServer: swiftNIOServer)
             }
         }
         
-        logger.info("Creating legacy DNS proxy server for compatibility")
+        logger.info("Creating legacy DNS proxy server for compatibility (DoH: \(enableDoH))")
         return DNSProxyServerAdapter(legacyServer: DNSProxyServer(
             port: port,
             upstreamServers: upstreamServers,
-            queryTimeout: queryTimeout
+            queryTimeout: queryTimeout,
+            enableDoH: enableDoH
         ))
     }
     

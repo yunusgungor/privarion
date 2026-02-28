@@ -7,6 +7,7 @@ import Logging
 internal class DNSProxyServer: DNSProxyServerProtocol {
     private let configuration: NetworkFilterConfig
     private let logger: Logger
+    private let fileLogger: FileLogger
     private var listener: NWListener?
     private var isRunning = false
     private let queue = DispatchQueue(label: "dns.proxy.server", qos: .userInitiated)
@@ -25,17 +26,39 @@ internal class DNSProxyServer: DNSProxyServerProtocol {
     // Real-time traffic monitoring service
     private let trafficMonitor: TrafficMonitoringService
     
+    // DoH and Connection Pooling (Requirements: 4.8, 18.8)
+    private let dohClient: DoHClient?
+    private let connectionPool: DNSConnectionPool
+    private let enableDoH: Bool
+    
     weak var delegate: DNSProxyServerDelegate?
     
-    internal init(port: Int, upstreamServers: [String], queryTimeout: Double) {
+    internal init(port: Int, upstreamServers: [String], queryTimeout: Double, enableDoH: Bool = false) {
         self.configuration = ConfigurationManager.shared.getCurrentConfiguration().modules.networkFilter
         self.logger = Logger(label: "privarion.dns.proxy")
+        self.fileLogger = FileLogger(logFilePath: "/var/log/privarion/network-extension.log")
         self.dnsPort = NWEndpoint.Port(integerLiteral: UInt16(port))
         self.upstreamServers = upstreamServers
         self.queryTimeout = queryTimeout
+        self.enableDoH = enableDoH
         self.ruleEngine = ApplicationNetworkRuleEngine()
         self.blocklistManager = BlocklistManager()
         self.trafficMonitor = TrafficMonitoringService()
+        
+        // Initialize DoH client if enabled (Requirement 4.8)
+        if enableDoH {
+            self.dohClient = DoHClient(timeout: queryTimeout)
+            logger.info("DoH (DNS over HTTPS) enabled")
+        } else {
+            self.dohClient = nil
+        }
+        
+        // Initialize connection pool (Requirement 18.8)
+        self.connectionPool = DNSConnectionPool(
+            maxPoolSize: 10,
+            connectionTimeout: queryTimeout,
+            idleTimeout: 60.0
+        )
     }
     
     /// Start the DNS proxy server
@@ -150,6 +173,10 @@ internal class DNSProxyServer: DNSProxyServerProtocol {
         var blockingReason: BlockingReason?
         var blocked = false
         
+        // Try to extract process information from connection (best effort)
+        // Note: NWConnection doesn't directly expose process info, but we log what we can
+        let processInfo: String? = nil // TODO: Extract from connection metadata if available
+        
         // Check per-application rules first
         let shouldBlockByAppRule = ruleEngine.shouldBlockQuery(domain: dnsQuery.domain, from: connection)
         
@@ -157,6 +184,16 @@ internal class DNSProxyServer: DNSProxyServerProtocol {
             blocked = true
             blockingReason = .applicationRule
             logger.info("Blocking DNS query for: \(dnsQuery.domain) due to application rule")
+            
+            // Log blocked query (Requirement 4.10, 17.5)
+            fileLogger.logDNSQuery(
+                domain: dnsQuery.domain,
+                action: "blocked",
+                reason: "application rule",
+                processInfo: processInfo,
+                queryType: dnsQuery.id
+            )
+            
             sendBlockedResponse(dnsQuery, connection: connection)
         }
         
@@ -166,8 +203,18 @@ internal class DNSProxyServer: DNSProxyServerProtocol {
             
             if shouldBlockByBlocklist {
                 blocked = true
-                blockingReason = .domainBlocklist // This could be more specific based on blocklist type
+                blockingReason = .domainBlocklist
                 logger.info("Blocking DNS query for: \(dnsQuery.domain) due to blocklist rule")
+                
+                // Log blocked query (Requirement 4.10, 17.5)
+                fileLogger.logDNSQuery(
+                    domain: dnsQuery.domain,
+                    action: "blocked",
+                    reason: "domain blocklist",
+                    processInfo: processInfo,
+                    queryType: dnsQuery.id
+                )
+                
                 sendBlockedResponse(dnsQuery, connection: connection)
             }
         }
@@ -180,6 +227,16 @@ internal class DNSProxyServer: DNSProxyServerProtocol {
                 blocked = true
                 blockingReason = .customRule
                 logger.info("Blocking DNS query for: \(dnsQuery.domain) due to delegate rule")
+                
+                // Log blocked query (Requirement 4.10, 17.5)
+                fileLogger.logDNSQuery(
+                    domain: dnsQuery.domain,
+                    action: "blocked",
+                    reason: "custom rule",
+                    processInfo: processInfo,
+                    queryType: dnsQuery.id
+                )
+                
                 sendBlockedResponse(dnsQuery, connection: connection)
             }
         }
@@ -201,6 +258,15 @@ internal class DNSProxyServer: DNSProxyServerProtocol {
         
         // Forward to upstream DNS server if not blocked
         if !blocked {
+            // Log allowed query (Requirement 4.10, 17.5)
+            fileLogger.logDNSQuery(
+                domain: dnsQuery.domain,
+                action: "allowed",
+                reason: "forwarded to upstream",
+                processInfo: processInfo,
+                queryType: dnsQuery.id
+            )
+            
             forwardDNSQuery(data, originalConnection: connection, domain: dnsQuery.domain, startTime: startTime)
         }
     }
@@ -254,24 +320,76 @@ internal class DNSProxyServer: DNSProxyServerProtocol {
     }
     
     private func forwardDNSQuery(_ data: Data, originalConnection: NWConnection, domain: String, startTime: Date) {
+        // Try DoH first if enabled (Requirement 4.8)
+        if enableDoH, let dohClient = dohClient {
+            Task {
+                do {
+                    let responseData = try await dohClient.queryRaw(data)
+                    
+                    originalConnection.send(content: responseData, completion: .contentProcessed { _ in })
+                    
+                    let latency = Date().timeIntervalSince(startTime)
+                    self.logger.info("Forwarded query via DoH for \(domain), latency: \(String(format: "%.3f", latency * 1000))ms")
+                    self.delegate?.dnsProxy(self, didProcessQuery: domain, blocked: false, latency: latency)
+                    
+                    return
+                } catch {
+                    self.logger.warning("DoH query failed for \(domain), falling back to UDP: \(error)")
+                    // Fall through to UDP forwarding
+                }
+                
+                // Fallback to UDP if DoH fails
+                self.forwardDNSQueryUDP(data, originalConnection: originalConnection, domain: domain, startTime: startTime)
+            }
+        } else {
+            // Use UDP directly
+            forwardDNSQueryUDP(data, originalConnection: originalConnection, domain: domain, startTime: startTime)
+        }
+    }
+    
+    private func forwardDNSQueryUDP(_ data: Data, originalConnection: NWConnection, domain: String, startTime: Date) {
         let upstreamServer = upstreamServers.first ?? "8.8.8.8"
-        let host = NWEndpoint.Host(upstreamServer)
-        let port = NWEndpoint.Port(integerLiteral: 53)
-        let endpoint = NWEndpoint.hostPort(host: host, port: port)
         
-        let connection = NWConnection(to: endpoint, using: .udp)
+        // Try to get connection from pool (Requirement 18.8)
+        let pooledConnection: PooledConnection?
+        do {
+            pooledConnection = try connectionPool.getConnection(host: upstreamServer, port: 53)
+            pooledConnection?.markUsed()
+        } catch {
+            logger.warning("Failed to get connection from pool: \(error), creating new connection")
+            pooledConnection = nil
+        }
         
-        connection.start(queue: queue)
+        let connection: NWConnection
+        if let pooled = pooledConnection {
+            connection = pooled.connection
+        } else {
+            // Create new connection if pool failed
+            let host = NWEndpoint.Host(upstreamServer)
+            let port = NWEndpoint.Port(integerLiteral: 53)
+            let endpoint = NWEndpoint.hostPort(host: host, port: port)
+            connection = NWConnection(to: endpoint, using: .udp)
+            connection.start(queue: queue)
+        }
         
         connection.send(content: data, completion: .contentProcessed { [weak self] error in
             if let error = error {
                 self?.logger.error("Failed to forward DNS query: \(error)")
+                if let pooled = pooledConnection {
+                    self?.connectionPool.closeConnection(pooled)
+                }
                 return
             }
             
             // Receive response from upstream DNS server
             connection.receive(minimumIncompleteLength: 1, maximumLength: 512) { responseData, _, _, error in
-                defer { connection.cancel() }
+                defer {
+                    if let pooled = pooledConnection {
+                        self?.connectionPool.returnConnection(pooled)
+                    } else {
+                        connection.cancel()
+                    }
+                }
                 
                 if let error = error {
                     self?.logger.error("Failed to receive DNS response: \(error)")

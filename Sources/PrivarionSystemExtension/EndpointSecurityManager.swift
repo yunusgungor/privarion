@@ -6,6 +6,7 @@ import Foundation
 import CEndpointSecurity
 import Logging
 import PrivarionSharedModels
+import PrivarionCore
 
 /// Manages the Endpoint Security Framework client lifecycle
 /// Handles initialization, event subscription, and cleanup of ES client
@@ -21,6 +22,9 @@ public class EndpointSecurityManager {
     /// Security event processor for handling events
     private let eventProcessor: SecurityEventProcessor
     
+    /// Protection policy engine for policy evaluation
+    private let policyEngine: ProtectionPolicyEngine
+    
     /// Thread-safe access to client
     private let queue = DispatchQueue(label: "com.privarion.endpointsecurity", attributes: .concurrent)
     
@@ -31,11 +35,13 @@ public class EndpointSecurityManager {
     
     /// Initialize the Endpoint Security Manager
     /// - Parameters:
+    ///   - policyEngine: Protection policy engine for policy evaluation
     ///   - logger: Optional logger instance (creates default if not provided)
     ///   - eventProcessor: Optional event processor (creates default if not provided)
-    public init(logger: Logger? = nil, eventProcessor: SecurityEventProcessor? = nil) {
+    public init(policyEngine: ProtectionPolicyEngine, logger: Logger? = nil, eventProcessor: SecurityEventProcessor? = nil) {
+        self.policyEngine = policyEngine
         self.logger = logger ?? Logger(label: "com.privarion.endpointsecurity")
-        self.eventProcessor = eventProcessor ?? SecurityEventProcessor(logger: self.logger)
+        self.eventProcessor = eventProcessor ?? SecurityEventProcessor(policyEngine: policyEngine, logger: self.logger)
     }
     
     // MARK: - Public Methods

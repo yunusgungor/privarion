@@ -7,17 +7,20 @@ import Logging
 import CEndpointSecurity
 @testable import PrivarionSystemExtension
 @testable import PrivarionSharedModels
+@testable import PrivarionCore
 
 final class EndpointSecurityManagerTests: XCTestCase {
     
     var manager: EndpointSecurityManager!
+    var policyEngine: ProtectionPolicyEngine!
     var logger: Logger!
     
     override func setUp() {
         super.setUp()
         logger = Logger(label: "com.privarion.tests.endpointsecurity")
         logger.logLevel = .debug
-        manager = EndpointSecurityManager(logger: logger)
+        policyEngine = ProtectionPolicyEngine()
+        manager = EndpointSecurityManager(policyEngine: policyEngine, logger: logger)
     }
     
     override func tearDown() {
@@ -26,6 +29,7 @@ final class EndpointSecurityManagerTests: XCTestCase {
             try? manager.unsubscribe()
         }
         manager = nil
+        policyEngine = nil
         logger = nil
         super.tearDown()
     }
@@ -261,7 +265,8 @@ final class EndpointSecurityManagerTests: XCTestCase {
     /// Check if we can initialize the ES client (requires permissions)
     /// - Returns: True if initialization is possible
     private func canInitializeClient() -> Bool {
-        let testManager = EndpointSecurityManager()
+        let testPolicyEngine = ProtectionPolicyEngine()
+        let testManager = EndpointSecurityManager(policyEngine: testPolicyEngine)
         do {
             try testManager.initialize()
             try testManager.unsubscribe()

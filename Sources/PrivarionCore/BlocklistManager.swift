@@ -12,8 +12,8 @@ internal class BlocklistManager: @unchecked Sendable {
     /// Logger instance
     private let logger: Logger
     
-    /// Configuration manager
-    private let configManager: ConfigurationManager
+    /// Configuration manager for system extension
+    private let configManager: SystemExtensionConfigurationManager
     
     /// Domain blocklist cache
     private var domainBlocklist: Set<String> = []
@@ -40,7 +40,7 @@ internal class BlocklistManager: @unchecked Sendable {
     
     internal init() {
         self.logger = Logger(label: "privarion.blocklist")
-        self.configManager = ConfigurationManager.shared
+        self.configManager = SystemExtensionConfigurationManager.shared
         
         loadBlocklistsFromConfiguration()
         loadBuiltInBlocklists()
@@ -67,10 +67,9 @@ internal class BlocklistManager: @unchecked Sendable {
                 return true
             }
             
-            // Check category blocklists
+            // Check category blocklists with pattern matching
             for (category, blocklist) in categoryBlocklists {
-                if blocklist.contains(normalizedDomain) || 
-                   blocklist.contains(where: { normalizedDomain.hasSuffix(".\($0)") }) {
+                if matchesDomainPattern(normalizedDomain, in: blocklist) {
                     statistics.categoryBlocks[category, default: 0] += 1
                     return true
                 }
@@ -210,17 +209,32 @@ internal class BlocklistManager: @unchecked Sendable {
     // MARK: - Private Methods
     
     private func loadBlocklistsFromConfiguration() {
-        let config = configManager.getCurrentConfiguration().modules.networkFilter
-        
-        cacheQueue.async(flags: .barrier) {
-            // Load basic blocked domains
-            self.domainBlocklist = Set(config.blockedDomains.map { self.normalizeDomain($0) })
-            
-            // Load category-based blocklists from configuration if available
-            // TODO: Extend configuration to support category-based blocklists
+        // Load from SystemExtensionConfiguration
+        guard let systemConfig = try? configManager.loadConfiguration() else {
+            logger.warning("Failed to load system extension configuration, using defaults")
+            return
         }
         
-        logger.info("Loaded \(domainBlocklist.count) domains from configuration")
+        cacheQueue.async(flags: .barrier) {
+            // Load tracking domains
+            let trackingDomains = Set(systemConfig.blocklists.trackingDomains.map { self.normalizeDomain($0) })
+            self.categoryBlocklists[.tracking] = trackingDomains
+            
+            // Load fingerprinting domains
+            let fingerprintingDomains = Set(systemConfig.blocklists.fingerprintingDomains.map { self.normalizeDomain($0) })
+            self.categoryBlocklists[.custom] = fingerprintingDomains
+            
+            // Load telemetry endpoints
+            let telemetryDomains = Set(systemConfig.blocklists.telemetryEndpoints.map { self.normalizeDomain($0) })
+            self.categoryBlocklists[.advertising] = telemetryDomains
+            
+            // Load custom blocklist
+            let customDomains = Set(systemConfig.blocklists.customBlocklist.map { self.normalizeDomain($0) })
+            self.domainBlocklist = customDomains
+            
+            let totalCount = trackingDomains.count + fingerprintingDomains.count + telemetryDomains.count + customDomains.count
+            self.logger.info("Loaded \(totalCount) domains from configuration")
+        }
     }
     
     private func loadBuiltInBlocklists() {
@@ -296,8 +310,37 @@ internal class BlocklistManager: @unchecked Sendable {
     }
     
     private func persistBlocklists() {
-        // TODO: Persist blocklists to configuration
-        // This would save the current state back to the configuration system
+        // Persist blocklists back to configuration
+        do {
+            var systemConfig = try configManager.loadConfiguration()
+            
+            // Update blocklist configuration from current state
+            cacheQueue.sync {
+                // Update tracking domains
+                if let trackingDomains = categoryBlocklists[.tracking] {
+                    systemConfig.blocklists.trackingDomains = Array(trackingDomains)
+                }
+                
+                // Update fingerprinting domains (stored in custom category)
+                if let fingerprintingDomains = categoryBlocklists[.custom] {
+                    systemConfig.blocklists.fingerprintingDomains = Array(fingerprintingDomains)
+                }
+                
+                // Update telemetry endpoints (stored in advertising category)
+                if let telemetryDomains = categoryBlocklists[.advertising] {
+                    systemConfig.blocklists.telemetryEndpoints = Array(telemetryDomains)
+                }
+                
+                // Update custom blocklist
+                systemConfig.blocklists.customBlocklist = Array(domainBlocklist)
+            }
+            
+            // Save configuration
+            try configManager.saveConfiguration(systemConfig)
+            logger.debug("Persisted blocklists to configuration")
+        } catch {
+            logger.error("Failed to persist blocklists: \(error)")
+        }
     }
     
     private func normalizeDomain(_ domain: String) -> String {
@@ -343,6 +386,65 @@ internal class BlocklistManager: @unchecked Sendable {
         let domainRegex = "^[a-zA-Z0-9][a-zA-Z0-9\\-]{0,61}[a-zA-Z0-9]?\\.[a-zA-Z]{2,}$"
         let predicate = NSPredicate(format: "SELF MATCHES %@", domainRegex)
         return predicate.evaluate(with: domain)
+    }
+    
+    /// Match domain against patterns in blocklist (supports wildcards)
+    /// Supports patterns like: *.analytics.*, *.telemetry.*, *.tracking.*
+    /// - Parameters:
+    ///   - domain: The domain to check
+    ///   - blocklist: Set of domain patterns to match against
+    /// - Returns: True if domain matches any pattern
+    private func matchesDomainPattern(_ domain: String, in blocklist: Set<String>) -> Bool {
+        for pattern in blocklist {
+            // Exact match
+            if pattern == domain {
+                return true
+            }
+            
+            // Subdomain match (pattern: example.com matches sub.example.com)
+            if domain.hasSuffix(".\(pattern)") {
+                return true
+            }
+            
+            // Wildcard pattern matching (*.analytics.*, *.telemetry.*, etc.)
+            if pattern.contains("*") {
+                if matchesWildcardPattern(domain, pattern: pattern) {
+                    return true
+                }
+            }
+        }
+        
+        return false
+    }
+    
+    /// Match domain against wildcard pattern
+    /// - Parameters:
+    ///   - domain: The domain to check
+    ///   - pattern: The wildcard pattern (e.g., *.analytics.*)
+    /// - Returns: True if domain matches the pattern
+    private func matchesWildcardPattern(_ domain: String, pattern: String) -> Bool {
+        // Convert wildcard pattern to regex
+        // *.analytics.* becomes ^.*\.analytics\..*$
+        var regexPattern = pattern
+            .replacingOccurrences(of: ".", with: "\\.")  // Escape dots
+            .replacingOccurrences(of: "*", with: ".*")   // Convert * to .*
+        
+        // Ensure pattern matches full domain
+        if !regexPattern.hasPrefix("^") {
+            regexPattern = "^" + regexPattern
+        }
+        if !regexPattern.hasSuffix("$") {
+            regexPattern = regexPattern + "$"
+        }
+        
+        // Test against regex
+        guard let regex = try? NSRegularExpression(pattern: regexPattern, options: .caseInsensitive) else {
+            logger.warning("Invalid wildcard pattern: \(pattern)")
+            return false
+        }
+        
+        let range = NSRange(domain.startIndex..., in: domain)
+        return regex.firstMatch(in: domain, options: [], range: range) != nil
     }
 }
 

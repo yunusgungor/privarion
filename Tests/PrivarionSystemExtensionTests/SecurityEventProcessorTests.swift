@@ -7,19 +7,23 @@ import CEndpointSecurity
 import Logging
 @testable import PrivarionSystemExtension
 @testable import PrivarionSharedModels
+@testable import PrivarionCore
 
 final class SecurityEventProcessorTests: XCTestCase {
     
     var processor: SecurityEventProcessor!
+    var policyEngine: ProtectionPolicyEngine!
     var logger: Logger!
     
     override func setUp() async throws {
         logger = Logger(label: "com.privarion.test")
-        processor = SecurityEventProcessor(logger: logger)
+        policyEngine = ProtectionPolicyEngine()
+        processor = SecurityEventProcessor(policyEngine: policyEngine, logger: logger)
     }
     
     override func tearDown() async throws {
         processor = nil
+        policyEngine = nil
         logger = nil
     }
     
@@ -175,14 +179,15 @@ final class SecurityEventProcessorTests: XCTestCase {
         let result = await handler.handleNetworkEvent(event)
         
         // Then
-        XCTAssertEqual(result, .deny, "Handler should return configured result")
+        XCTAssertEqual(result, ESAuthResult.deny, "Handler should return configured result")
     }
     
     // MARK: - Integration Tests
     
     func testProcessorInitializesWithDefaultLogger() async {
         // Given/When
-        let processor = SecurityEventProcessor()
+        let testPolicyEngine = ProtectionPolicyEngine()
+        let processor = SecurityEventProcessor(policyEngine: testPolicyEngine)
         
         // Then - should initialize without error
         XCTAssertNotNil(processor, "Processor should initialize with default logger")
@@ -191,9 +196,10 @@ final class SecurityEventProcessorTests: XCTestCase {
     func testProcessorInitializesWithCustomLogger() async {
         // Given
         let customLogger = Logger(label: "com.privarion.custom")
+        let testPolicyEngine = ProtectionPolicyEngine()
         
         // When
-        let processor = SecurityEventProcessor(logger: customLogger)
+        let processor = SecurityEventProcessor(policyEngine: testPolicyEngine, logger: customLogger)
         
         // Then - should initialize without error
         XCTAssertNotNil(processor, "Processor should initialize with custom logger")
@@ -221,7 +227,7 @@ class MockSecurityEventHandler: SecurityEventHandler {
         return fileAccessResult
     }
     
-    func handleNetworkEvent(_ event: NetworkEvent) async -> ESAuthResult {
+    func handleNetworkEvent(_ event: PrivarionSharedModels.NetworkEvent) async -> ESAuthResult {
         return networkEventResult
     }
 }
