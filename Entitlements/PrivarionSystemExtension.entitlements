@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!-- System Extension Installation -->
+    <key>com.apple.developer.system-extension.install</key>
+    <true/>
+    
+    <!-- Endpoint Security Framework -->
+    <key>com.apple.developer.endpoint-security.client</key>
+    <true/>
+    
+    <!-- Full Disk Access for file monitoring -->
+    <key>com.apple.security.files.user-selected.read-write</key>
+    <true/>
+    
+    <!-- App Sandbox (required for System Extensions) -->
+    <key>com.apple.security.app-sandbox</key>
+    <true/>
+    
+    <!-- Network access for monitoring -->
+    <key>com.apple.security.network.client</key>
+    <true/>
+    <key>com.apple.security.network.server</key>
+    <true/>
+</dict>
+</plist>

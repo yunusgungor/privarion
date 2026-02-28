@@ -29,6 +29,31 @@ let package = Package(
         .executable(
             name: "PrivarionGUI",
             targets: ["PrivarionGUI"]
+        ),
+        // System Extension for system-level protection
+        .library(
+            name: "PrivarionSystemExtension",
+            targets: ["PrivarionSystemExtension"]
+        ),
+        // Network Extension for packet filtering
+        .library(
+            name: "PrivarionNetworkExtension",
+            targets: ["PrivarionNetworkExtension"]
+        ),
+        // VM Manager for hardware isolation
+        .library(
+            name: "PrivarionVM",
+            targets: ["PrivarionVM"]
+        ),
+        // Background agent for persistent protection
+        .executable(
+            name: "PrivarionAgent",
+            targets: ["PrivarionAgent"]
+        ),
+        // Shared data models for cross-component communication
+        .library(
+            name: "PrivarionSharedModels",
+            targets: ["PrivarionSharedModels"]
         )
     ],
     dependencies: [
@@ -41,7 +66,9 @@ let package = Package(
         // KeyboardShortcuts for global macOS shortcuts
         .package(url: "https://github.com/sindresorhus/KeyboardShortcuts", from: "1.15.0"),
         // SwiftNIO for high-performance async networking
-        .package(url: "https://github.com/apple/swift-nio", from: "2.65.0")
+        .package(url: "https://github.com/apple/swift-nio", from: "2.65.0"),
+        // SwiftCheck for property-based testing
+        .package(url: "https://github.com/typelift/SwiftCheck", from: "0.12.0")
     ],
     targets: [
         // CLI executable target
@@ -88,7 +115,10 @@ let package = Package(
         // Tests for core library
         .testTarget(
             name: "PrivarionCoreTests",
-            dependencies: ["PrivarionCore"],
+            dependencies: [
+                "PrivarionCore",
+                .product(name: "SwiftCheck", package: "SwiftCheck")
+            ],
             exclude: ["AGENTS.md"]
         ),
         // Tests for hook library
@@ -105,6 +135,85 @@ let package = Package(
         .testTarget(
             name: "PrivarionGUITests",
             dependencies: ["PrivarionGUI", "PrivarionCore"]
+        ),
+        // Shared data models for cross-component communication
+        .target(
+            name: "PrivarionSharedModels",
+            dependencies: [
+                .product(name: "Logging", package: "swift-log")
+            ],
+            exclude: ["README.md"]
+        ),
+        // Tests for Shared Models
+        .testTarget(
+            name: "PrivarionSharedModelsTests",
+            dependencies: ["PrivarionSharedModels"]
+        ),
+        // System Extension target
+        .target(
+            name: "PrivarionSystemExtension",
+            dependencies: [
+                "PrivarionCore",
+                "PrivarionSharedModels",
+                .product(name: "Logging", package: "swift-log"),
+                .product(name: "Collections", package: "swift-collections")
+            ],
+            exclude: ["README.md"]
+        ),
+        // Network Extension target
+        .target(
+            name: "PrivarionNetworkExtension",
+            dependencies: [
+                "PrivarionCore",
+                "PrivarionSharedModels",
+                .product(name: "Logging", package: "swift-log"),
+                .product(name: "NIOCore", package: "swift-nio"),
+                .product(name: "NIOPosix", package: "swift-nio")
+            ],
+            exclude: ["README.md"]
+        ),
+        // VM Manager target
+        .target(
+            name: "PrivarionVM",
+            dependencies: [
+                "PrivarionSharedModels",
+                .product(name: "Logging", package: "swift-log")
+            ],
+            exclude: ["README.md"]
+        ),
+        // Background agent target
+        .executableTarget(
+            name: "PrivarionAgent",
+            dependencies: [
+                "PrivarionCore",
+                "PrivarionSystemExtension",
+                "PrivarionNetworkExtension",
+                "PrivarionVM",
+                "PrivarionSharedModels",
+                .product(name: "Logging", package: "swift-log"),
+                .product(name: "ArgumentParser", package: "swift-argument-parser")
+            ],
+            exclude: ["README.md"]
+        ),
+        // Tests for System Extension
+        .testTarget(
+            name: "PrivarionSystemExtensionTests",
+            dependencies: ["PrivarionSystemExtension", "PrivarionSharedModels"]
+        ),
+        // Tests for Network Extension
+        .testTarget(
+            name: "PrivarionNetworkExtensionTests",
+            dependencies: ["PrivarionNetworkExtension", "PrivarionSharedModels"]
+        ),
+        // Tests for VM Manager
+        .testTarget(
+            name: "PrivarionVMTests",
+            dependencies: ["PrivarionVM", "PrivarionSharedModels"]
+        ),
+        // Tests for Agent
+        .testTarget(
+            name: "PrivarionAgentTests",
+            dependencies: ["PrivarionAgent", "PrivarionSharedModels"]
         )
     ]
 )
