@@ -1,0 +1,6 @@
+module CEndpointSecurity [system] {
+    header "include/CEndpointSecurity.h"
+    link "EndpointSecurity"
+    link "bsm"
+    export *
+}

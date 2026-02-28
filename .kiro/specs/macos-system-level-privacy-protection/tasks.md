@@ -148,7 +148,7 @@ The implementation is organized into discrete, incremental tasks that build upon
     - _Requirements: 20.1_
 
 
-- [ ] 5. Implement System Extension Manager
+- [x] 5. Implement System Extension Manager
   - [x] 5.1 Create SystemExtensionCoordinator
     - Implement submitRequest(_:) to handle OSSystemExtensionRequest submission
     - Implement validateEntitlements() to check for required entitlements before installation
@@ -171,12 +171,12 @@ The implementation is organized into discrete, incremental tasks that build upon
     - Implement status persistence across app restarts
     - _Requirements: 1.3, 1.7_
 
-  - [~] 5.4 Implement extension lifecycle protocols
+  - [x] 5.4 Implement extension lifecycle protocols
     - Create SystemExtensionLifecycle protocol with willActivate, didActivate, willDeactivate, didDeactivate, didFailWithError methods
     - Implement lifecycle event logging to /var/log/privarion/system-extension.log
     - _Requirements: 1.8, 17.1_
 
-  - [~] 5.5 Write unit tests for System Extension Manager
+  - [x] 5.5 Write unit tests for System Extension Manager
     - Test installation request creation
     - Test entitlement validation
     - Test status transitions
@@ -185,7 +185,7 @@ The implementation is organized into discrete, incremental tasks that build upon
 
 
 - [ ] 6. Implement Endpoint Security Framework integration
-  - [ ] 6.1 Create EndpointSecurityManager
+  - [x] 6.1 Create EndpointSecurityManager
     - Implement initialize() to create ES client using es_new_client()
     - Implement subscribe(to:) to subscribe to event types (ES_EVENT_TYPE_AUTH_EXEC, ES_EVENT_TYPE_AUTH_OPEN, ES_EVENT_TYPE_NOTIFY_WRITE, ES_EVENT_TYPE_NOTIFY_EXIT)
     - Implement unsubscribe() to cleanup ES client
@@ -193,7 +193,7 @@ The implementation is organized into discrete, incremental tasks that build upon
     - Store ES client as OpaquePointer
     - _Requirements: 2.1-2.10, 14.6_
 
-  - [ ] 6.2 Implement SecurityEventProcessor
+  - [x] 6.2 Implement SecurityEventProcessor
     - Implement processEvent(_:) to handle incoming es_message_t events
     - Implement handleProcessExecution(_:) for process launch events
     - Implement handleFileAccess(_:) for file access events
@@ -203,24 +203,24 @@ The implementation is organized into discrete, incremental tasks that build upon
     - Implement thread-safe concurrent event handling
     - _Requirements: 2.5-2.8, 18.1_
 
-  - [ ] 6.3 Integrate with ProtectionPolicyEngine
+  - [~] 6.3 Integrate with ProtectionPolicyEngine
     - Query ProtectionPolicyEngine for policy matching in handleProcessExecution
     - Apply protection rules based on policy (allow, deny, require VM isolation)
     - Log policy application decisions
     - _Requirements: 2.6-2.7, 11.7_
 
-  - [ ] 6.4 Implement SecurityEventHandler protocol
+  - [~] 6.4 Implement SecurityEventHandler protocol
     - Create protocol with canHandle(_:) and handle(_:) methods
     - Allow pluggable event handlers for extensibility
     - _Requirements: 2.5_
 
-  - [ ] 6.5 Implement event logging
+  - [~] 6.5 Implement event logging
     - Log all subscribed events with timestamp, process ID, event type, and action taken
     - Write logs to /var/log/privarion/system-extension.log
     - Include executable path and result in log entries
     - _Requirements: 2.10, 17.4_
 
-  - [ ] 6.6 Write unit tests for Endpoint Security Manager
+  - [~] 6.6 Write unit tests for Endpoint Security Manager
     - Test ES client initialization with mock client
     - Test event subscription
     - Test process execution event handling
@@ -228,7 +228,7 @@ The implementation is organized into discrete, incremental tasks that build upon
     - Test event processing latency (<100ms)
     - _Requirements: 20.1-20.2_
 
-  - [ ] 6.7 Write integration tests for Endpoint Security
+  - [~] 6.7 Write integration tests for Endpoint Security
     - Test complete flow: process launch → policy evaluation → protection application
     - Test with various applications (Safari, Chrome, native apps)
     - Test error handling for Full Disk Access denial

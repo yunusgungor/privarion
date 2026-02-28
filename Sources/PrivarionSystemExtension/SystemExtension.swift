@@ -18,6 +18,12 @@ public class PrivarionSystemExtension: NSObject, OSSystemExtensionRequestDelegat
     // Status observers for notification
     private var statusObservers: [SystemExtensionStatusObserver] = []
     
+    // Lifecycle observers for lifecycle events
+    private var lifecycleObservers: [SystemExtensionLifecycle] = []
+    
+    // Lifecycle logger for event logging
+    private let lifecycleLogger: SystemExtensionLifecycleLogger
+    
     // Current extension status
     private var currentStatus: ExtensionStatus = .notInstalled
     
@@ -30,7 +36,11 @@ public class PrivarionSystemExtension: NSObject, OSSystemExtensionRequestDelegat
         self.extensionIdentifier = extensionIdentifier
         self.coordinator = SystemExtensionCoordinator(extensionIdentifier: extensionIdentifier)
         self.persistenceManager = ExtensionStatusPersistence()
+        self.lifecycleLogger = SystemExtensionLifecycleLogger(extensionIdentifier: extensionIdentifier)
         super.init()
+        
+        // Add lifecycle logger as observer
+        lifecycleObservers.append(lifecycleLogger)
         
         // Load persisted status on initialization
         loadPersistedStatus()
@@ -48,6 +58,11 @@ public class PrivarionSystemExtension: NSObject, OSSystemExtensionRequestDelegat
         guard #available(macOS 13.0, *) else {
             logger.error("Incompatible macOS version")
             throw SystemExtensionError.incompatibleMacOSVersion
+        }
+        
+        // Notify lifecycle observers: willActivate (installation activates the extension)
+        await notifyLifecycleObservers { observer in
+            await observer.willActivate()
         }
         
         // Update status to activating
@@ -68,6 +83,11 @@ public class PrivarionSystemExtension: NSObject, OSSystemExtensionRequestDelegat
             // Update status to active
             updateStatus(.active)
             
+            // Notify lifecycle observers: didActivate
+            await notifyLifecycleObservers { observer in
+                await observer.didActivate()
+            }
+            
         } catch {
             logger.error("System Extension installation failed", metadata: [
                 "error": .string(error.localizedDescription)
@@ -75,6 +95,11 @@ public class PrivarionSystemExtension: NSObject, OSSystemExtensionRequestDelegat
             
             // Update status to error with error message
             updateStatus(.error(error.localizedDescription))
+            
+            // Notify lifecycle observers: didFailWithError
+            await notifyLifecycleObservers { observer in
+                await observer.didFailWithError(error)
+            }
             
             throw error
         }
@@ -92,6 +117,11 @@ public class PrivarionSystemExtension: NSObject, OSSystemExtensionRequestDelegat
         guard #available(macOS 13.0, *) else {
             logger.error("Incompatible macOS version")
             throw SystemExtensionError.incompatibleMacOSVersion
+        }
+        
+        // Notify lifecycle observers: willActivate
+        await notifyLifecycleObservers { observer in
+            await observer.willActivate()
         }
         
         // Update status to activating
@@ -112,6 +142,11 @@ public class PrivarionSystemExtension: NSObject, OSSystemExtensionRequestDelegat
             // Update status to active
             updateStatus(.active)
             
+            // Notify lifecycle observers: didActivate
+            await notifyLifecycleObservers { observer in
+                await observer.didActivate()
+            }
+            
         } catch {
             logger.error("System Extension activation failed", metadata: [
                 "error": .string(error.localizedDescription)
@@ -119,6 +154,11 @@ public class PrivarionSystemExtension: NSObject, OSSystemExtensionRequestDelegat
             
             // Update status to error with error message
             updateStatus(.error(error.localizedDescription))
+            
+            // Notify lifecycle observers: didFailWithError
+            await notifyLifecycleObservers { observer in
+                await observer.didFailWithError(error)
+            }
             
             throw error
         }
@@ -136,6 +176,11 @@ public class PrivarionSystemExtension: NSObject, OSSystemExtensionRequestDelegat
         guard #available(macOS 13.0, *) else {
             logger.error("Incompatible macOS version")
             throw SystemExtensionError.incompatibleMacOSVersion
+        }
+        
+        // Notify lifecycle observers: willDeactivate
+        await notifyLifecycleObservers { observer in
+            await observer.willDeactivate()
         }
         
         // Update status to deactivating
@@ -156,6 +201,11 @@ public class PrivarionSystemExtension: NSObject, OSSystemExtensionRequestDelegat
             // Update status to installed (but not active)
             updateStatus(.installed)
             
+            // Notify lifecycle observers: didDeactivate
+            await notifyLifecycleObservers { observer in
+                await observer.didDeactivate()
+            }
+            
         } catch {
             logger.error("System Extension deactivation failed", metadata: [
                 "error": .string(error.localizedDescription)
@@ -163,6 +213,11 @@ public class PrivarionSystemExtension: NSObject, OSSystemExtensionRequestDelegat
             
             // Update status to error with error message
             updateStatus(.error(error.localizedDescription))
+            
+            // Notify lifecycle observers: didFailWithError
+            await notifyLifecycleObservers { observer in
+                await observer.didFailWithError(error)
+            }
             
             throw error
         }
@@ -212,6 +267,27 @@ public class PrivarionSystemExtension: NSObject, OSSystemExtensionRequestDelegat
         ])
     }
     
+    /// Add a lifecycle observer
+    /// - Parameter observer: Observer to receive lifecycle event notifications
+    public func addLifecycleObserver(_ observer: SystemExtensionLifecycle) {
+        lifecycleObservers.append(observer)
+        logger.debug("Lifecycle observer added", metadata: [
+            "observer_count": .stringConvertible(lifecycleObservers.count)
+        ])
+    }
+    
+    /// Remove a lifecycle observer
+    /// Note: This removes all observers of the same type since SystemExtensionLifecycle is not AnyObject
+    /// - Parameter observerType: Type of observer to remove
+    public func removeLifecycleObserver<T: SystemExtensionLifecycle>(ofType observerType: T.Type) {
+        lifecycleObservers.removeAll { observer in
+            type(of: observer) == observerType
+        }
+        logger.debug("Lifecycle observer removed", metadata: [
+            "observer_count": .stringConvertible(lifecycleObservers.count)
+        ])
+    }
+    
     // MARK: - Private Methods
     
     /// Load persisted status from disk
@@ -255,6 +331,14 @@ public class PrivarionSystemExtension: NSObject, OSSystemExtensionRequestDelegat
             "status": .string(String(describing: newStatus)),
             "observer_count": .stringConvertible(statusObservers.count)
         ])
+    }
+    
+    /// Notify all lifecycle observers
+    /// - Parameter notification: Closure that calls the appropriate lifecycle method on each observer
+    private func notifyLifecycleObservers(_ notification: @escaping (SystemExtensionLifecycle) async -> Void) async {
+        for observer in lifecycleObservers {
+            await notification(observer)
+        }
     }
     
     // MARK: - OSSystemExtensionRequestDelegate

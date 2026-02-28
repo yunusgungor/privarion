@@ -101,6 +101,11 @@ let package = Package(
             name: "PrivarionHook",
             dependencies: []
         ),
+        // C wrapper for EndpointSecurity framework
+        .systemLibrary(
+            name: "CEndpointSecurity",
+            path: "Sources/CEndpointSecurity"
+        ),
         // SwiftUI GUI application target
         .executableTarget(
             name: "PrivarionGUI",
@@ -155,6 +160,7 @@ let package = Package(
             dependencies: [
                 "PrivarionCore",
                 "PrivarionSharedModels",
+                "CEndpointSecurity",
                 .product(name: "Logging", package: "swift-log"),
                 .product(name: "Collections", package: "swift-collections")
             ],
@@ -193,7 +199,10 @@ let package = Package(
                 .product(name: "Logging", package: "swift-log"),
                 .product(name: "ArgumentParser", package: "swift-argument-parser")
             ],
-            exclude: ["README.md"]
+            exclude: ["README.md"],
+            linkerSettings: [
+                .linkedLibrary("bsm")
+            ]
         ),
         // Tests for System Extension
         .testTarget(
