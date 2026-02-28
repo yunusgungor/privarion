@@ -90,6 +90,7 @@ enum PrivarionCLIError: Error, LocalizedError {
 }
 
 /// Main CLI tool for Privarion privacy protection system
+@available(macOS 10.15, macCatalyst 13, iOS 13, tvOS 13, watchOS 6, *)
 struct PrivacyCtl: AsyncParsableCommand {
     
     static let configuration = CommandConfiguration(
@@ -148,6 +149,7 @@ struct PrivacyCtl: AsyncParsableCommand {
 }
 
 /// Start the privacy protection system
+@available(macOS 13.0, *)
 struct StartCommand: ParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "start",
@@ -337,6 +339,7 @@ struct StartCommand: ParsableCommand {
 }
 
 /// Stop the privacy protection system
+@available(macOS 13.0, *)
 struct StopCommand: ParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "stop",
@@ -432,6 +435,7 @@ struct StopCommand: ParsableCommand {
 }
 
 /// Show system status
+@available(macOS 13.0, *)
 struct StatusCommand: ParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "status",
@@ -618,6 +622,7 @@ struct StatusCommand: ParsableCommand {
 }
 
 /// Configuration management commands
+@available(macOS 13.0, *)
 struct ConfigCommand: ParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "config",
@@ -631,6 +636,7 @@ struct ConfigCommand: ParsableCommand {
     )
 }
 
+@available(macOS 13.0, *)
 struct ConfigListCommand: ParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "list",
@@ -685,6 +691,7 @@ struct ConfigListCommand: ParsableCommand {
     }
 }
 
+@available(macOS 13.0, *)
 struct ConfigGetCommand: ParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "get",
@@ -727,6 +734,7 @@ struct ConfigGetCommand: ParsableCommand {
     }
 }
 
+@available(macOS 13.0, *)
 struct ConfigSetCommand: ParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "set",
@@ -981,6 +989,7 @@ struct ConfigSetCommand: ParsableCommand {
     }
 }
 
+@available(macOS 13.0, *)
 struct ConfigResetCommand: ParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "reset",
@@ -1007,6 +1016,7 @@ struct ConfigResetCommand: ParsableCommand {
 }
 
 /// Profile management commands
+@available(macOS 13.0, *)
 struct ProfileCommand: ParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "profile",
@@ -1021,6 +1031,7 @@ struct ProfileCommand: ParsableCommand {
     )
 }
 
+@available(macOS 13.0, *)
 struct ProfileListCommand: ParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "list",
@@ -1047,6 +1058,7 @@ struct ProfileListCommand: ParsableCommand {
     }
 }
 
+@available(macOS 13.0, *)
 struct ProfileSwitchCommand: ParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "switch",
@@ -1071,6 +1083,7 @@ struct ProfileSwitchCommand: ParsableCommand {
     }
 }
 
+@available(macOS 13.0, *)
 struct ProfileCreateCommand: ParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "create",
@@ -1102,6 +1115,7 @@ struct ProfileCreateCommand: ParsableCommand {
     }
 }
 
+@available(macOS 13.0, *)
 struct ProfileDeleteCommand: ParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "delete",
@@ -1122,6 +1136,7 @@ struct ProfileDeleteCommand: ParsableCommand {
     }
 }
 
+@available(macOS 13.0, *)
 struct ProfileExportCommand: ParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "export",
@@ -1163,6 +1178,7 @@ struct ProfileExportCommand: ParsableCommand {
 }
 
 /// Logs management command
+@available(macOS 13.0, *)
 struct LogsCommand: ParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "logs",
@@ -1230,6 +1246,7 @@ struct LogsCommand: ParsableCommand {
     }
 }
 
+@available(macOS 13.0, *)
 struct LogsExportCommand: ParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "export",
@@ -1306,6 +1323,7 @@ struct LogsExportCommand: ParsableCommand {
 
 /// Inject syscall hooks into target application via DYLD
 /// This implements STORY-2025-002 AC001 requirement
+@available(macOS 13.0, *)
 struct InjectCommand: ParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "inject",
@@ -1415,6 +1433,7 @@ struct InjectCommand: ParsableCommand {
 }
 
 /// Manage syscall hooks directly
+@available(macOS 13.0, *)
 struct HookCommand: ParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "hook",
@@ -1428,6 +1447,7 @@ struct HookCommand: ParsableCommand {
 }
 
 /// List available and active hooks
+@available(macOS 13.0, *)
 struct HookListCommand: ParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "list",
@@ -1458,6 +1478,7 @@ struct HookListCommand: ParsableCommand {
 }
 
 /// Test syscall hook functionality
+@available(macOS 13.0, *)
 struct HookTestCommand: ParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "test",
@@ -1499,6 +1520,7 @@ struct HookTestCommand: ParsableCommand {
 }
 
 /// Show hook system status
+@available(macOS 13.0, *)
 struct HookStatusCommand: ParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "status",
@@ -1559,6 +1581,7 @@ enum ConfigError: Error, LocalizedError {
 }
 
 /// Identity backup and restore management commands
+@available(macOS 13.0, *)
 struct IdentityCommand: ParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "identity",
@@ -1604,6 +1627,7 @@ struct IdentityCommand: ParsableCommand {
 }
 
 /// Backup current system identity
+@available(macOS 13.0, *)
 struct IdentityBackupCommand: ParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "backup",
@@ -1775,6 +1799,7 @@ struct IdentityBackupCommand: ParsableCommand {
 }
 
 /// Restore from identity backup
+@available(macOS 13.0, *)
 struct IdentityRestoreCommand: ParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "restore",
@@ -1908,6 +1933,7 @@ struct IdentityRestoreCommand: ParsableCommand {
 }
 
 /// List all identity backups
+@available(macOS 13.0, *)
 struct IdentityListCommand: ParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "list",
@@ -2015,6 +2041,7 @@ struct IdentityListCommand: ParsableCommand {
 }
 
 /// Show backup sessions information
+@available(macOS 13.0, *)
 struct IdentitySessionsCommand: ParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "sessions",
@@ -2118,6 +2145,7 @@ struct IdentitySessionsCommand: ParsableCommand {
 }
 
 /// Show detailed information about a backup
+@available(macOS 13.0, *)
 struct IdentityInfoCommand: ParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "info",
@@ -2329,6 +2357,7 @@ struct IdentityInfoCommand: ParsableCommand {
 }
 
 /// Validate backup integrity
+@available(macOS 13.0, *)
 struct IdentityValidateCommand: ParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "validate",
@@ -2645,6 +2674,7 @@ private struct ValidationResult {
 }
 
 /// Clean up old backup files
+@available(macOS 13.0, *)
 struct IdentityCleanupCommand: ParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "cleanup",
@@ -2871,6 +2901,7 @@ struct IdentityCleanupCommand: ParsableCommand {
 }
 
 /// Delete specific backup or session
+@available(macOS 13.0, *)
 struct IdentityDeleteCommand: ParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "delete",
@@ -3150,6 +3181,7 @@ struct IdentityDeleteCommand: ParsableCommand {
 }
 
 /// System management commands
+@available(macOS 13.0, *)
 struct SystemCommand: ParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "system",
@@ -3176,6 +3208,7 @@ struct SystemCommand: ParsableCommand {
     )
 }
 
+@available(macOS 13.0, *)
 struct SystemStartCommand: ParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "start",
@@ -3244,6 +3277,7 @@ struct SystemStartCommand: ParsableCommand {
     }
 }
 
+@available(macOS 13.0, *)
 struct SystemStopCommand: ParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "stop",
@@ -3301,6 +3335,7 @@ struct SystemStopCommand: ParsableCommand {
     }
 }
 
+@available(macOS 13.0, *)
 struct SystemStatusCommand: ParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "status",
@@ -3350,3 +3385,6 @@ extension String {
         return String(repeating: lhs, count: rhs)
     }
 }
+
+// Entry point - Run the CLI
+PrivacyCtl.main()

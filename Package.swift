@@ -60,6 +60,7 @@ let package = Package(
                 "PrivarionHook",
                 .product(name: "Logging", package: "swift-log"),
                 .product(name: "Collections", package: "swift-collections"),
+                .product(name: "ArgumentParser", package: "swift-argument-parser"),
                 .product(name: "NIOCore", package: "swift-nio"),
                 .product(name: "NIOPosix", package: "swift-nio"),
                 .product(name: "NIOFoundationCompat", package: "swift-nio"),

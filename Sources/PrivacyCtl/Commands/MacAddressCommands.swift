@@ -3,6 +3,7 @@ import ArgumentParser
 import PrivarionCore
 
 /// MAC Address Spoofing Commands - Network Interface Privacy Management
+@available(macOS 13.0, *)
 struct MacAddressCommand: ParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "mac-address",
