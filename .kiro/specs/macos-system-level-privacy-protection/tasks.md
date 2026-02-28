@@ -149,14 +149,14 @@ The implementation is organized into discrete, incremental tasks that build upon
 
 
 - [ ] 5. Implement System Extension Manager
-  - [ ] 5.1 Create SystemExtensionCoordinator
+  - [x] 5.1 Create SystemExtensionCoordinator
     - Implement submitRequest(_:) to handle OSSystemExtensionRequest submission
     - Implement validateEntitlements() to check for required entitlements before installation
     - Implement handleActivationResult(_:) to process activation success/failure
     - Use async/await for asynchronous operations
     - _Requirements: 1.1-1.8, 12.1-12.10_
 
-  - [ ] 5.2 Implement PrivarionSystemExtension class
+  - [x] 5.2 Implement PrivarionSystemExtension class
     - Conform to OSSystemExtensionRequestDelegate protocol
     - Implement installExtension() to create and submit installation request
     - Implement activateExtension() to activate installed extension
@@ -165,18 +165,18 @@ The implementation is organized into discrete, incremental tasks that build upon
     - Handle user approval/denial in delegate methods
     - _Requirements: 1.1-1.8_
 
-  - [ ] 5.3 Implement extension status management
+  - [x] 5.3 Implement extension status management
     - Create ExtensionStatus enum (notInstalled, installed, active, activating, deactivating, error)
     - Implement SystemExtensionStatusObserver protocol for status change notifications
     - Implement status persistence across app restarts
     - _Requirements: 1.3, 1.7_
 
-  - [ ] 5.4 Implement extension lifecycle protocols
+  - [~] 5.4 Implement extension lifecycle protocols
     - Create SystemExtensionLifecycle protocol with willActivate, didActivate, willDeactivate, didDeactivate, didFailWithError methods
     - Implement lifecycle event logging to /var/log/privarion/system-extension.log
     - _Requirements: 1.8, 17.1_
 
-  - [ ] 5.5 Write unit tests for System Extension Manager
+  - [~] 5.5 Write unit tests for System Extension Manager
     - Test installation request creation
     - Test entitlement validation
     - Test status transitions

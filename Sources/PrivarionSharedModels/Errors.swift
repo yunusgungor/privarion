@@ -13,6 +13,7 @@ public enum SystemExtensionError: Error, LocalizedError {
     case notarizationFailed
     case userDeniedApproval
     case incompatibleMacOSVersion
+    case notImplemented
     
     public var errorDescription: String? {
         switch self {
@@ -28,6 +29,8 @@ public enum SystemExtensionError: Error, LocalizedError {
             return "User denied System Extension approval"
         case .incompatibleMacOSVersion:
             return "Incompatible macOS version. Requires macOS 13.0 or later"
+        case .notImplemented:
+            return "Feature not yet implemented"
         }
     }
 }
