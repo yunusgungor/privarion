@@ -220,7 +220,7 @@ The implementation is organized into discrete, incremental tasks that build upon
     - Include executable path and result in log entries
     - _Requirements: 2.10, 17.4_
 
-  - [ ] 6.6 Write unit tests for Endpoint Security Manager
+  - [x] 6.6 Write unit tests for Endpoint Security Manager
     - Test ES client initialization with mock client
     - Test event subscription
     - Test process execution event handling
@@ -228,7 +228,7 @@ The implementation is organized into discrete, incremental tasks that build upon
     - Test event processing latency (<100ms)
     - _Requirements: 20.1-20.2_
 
-  - [ ] 6.7 Write integration tests for Endpoint Security
+  - [x] 6.7 Write integration tests for Endpoint Security
     - Test complete flow: process launch → policy evaluation → protection application
     - Test with various applications (Safari, Chrome, native apps)
     - Test error handling for Full Disk Access denial
@@ -292,21 +292,21 @@ The implementation is organized into discrete, incremental tasks that build upon
 
 
 - [ ] 9. Implement Network Extension - Packet Tunnel Provider
-  - [ ] 9.1 Create PrivarionPacketTunnelProvider
+  - [x] 9.1 Create PrivarionPacketTunnelProvider
     - Subclass NEPacketTunnelProvider
     - Override startTunnel(options:) to initialize packet tunnel
     - Override stopTunnel(with:) to cleanup tunnel
     - Create virtual network interface for traffic interception
     - _Requirements: 3.1-3.12_
 
-  - [ ] 9.2 Configure tunnel network settings
+  - [x] 9.2 Configure tunnel network settings
     - Configure tunnel settings with local address 127.0.0.1
     - Configure DNS settings to route queries through local proxy (127.0.0.1:53)
     - Configure IPv4 settings with included routes for all traffic (0.0.0.0/0)
     - Apply settings using setTunnelNetworkSettings(_:)
     - _Requirements: 3.2-3.4_
 
-  - [ ] 9.3 Implement packet processing loop
+  - [x] 9.3 Implement packet processing loop
     - Read packets from packetFlow in continuous async loop
     - Parse packet headers to extract destination IP and port
     - Filter packets based on Protection_Policy
@@ -314,7 +314,7 @@ The implementation is organized into discrete, incremental tasks that build upon
     - Maintain packet processing latency below 10ms for 95% of packets
     - _Requirements: 3.5-3.9, 18.2_
 
-  - [ ] 9.4 Implement PacketFilter class
+  - [x] 9.4 Implement PacketFilter class
     - Implement filterPacket(_:protocol:) to evaluate packets against rules
     - Implement extractDestination(_:) to parse packet headers
     - Return FilterResult (allow, drop, modify)
@@ -322,20 +322,20 @@ The implementation is organized into discrete, incremental tasks that build upon
     - Modify packets destined for fingerprinting domains
     - _Requirements: 3.6-3.8_
 
-  - [ ] 9.5 Implement error handling and graceful shutdown
+  - [x] 9.5 Implement error handling and graceful shutdown
     - Handle tunnel start failures with descriptive errors
     - Implement cleanup of network settings on shutdown
     - Restore original network configuration
     - _Requirements: 3.11-3.12, 19.2_
 
-  - [ ] 9.6 Write unit tests for Packet Tunnel Provider
+  - [~] 9.6 Write unit tests for Packet Tunnel Provider
     - Test tunnel configuration
     - Test packet filtering (allow, drop, modify)
     - Test packet processing latency (<10ms)
     - Test graceful shutdown
     - _Requirements: 20.1, 20.3_
 
-  - [ ] 9.7 Write integration tests for Network Extension
+  - [~] 9.7 Write integration tests for Network Extension
     - Test complete flow: network request → packet interception → filtering → response
     - Test with various network configurations (Wi-Fi, Ethernet)
     - Test with VPN active
@@ -343,33 +343,33 @@ The implementation is organized into discrete, incremental tasks that build upon
 
 
 - [ ] 10. Implement Content Filter Extension
-  - [ ] 10.1 Create PrivarionContentFilterProvider
+  - [~] 10.1 Create PrivarionContentFilterProvider
     - Subclass NEFilterDataProvider
     - Override handleNewFlow(_:) to evaluate new network flows
     - Override handleInboundData(from:readBytesStartOffset:readBytes:) to inspect inbound data
     - Override handleOutboundData(from:readBytesStartOffset:readBytes:) to inspect outbound data
     - _Requirements: 5.1-5.10_
 
-  - [ ] 10.2 Implement flow filtering
+  - [~] 10.2 Implement flow filtering
     - Evaluate flow destination against tracking domain list
     - Return drop verdict for tracking domains
     - Return filter verdict with monitoring for fingerprinting domains
     - Support filtering for Safari and WKWebView
     - _Requirements: 5.2-5.4, 5.9_
 
-  - [ ] 10.3 Implement content inspection
+  - [~] 10.3 Implement content inspection
     - Inspect inbound data for fingerprinting patterns (canvas fingerprinting, WebGL, font enumeration)
     - Modify or block data containing fingerprinting code
     - Inspect outbound data for telemetry patterns (analytics payloads, tracking beacons)
     - Block transmission of telemetry data
     - _Requirements: 5.5-5.8_
 
-  - [ ] 10.4 Implement flow logging
+  - [~] 10.4 Implement flow logging
     - Log all blocked flows with URL, timestamp, and reason
     - Write logs to /var/log/privarion/network-extension.log
     - _Requirements: 5.10, 17.3_
 
-  - [ ] 10.5 Write unit tests for Content Filter Provider
+  - [~] 10.5 Write unit tests for Content Filter Provider
     - Test flow evaluation (allow, drop, filter)
     - Test fingerprinting pattern detection
     - Test telemetry pattern detection
@@ -377,38 +377,38 @@ The implementation is organized into discrete, incremental tasks that build upon
 
 
 - [ ] 11. Implement Telemetry Blocker
-  - [ ] 11.1 Create TelemetryDatabase
+  - [~] 11.1 Create TelemetryDatabase
     - Implement storage for known telemetry endpoints
     - Implement isKnownTelemetryEndpoint(_:) to check domain against database
     - Implement addEndpoint and removeEndpoint methods
     - Implement loadFromRemote() to update database from remote source
     - _Requirements: 10.1, 10.10_
 
-  - [ ] 11.2 Create TelemetryPattern struct
+  - [~] 11.2 Create TelemetryPattern struct
     - Define pattern structure with type, domainPattern, pathPattern, headerPatterns, payloadPattern
     - Implement TelemetryType enum (analytics, tracking, crashReporting, usageStatistics)
     - _Requirements: 10.2_
 
-  - [ ] 11.3 Implement TelemetryPatternMatcher
+  - [~] 11.3 Implement TelemetryPatternMatcher
     - Implement pattern matching for telemetry domains (*.analytics.*, *.telemetry.*, *.tracking.*)
     - Implement pattern matching for telemetry paths (/api/analytics, /track, /collect)
     - Implement header inspection for telemetry indicators (X-Analytics-*, X-Tracking-*)
     - Implement payload inspection for telemetry JSON structures
     - _Requirements: 10.4-10.7_
 
-  - [ ] 11.4 Implement TelemetryBlocker
+  - [~] 11.4 Implement TelemetryBlocker
     - Implement shouldBlock(_:) to evaluate network requests
     - Implement detectTelemetryPattern(in:) to identify telemetry in data
     - Integrate with NetworkExtension for request blocking
     - Support user-defined telemetry patterns
     - _Requirements: 10.2-10.3, 10.9_
 
-  - [ ] 11.5 Implement telemetry logging
+  - [~] 11.5 Implement telemetry logging
     - Log all blocked telemetry requests with domain, path, and timestamp
     - Write logs to /var/log/privarion/network-extension.log
     - _Requirements: 10.8, 17.5_
 
-  - [ ] 11.6 Write unit tests for Telemetry Blocker
+  - [~] 11.6 Write unit tests for Telemetry Blocker
     - Test telemetry domain detection
     - Test telemetry path detection
     - Test header inspection
@@ -421,31 +421,31 @@ The implementation is organized into discrete, incremental tasks that build upon
   - Ensure all tests pass, ask the user if questions arise.
 
 - [ ] 13. Implement Hardware Profile Manager
-  - [ ] 13.1 Create HardwareProfile struct (extend existing)
+  - [~] 13.1 Create HardwareProfile struct (extend existing)
     - Add id (UUID), name, hardwareModel (Data), machineIdentifier (Data), macAddress, serialNumber, createdAt
     - Implement validate() to check identifier formats
     - Conform to Codable and HardwareProfileProtocol
     - _Requirements: 9.1-9.8_
 
-  - [ ] 13.2 Implement predefined hardware profiles
+  - [~] 13.2 Implement predefined hardware profiles
     - Create static predefinedProfiles() method
     - Define profiles for MacBook Pro 2021, MacBook Air 2022, iMac 2021, Mac Mini 2023, Mac Studio 2022
     - Use realistic hardware model identifiers and serial number formats
     - _Requirements: 9.5_
 
-  - [ ] 13.3 Implement HardwareProfileManager
+  - [~] 13.3 Implement HardwareProfileManager
     - Implement createProfile(name:template:) to create new profiles
     - Implement getProfile(id:), listProfiles(), deleteProfile(id:)
     - Implement exportProfile(_:) and importProfile(_:) for backup/restore
     - Store profiles in /Library/Application Support/Privarion/profiles.json
     - _Requirements: 9.6-9.11_
 
-  - [ ] 13.4 Implement ProfileTemplate enum
+  - [~] 13.4 Implement ProfileTemplate enum
     - Define templates: macBookPro2021, macBookAir2022, iMac2021, macMini2023, macStudio2022, custom
     - Each template provides realistic hardware identifiers
     - _Requirements: 9.5-9.6_
 
-  - [ ] 13.5 Write unit tests for Hardware Profile Manager
+  - [~] 13.5 Write unit tests for Hardware Profile Manager
     - Test profile creation with templates
     - Test profile validation (valid and invalid formats)
     - Test profile serialization/deserialization
@@ -454,7 +454,7 @@ The implementation is organized into discrete, incremental tasks that build upon
 
 
 - [ ] 14. Implement Virtualization Framework integration
-  - [ ] 14.1 Create VMConfigurationBuilder
+  - [~] 14.1 Create VMConfigurationBuilder
     - Implement buildConfiguration(profile:) to create VZVirtualMachineConfiguration
     - Implement createPlatformConfiguration(_:) with custom hardware model and machine identifier
     - Implement createNetworkDevice(macAddress:) with custom MAC address
@@ -463,20 +463,20 @@ The implementation is organized into discrete, incremental tasks that build upon
     - Configure memory size (4GB-16GB based on host, max 50% of host)
     - _Requirements: 8.1-8.7_
 
-  - [ ] 14.2 Implement configuration validation
+  - [~] 14.2 Implement configuration validation
     - Validate configuration using VZVirtualMachineConfiguration.validate()
     - Return descriptive validation errors
     - Check resource limits before VM creation
     - _Requirements: 8.8-8.9_
 
-  - [ ] 14.3 Create VMResourceManager
+  - [~] 14.3 Create VMResourceManager
     - Implement allocateResources(for:) to reserve CPU and memory
     - Implement releaseResources(for:) to free resources on VM shutdown
     - Implement enforceResourceLimits(_:) to limit VM to 50% CPU and 50% memory
     - Implement getResourceUsage(_:) to query VM resource consumption
     - _Requirements: 8.13, 18.6-18.7_
 
-  - [ ] 14.4 Implement VMManager
+  - [~] 14.4 Implement VMManager
     - Implement createVM(with:) to create VZVirtualMachine with hardware profile
     - Implement startVM(_:) to start virtual machine
     - Implement stopVM(_:) to gracefully stop virtual machine
@@ -486,13 +486,13 @@ The implementation is organized into discrete, incremental tasks that build upon
     - Track active VMs in dictionary [UUID: VZVirtualMachine]
     - _Requirements: 8.1-8.12_
 
-  - [ ] 14.5 Implement VM lifecycle observer
+  - [~] 14.5 Implement VM lifecycle observer
     - Create VMLifecycleObserver protocol with vmDidStart, vmDidStop, vmDidCrash methods
     - Implement crash handling with resource cleanup
     - Log VM lifecycle events to /var/log/privarion/vm-manager.log
     - _Requirements: 8.14, 17.6_
 
-  - [ ] 14.6 Write unit tests for VM Manager
+  - [~] 14.6 Write unit tests for VM Manager
     - Test VM configuration building
     - Test configuration validation (valid and invalid)
     - Test resource allocation and limits
@@ -500,7 +500,7 @@ The implementation is organized into discrete, incremental tasks that build upon
     - Test snapshot and restore
     - _Requirements: 20.1, 20.4_
 
-  - [ ] 14.7 Write integration tests for VM Manager
+  - [~] 14.7 Write integration tests for VM Manager
     - Test complete flow: VM creation → application installation → execution → hardware verification
     - Test resource limit enforcement
     - Test crash recovery
@@ -508,7 +508,7 @@ The implementation is organized into discrete, incremental tasks that build upon
 
 
 - [ ] 15. Implement Transparent Proxy Architecture
-  - [ ] 15.1 Create NetworkSettingsManager
+  - [~] 15.1 Create NetworkSettingsManager
     - Implement configureSystemProxy() to set system-wide proxy settings
     - Implement restoreOriginalSettings() to restore pre-proxy settings
     - Implement backupCurrentSettings() to save current network configuration
@@ -516,13 +516,13 @@ The implementation is organized into discrete, incremental tasks that build upon
     - Use networksetup command with admin privileges for configuration
     - _Requirements: 7.4-7.8, 7.11_
 
-  - [ ] 15.2 Create NetworkSettings and ProxyConfiguration structs
+  - [~] 15.2 Create NetworkSettings and ProxyConfiguration structs
     - Implement NetworkSettings with interfaces, dnsServers, webProxy, secureWebProxy
     - Implement ProxyConfiguration with host, port, enabled
     - Implement NetworkInterface struct with name and type
     - _Requirements: 7.6-7.8_
 
-  - [ ] 15.3 Implement TransparentProxyCoordinator
+  - [~] 15.3 Implement TransparentProxyCoordinator
     - Implement start() to start all proxy components (DNS, HTTP, HTTPS)
     - Implement stop() to stop all proxies and restore network settings
     - Implement getStatus() to query proxy status
@@ -532,26 +532,26 @@ The implementation is organized into discrete, incremental tasks that build upon
     - Configure system to use local proxies for all active interfaces
     - _Requirements: 7.1-7.9_
 
-  - [ ] 15.4 Implement HTTP/HTTPS proxy servers
+  - [~] 15.4 Implement HTTP/HTTPS proxy servers
     - Create HTTPProxyServer for HTTP traffic proxying
     - Create HTTPSProxyServer for HTTPS traffic proxying with TLS interception
     - Integrate with TelemetryBlocker for request filtering
     - Integrate with ProtectionPolicyEngine for policy application
     - _Requirements: 7.2-7.3_
 
-  - [ ] 15.5 Implement proxy verification
+  - [~] 15.5 Implement proxy verification
     - Verify proxy functionality after configuration
     - Test DNS resolution through local proxy
     - Test HTTP/HTTPS requests through local proxies
     - _Requirements: 7.12_
 
-  - [ ] 15.6 Write unit tests for Transparent Proxy
+  - [~] 15.6 Write unit tests for Transparent Proxy
     - Test network settings backup and restore
     - Test proxy configuration for multiple interfaces
     - Test proxy start and stop
     - _Requirements: 20.1_
 
-  - [ ] 15.7 Write integration tests for Transparent Proxy
+  - [~] 15.7 Write integration tests for Transparent Proxy
     - Test complete flow: configure proxies → make network request → verify filtering
     - Test with multiple network interfaces
     - Test settings restoration on failure
@@ -559,7 +559,7 @@ The implementation is organized into discrete, incremental tasks that build upon
 
 
 - [ ] 16. Implement Privarion Agent (Launch Agent)
-  - [ ] 16.1 Create PermissionManager
+  - [~] 16.1 Create PermissionManager
     - Implement checkSystemExtensionPermission() to verify extension approval
     - Implement checkFullDiskAccessPermission() to verify FDA permission
     - Implement checkNetworkExtensionPermission() to verify network extension approval
@@ -568,12 +568,12 @@ The implementation is organized into discrete, incremental tasks that build upon
     - Return PermissionStatus (granted, denied, notDetermined)
     - _Requirements: 14.1-14.11_
 
-  - [ ] 16.2 Create AgentStatus struct
+  - [~] 16.2 Create AgentStatus struct
     - Include isRunning, systemExtensionStatus, endpointSecurityActive, networkExtensionActive, activeVMCount, permissions
     - Provide comprehensive status snapshot for monitoring
     - _Requirements: 6.9_
 
-  - [ ] 16.3 Implement PrivarionAgent
+  - [~] 16.3 Implement PrivarionAgent
     - Implement start() to initialize all protection components
     - Initialize EndpointSecurityManager on startup
     - Start NetworkExtension on startup
@@ -585,7 +585,7 @@ The implementation is organized into discrete, incremental tasks that build upon
     - Implement getStatus() to return AgentStatus
     - _Requirements: 6.1-6.10_
 
-  - [ ] 16.4 Create Launch Agent plist
+  - [~] 16.4 Create Launch Agent plist
     - Create com.privarion.agent.plist in ~/Library/LaunchAgents/
     - Configure RunAtLoad=true for automatic startup
     - Configure KeepAlive=true for automatic restart on crash
@@ -593,26 +593,26 @@ The implementation is organized into discrete, incremental tasks that build upon
     - Set ProgramArguments to PrivarionAgent executable path
     - _Requirements: 6.1-6.4_
 
-  - [ ] 16.5 Implement agent logging
+  - [~] 16.5 Implement agent logging
     - Log startup, shutdown, and crash events to /var/log/privarion/agent.log
     - Log component initialization success/failure
     - Log permission check results
     - _Requirements: 6.10, 17.2_
 
-  - [ ] 16.6 Implement crash recovery
+  - [~] 16.6 Implement crash recovery
     - Launch Agent automatically restarts agent within 5 seconds on crash
     - Agent logs crash reason before restart
     - Agent attempts to restore previous state after restart
     - _Requirements: 6.11, 19.8_
 
-  - [ ] 16.7 Write unit tests for Privarion Agent
+  - [~] 16.7 Write unit tests for Privarion Agent
     - Test permission checking
     - Test component initialization
     - Test status reporting
     - Test graceful shutdown
     - _Requirements: 20.1_
 
-  - [ ] 16.8 Write integration tests for Privarion Agent
+  - [~] 16.8 Write integration tests for Privarion Agent
     - Test complete startup flow: permission check → extension activation → component initialization
     - Test automatic restart on crash
     - Test permission request flow
@@ -620,7 +620,7 @@ The implementation is organized into discrete, incremental tasks that build upon
 
 
 - [ ] 17. Implement error handling and recovery mechanisms
-  - [ ] 17.1 Implement RetryPolicy class
+  - [~] 17.1 Implement RetryPolicy class
     - Create RetryPolicy with maxAttempts, baseDelay, maxDelay
     - Implement execute(_:) with exponential backoff
     - Apply to ES client initialization (3 attempts, 1s base delay)
@@ -628,7 +628,7 @@ The implementation is organized into discrete, incremental tasks that build upon
     - Apply to VM creation (2 attempts, 5s base delay)
     - _Requirements: 19.1_
 
-  - [ ] 17.2 Implement CircuitBreaker class
+  - [~] 17.2 Implement CircuitBreaker class
     - Create CircuitBreaker with state (closed, open, halfOpen), failureCount, threshold, timeout
     - Implement execute(_:) with circuit breaker logic
     - Apply to DNS upstream queries (5 failures, 60s timeout)
@@ -636,7 +636,7 @@ The implementation is organized into discrete, incremental tasks that build upon
     - Apply to VM operations (3 failures, 120s timeout)
     - _Requirements: 19.6-19.7_
 
-  - [ ] 17.3 Implement GracefulDegradationManager
+  - [~] 17.3 Implement GracefulDegradationManager
     - Track active and degraded components
     - Implement handleComponentFailure(_:error:) to degrade component
     - Implement attemptRecovery(_:) to restore degraded component
@@ -645,14 +645,14 @@ The implementation is organized into discrete, incremental tasks that build upon
     - Continue operation with reduced functionality when components fail
     - _Requirements: 19.2, 19.8_
 
-  - [ ] 17.4 Implement error logging and reporting
+  - [~] 17.4 Implement error logging and reporting
     - Create ErrorLogEntry struct with timestamp, component, errorType, message, stackTrace, context, severity
     - Implement ErrorSeverity enum (recoverable, degraded, critical)
     - Log all errors with structured information
     - Create ErrorNotification struct for user notifications with recovery steps
     - _Requirements: 19.9_
 
-  - [ ] 17.5 Implement resource cleanup
+  - [~] 17.5 Implement resource cleanup
     - Create ResourceCleanup protocol with cleanup() method
     - Implement cleanup for NetworkExtension (restore network settings, close connections)
     - Implement cleanup for EndpointSecurity (unsubscribe, release client)
@@ -660,7 +660,7 @@ The implementation is organized into discrete, incremental tasks that build upon
     - Ensure cleanup is called on errors and shutdown
     - _Requirements: 19.3, 18.10_
 
-  - [ ] 17.6 Write unit tests for error handling
+  - [~] 17.6 Write unit tests for error handling
     - Test retry policy with exponential backoff
     - Test circuit breaker state transitions
     - Test graceful degradation
@@ -669,7 +669,7 @@ The implementation is organized into discrete, incremental tasks that build upon
 
 
 - [ ] 18. Implement logging and monitoring system
-  - [ ] 18.1 Create logging infrastructure
+  - [~] 18.1 Create logging infrastructure
     - Configure swift-log for structured logging
     - Create log handlers for file output
     - Set up log rotation (daily, 7-day retention)
@@ -677,43 +677,43 @@ The implementation is organized into discrete, incremental tasks that build upon
     - Create log directories: /var/log/privarion/
     - _Requirements: 17.1-17.3, 17.8-17.9_
 
-  - [ ] 18.2 Implement component-specific logging
+  - [~] 18.2 Implement component-specific logging
     - System Extension logs to /var/log/privarion/system-extension.log
     - Privarion Agent logs to /var/log/privarion/agent.log
     - Network Extension logs to /var/log/privarion/network-extension.log
     - VM Manager logs to /var/log/privarion/vm-manager.log
     - _Requirements: 17.1-17.3, 17.6_
 
-  - [ ] 18.3 Implement security event logging
+  - [~] 18.3 Implement security event logging
     - Log all Security_Event processing with timestamp, process ID, event type, action taken
     - Log all blocked network requests with domain, timestamp, reason
     - Log all VM creation and destruction events
     - _Requirements: 17.4-17.6_
 
-  - [ ] 18.4 Implement log level support
+  - [~] 18.4 Implement log level support
     - Support log levels: debug, info, warning, error, critical
     - Configure log level from configuration file
     - Filter logs based on configured level
     - _Requirements: 17.7_
 
-  - [ ] 18.5 Implement log sanitization
+  - [~] 18.5 Implement log sanitization
     - Sanitize logs to remove personally identifiable information (PII)
     - Redact file paths containing usernames
     - Redact IP addresses in logs (optional based on configuration)
     - _Requirements: 17.12_
 
-  - [ ] 18.6 Implement log export functionality
+  - [~] 18.6 Implement log export functionality
     - Create log export command for support requests
     - Bundle all logs into compressed archive
     - Include system information and configuration (sanitized)
     - _Requirements: 17.11_
 
-  - [ ] 18.7 Implement fallback logging
+  - [~] 18.7 Implement fallback logging
     - When log directory is not writable, fall back to system log (os_log)
     - Log warning about fallback to system log
     - _Requirements: 17.10_
 
-  - [ ] 18.8 Write unit tests for logging system
+  - [~] 18.8 Write unit tests for logging system
     - Test log rotation
     - Test log level filtering
     - Test PII sanitization
@@ -725,7 +725,7 @@ The implementation is organized into discrete, incremental tasks that build upon
   - Ensure all tests pass, ask the user if questions arise.
 
 - [ ] 20. Implement performance monitoring and optimization
-  - [ ] 20.1 Implement performance metrics collection
+  - [~] 20.1 Implement performance metrics collection
     - Track event processing latency for Endpoint Security (<100ms target)
     - Track packet processing latency for Network Extension (<10ms target)
     - Track DNS query latency (cached <50ms, non-cached <200ms)
@@ -734,33 +734,33 @@ The implementation is organized into discrete, incremental tasks that build upon
     - Track VM resource usage (CPU, memory, disk, network)
     - _Requirements: 18.1-18.7_
 
-  - [ ] 20.2 Implement connection pooling
+  - [~] 20.2 Implement connection pooling
     - Create connection pool for upstream DNS queries
     - Reuse connections to reduce latency
     - Configure pool size based on load
     - _Requirements: 18.8_
 
-  - [ ] 20.3 Implement caching strategies
+  - [~] 20.3 Implement caching strategies
     - DNS response caching with TTL (300 seconds)
     - Policy evaluation result caching
     - Blocklist lookup caching
     - Implement cache eviction for memory management
     - _Requirements: 18.9_
 
-  - [ ] 20.4 Implement resource management
+  - [~] 20.4 Implement resource management
     - Release resources promptly when no longer needed
     - Reduce cache size when system memory is low
     - Monitor memory pressure and adjust behavior
     - _Requirements: 18.10-18.11_
 
-  - [ ] 20.5 Create performance metrics dashboard
+  - [~] 20.5 Create performance metrics dashboard
     - Expose metrics through API for GUI/CLI consumption
     - Include real-time CPU, memory, network usage
     - Include latency percentiles (p50, p95, p99)
     - Include error counts and rates
     - _Requirements: 18.12_
 
-  - [ ] 20.6 Write performance benchmarks
+  - [~] 20.6 Write performance benchmarks
     - Benchmark event processing latency (target <100ms for 95%)
     - Benchmark packet processing latency (target <10ms for 95%)
     - Benchmark DNS query latency (cached <50ms, non-cached <200ms)
@@ -769,34 +769,34 @@ The implementation is organized into discrete, incremental tasks that build upon
 
 
 - [ ] 21. Integrate with existing CLI (PrivacyCtl)
-  - [ ] 21.1 Add extension management commands
+  - [~] 21.1 Add extension management commands
     - Add `privacyctl extension install` command to install System Extension
     - Add `privacyctl extension status` command to check extension status
     - Add `privacyctl extension activate` command to activate extension
     - Add `privacyctl extension deactivate` command to deactivate extension
     - _Requirements: 21.1-21.2_
 
-  - [ ] 21.2 Add protection control commands
+  - [~] 21.2 Add protection control commands
     - Add `privacyctl protection start` command to start all protection components
     - Add `privacyctl protection stop` command to stop all protection components
     - Add `privacyctl protection status` command to show protection status
     - _Requirements: 21.3-21.4_
 
-  - [ ] 21.3 Add policy management commands
+  - [~] 21.3 Add policy management commands
     - Add `privacyctl policy add` command to add protection policy
     - Add `privacyctl policy remove` command to remove policy
     - Add `privacyctl policy list` command to list all policies
     - Add `privacyctl policy show <id>` command to show policy details
     - _Requirements: 21.5_
 
-  - [ ] 21.4 Add blocklist management commands
+  - [~] 21.4 Add blocklist management commands
     - Add `privacyctl blocklist add <domain>` command to add domain to blocklist
     - Add `privacyctl blocklist remove <domain>` command to remove domain
     - Add `privacyctl blocklist list` command to list blocked domains
     - Add `privacyctl blocklist import <file>` command to import blocklist
     - _Requirements: 21.6_
 
-  - [ ] 21.5 Add VM management commands
+  - [~] 21.5 Add VM management commands
     - Add `privacyctl vm create <profile>` command to create VM with hardware profile
     - Add `privacyctl vm start <id>` command to start VM
     - Add `privacyctl vm stop <id>` command to stop VM
@@ -805,25 +805,25 @@ The implementation is organized into discrete, incremental tasks that build upon
     - Add `privacyctl vm restore <snapshot-id>` command to restore snapshot
     - _Requirements: 21.7_
 
-  - [ ] 21.6 Add utility commands
+  - [~] 21.6 Add utility commands
     - Add `privacyctl logs show` command to view recent logs with filtering
     - Add `privacyctl logs export` command to export logs for support
     - Add `privacyctl permissions status` command to check all permissions
     - Add `privacyctl metrics show` command to display performance metrics
     - _Requirements: 21.8-21.10_
 
-  - [ ] 21.7 Add JSON output support
+  - [~] 21.7 Add JSON output support
     - Add `--format json` flag to all commands for scripting
     - Output structured JSON for machine parsing
     - _Requirements: 21.11_
 
-  - [ ] 21.8 Add shell completion
+  - [~] 21.8 Add shell completion
     - Generate bash completion script
     - Generate zsh completion script
     - Install completion scripts during setup
     - _Requirements: 21.12_
 
-  - [ ] 21.9 Write integration tests for CLI commands
+  - [~] 21.9 Write integration tests for CLI commands
     - Test all extension commands
     - Test all protection commands
     - Test policy and blocklist management
@@ -833,21 +833,21 @@ The implementation is organized into discrete, incremental tasks that build upon
 
 
 - [ ] 22. Integrate with existing GUI (PrivarionGUI)
-  - [ ] 22.1 Create System Extension status view
+  - [~] 22.1 Create System Extension status view
     - Display extension status (active, inactive, error) with visual indicator
     - Add "Install Extension" button that calls SystemExtensionManager
     - Add "Activate Extension" button for installed but inactive extensions
     - Show extension version and installation date
     - _Requirements: 22.1-22.2_
 
-  - [ ] 22.2 Create permissions status view
+  - [~] 22.2 Create permissions status view
     - Display status for all required permissions (System Extension, Full Disk Access, Network Extension)
     - Use color-coded indicators (green=granted, yellow=notDetermined, red=denied)
     - Add "Open System Preferences" buttons for each permission
     - Deep link to specific permission panes in System Preferences
     - _Requirements: 22.3-22.4_
 
-  - [ ] 22.3 Create protection policy management view
+  - [~] 22.3 Create protection policy management view
     - Display list of active Protection_Policy entries in table
     - Add "New Policy" button to open policy creation form
     - Implement policy creation form with fields: identifier, protection level, filtering rules, VM isolation
@@ -855,14 +855,14 @@ The implementation is organized into discrete, incremental tasks that build upon
     - Support policy import/export
     - _Requirements: 22.5-22.6_
 
-  - [ ] 22.4 Create network monitoring view
+  - [~] 22.4 Create network monitoring view
     - Display list of blocked domains with timestamps in scrollable list
     - Add search/filter functionality
     - Show statistics: total blocked requests, top blocked domains
     - Add "Export Logs" button
     - _Requirements: 22.7_
 
-  - [ ] 22.5 Create VM management view
+  - [~] 22.5 Create VM management view
     - Display list of running VMs with resource usage (CPU, memory, network)
     - Show VM status indicators (running, stopped, error)
     - Add controls for starting/stopping VMs
@@ -870,7 +870,7 @@ The implementation is organized into discrete, incremental tasks that build upon
     - Display VM hardware profile information
     - _Requirements: 22.8-22.9_
 
-  - [ ] 22.6 Create performance metrics dashboard
+  - [~] 22.6 Create performance metrics dashboard
     - Display real-time CPU usage graph
     - Display real-time memory usage graph
     - Display network throughput graph
@@ -879,7 +879,7 @@ The implementation is organized into discrete, incremental tasks that build upon
     - Update metrics every 2 seconds
     - _Requirements: 22.10_
 
-  - [ ] 22.7 Create logs viewer
+  - [~] 22.7 Create logs viewer
     - Display recent log entries (last 100) with auto-refresh
     - Add log level filtering (debug, info, warning, error, critical)
     - Add component filtering (System Extension, Agent, Network Extension, VM Manager)
@@ -887,13 +887,13 @@ The implementation is organized into discrete, incremental tasks that build upon
     - Add "Export Logs" button
     - _Requirements: 22.11_
 
-  - [ ] 22.8 Implement dark mode support
+  - [~] 22.8 Implement dark mode support
     - Ensure all views support dark mode and light mode
     - Use system color scheme
     - Test all views in both modes
     - _Requirements: 22.12_
 
-  - [ ] 22.9 Write UI tests for GUI integration
+  - [~] 22.9 Write UI tests for GUI integration
     - Test extension installation flow
     - Test permission request flow
     - Test policy creation and management
@@ -905,60 +905,60 @@ The implementation is organized into discrete, incremental tasks that build upon
   - Ensure all tests pass, ask the user if questions arise.
 
 - [ ] 24. Implement migration from current implementation
-  - [ ] 24.1 Create migration detection
+  - [~] 24.1 Create migration detection
     - Detect existing Privarion configuration in ~/.privarion/
     - Check for existing identity profiles
     - Check for existing network rules
     - Check for existing blocklists
     - _Requirements: 23.1_
 
-  - [ ] 24.2 Implement identity profile migration
+  - [~] 24.2 Implement identity profile migration
     - Parse existing identity profiles from old format
     - Convert to HardwareProfile format with UUID and metadata
     - Validate migrated profiles
     - Save to /Library/Application Support/Privarion/profiles.json
     - _Requirements: 23.2_
 
-  - [ ] 24.3 Implement network rules migration
+  - [~] 24.3 Implement network rules migration
     - Parse existing network rules from old format
     - Convert to ProtectionPolicy format
     - Map old protection levels to new protection levels
     - Save to configuration file
     - _Requirements: 23.3_
 
-  - [ ] 24.4 Implement blocklist migration
+  - [~] 24.4 Implement blocklist migration
     - Parse existing blocklists from old format
     - Convert to new blocklist format (tracking domains, fingerprinting domains, telemetry endpoints)
     - Merge with default blocklists
     - Save to configuration file
     - _Requirements: 23.4_
 
-  - [ ] 24.5 Implement migration backup
+  - [~] 24.5 Implement migration backup
     - Backup old configuration to ~/.privarion/backup/ before migration
     - Include timestamp in backup directory name
     - Preserve original configuration for rollback
     - _Requirements: 23.5_
 
-  - [ ] 24.6 Implement migration validation
+  - [~] 24.6 Implement migration validation
     - Validate migrated configuration before activation
     - Check for missing required fields
     - Check for invalid values
     - Report validation errors to user
     - _Requirements: 23.6_
 
-  - [ ] 24.7 Implement migration error handling
+  - [~] 24.7 Implement migration error handling
     - When migration fails, preserve original configuration
     - Log detailed error information
     - Provide rollback option to user
     - _Requirements: 23.7, 23.9_
 
-  - [ ] 24.8 Create migration status report
+  - [~] 24.8 Create migration status report
     - Show number of migrated profiles, policies, blocklist entries
     - Show any items that failed to migrate
     - Display report in GUI and CLI
     - _Requirements: 23.8_
 
-  - [ ] 24.9 Write integration tests for migration
+  - [~] 24.9 Write integration tests for migration
     - Test migration with various old configuration formats
     - Test migration validation
     - Test migration error handling
@@ -967,7 +967,7 @@ The implementation is organized into discrete, incremental tasks that build upon
 
 
 - [ ] 25. Implement entitlements and provisioning
-  - [ ] 25.1 Create entitlements files
+  - [~] 25.1 Create entitlements files
     - Create SystemExtension.entitlements with com.apple.developer.system-extension.install
     - Add com.apple.developer.endpoint-security.client entitlement
     - Add com.apple.security.files.user-selected.read-write for Full Disk Access
@@ -975,19 +975,19 @@ The implementation is organized into discrete, incremental tasks that build upon
     - Create VMManager.entitlements with com.apple.security.virtualization
     - _Requirements: 12.1-12.6_
 
-  - [ ] 25.2 Configure code signing
+  - [~] 25.2 Configure code signing
     - Configure signing with Developer ID certificate
     - Set up provisioning profiles for each target
     - Enable hardened runtime for all targets
     - _Requirements: 12.7-12.8, 13.1_
 
-  - [ ] 25.3 Implement entitlement validation
+  - [~] 25.3 Implement entitlement validation
     - Validate entitlements during System Extension installation
     - Return descriptive error when entitlement is missing
     - Log entitlement validation results
     - _Requirements: 12.9-12.10_
 
-  - [ ] 25.4 Write tests for entitlement validation
+  - [~] 25.4 Write tests for entitlement validation
     - Test validation with all required entitlements
     - Test validation with missing entitlements
     - Test error messages
@@ -995,13 +995,13 @@ The implementation is organized into discrete, incremental tasks that build upon
 
 
 - [ ] 26. Implement notarization and distribution
-  - [ ] 26.1 Configure build for notarization
+  - [~] 26.1 Configure build for notarization
     - Enable hardened runtime for all targets
     - Configure code signing with Developer ID Application certificate
     - Set up build settings for notarization compatibility
     - _Requirements: 13.1-13.2_
 
-  - [ ] 26.2 Create distribution package
+  - [~] 26.2 Create distribution package
     - Package application in DMG or ZIP format
     - Include installer script for Launch Agent setup
     - Include README with installation instructions
