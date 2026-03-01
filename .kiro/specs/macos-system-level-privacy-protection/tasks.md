@@ -184,7 +184,7 @@ The implementation is organized into discrete, incremental tasks that build upon
     - _Requirements: 20.1_
 
 
-- [ ] 6. Implement Endpoint Security Framework integration
+- [x] 6. Implement Endpoint Security Framework integration
   - [x] 6.1 Create EndpointSecurityManager
     - Implement initialize() to create ES client using es_new_client()
     - Implement subscribe(to:) to subscribe to event types (ES_EVENT_TYPE_AUTH_EXEC, ES_EVENT_TYPE_AUTH_OPEN, ES_EVENT_TYPE_NOTIFY_WRITE, ES_EVENT_TYPE_NOTIFY_EXIT)
@@ -291,7 +291,7 @@ The implementation is organized into discrete, incremental tasks that build upon
     - _Requirements: 20.1, 18.3_
 
 
-- [ ] 9. Implement Network Extension - Packet Tunnel Provider
+- [x] 9. Implement Network Extension - Packet Tunnel Provider
   - [x] 9.1 Create PrivarionPacketTunnelProvider
     - Subclass NEPacketTunnelProvider
     - Override startTunnel(options:) to initialize packet tunnel
@@ -328,14 +328,14 @@ The implementation is organized into discrete, incremental tasks that build upon
     - Restore original network configuration
     - _Requirements: 3.11-3.12, 19.2_
 
-  - [~] 9.6 Write unit tests for Packet Tunnel Provider
+  - [x] 9.6 Write unit tests for Packet Tunnel Provider
     - Test tunnel configuration
     - Test packet filtering (allow, drop, modify)
     - Test packet processing latency (<10ms)
     - Test graceful shutdown
     - _Requirements: 20.1, 20.3_
 
-  - [~] 9.7 Write integration tests for Network Extension
+  - [x] 9.7 Write integration tests for Network Extension
     - Test complete flow: network request → packet interception → filtering → response
     - Test with various network configurations (Wi-Fi, Ethernet)
     - Test with VPN active

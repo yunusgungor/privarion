@@ -166,65 +166,19 @@ public final class ApplicationLauncher: Sendable {
     private let securityMonitor: SecurityMonitoringEngine?
     private let logger: Logger
     
-    /// Lock for thread-safe Process access
-    private let processLock = NSLock()
+    /// Serial queue for thread-safe process management
+    private let processQueue = DispatchQueue(label: "com.privarion.applicationlauncher.process", qos: .userInitiated)
     
-    /// Actor for thread-safe process management
-    private actor ProcessRegistry {
-        private var runningProcesses: [UUID: ProcessInfo] = [:]
-        private var processTimers: [UUID: Timer] = [:]
-        private var completedProcesses: [UUID: ProcessResult] = [:]
-        
-        func registerProcess(_ handle: ProcessHandle, process: Process, lock: NSLock) {
-            let processInfo = ProcessInfo(
-                handle: handle,
-                process: process,
-                startTime: Date(),
-                lock: lock
-            )
-            runningProcesses[handle.id] = processInfo
-        }
-        
-        func unregisterProcess(_ id: UUID) {
-            runningProcesses.removeValue(forKey: id)
-            processTimers[id]?.invalidate()
-            processTimers.removeValue(forKey: id)
-        }
-        
-        func getProcess(_ id: UUID) -> ProcessInfo? {
-            return runningProcesses[id]
-        }
-        
-        func getAllProcesses() -> [ProcessInfo] {
-            return Array(runningProcesses.values)
-        }
-        
-        func setTimer(_ id: UUID, timer: Timer) {
-            processTimers[id] = timer
-        }
-        
-        func storeCompletedProcess(_ id: UUID, result: ProcessResult) {
-            completedProcesses[id] = result
-        }
-        
-        func getCompletedProcess(_ id: UUID) -> ProcessResult? {
-            return completedProcesses[id]
-        }
-        
-        func removeCompletedProcess(_ id: UUID) {
-            completedProcesses.removeValue(forKey: id)
-        }
-        
-        struct ProcessInfo: Sendable {
-            let handle: ProcessHandle
-            let process: Process
-            let startTime: Date
-            let lock: NSLock
-            var resourceUsage: ResourceUsage?
-        }
+    /// Process registry protected by serial queue
+    private struct ProcessInfo {
+        let handle: ProcessHandle
+        let process: Process
+        let startTime: Date
+        var resourceUsage: ResourceUsage?
     }
     
-    private let processRegistry = ProcessRegistry()
+    private var runningProcesses: [UUID: ProcessInfo] = [:]
+    private var completedProcesses: [UUID: ProcessResult] = [:]
     
     // MARK: - Initialization
     
@@ -316,8 +270,15 @@ public final class ApplicationLauncher: Sendable {
                 configuration: configuration
             )
             
-            // Register process
-            await processRegistry.registerProcess(updatedHandle, process: process, lock: processLock)
+            // Register process (thread-safe via serial queue)
+            processQueue.sync {
+                let processInfo = ProcessInfo(
+                    handle: updatedHandle,
+                    process: process,
+                    startTime: Date()
+                )
+                runningProcesses[updatedHandle.id] = processInfo
+            }
             
             // Set up process monitoring
             await setupProcessMonitoring(handle: updatedHandle, process: process)
@@ -382,31 +343,32 @@ public final class ApplicationLauncher: Sendable {
         logger.info("Terminating process: \(processId)")
         
         // First check if process already completed and we have the result stored
-        if let completedResult = await processRegistry.getCompletedProcess(processId) {
-            await processRegistry.removeCompletedProcess(processId)
-            return completedResult
+        let completedResult: ProcessResult? = processQueue.sync {
+            return completedProcesses[processId]
+        }
+        
+        if let result = completedResult {
+            processQueue.sync {
+                _ = completedProcesses.removeValue(forKey: processId)
+            }
+            return result
         }
         
         // Get process info - handle case where process already terminated
-        guard let processInfo = await processRegistry.getProcess(processId) else {
-            // Process already terminated and cleaned up - this can happen in concurrent scenarios
-            // where the termination handler fired before we could terminate the process
+        let processInfo: ProcessInfo? = processQueue.sync {
+            return runningProcesses[processId]
+        }
+        
+        guard let processInfo = processInfo else {
             logger.info("Process already terminated: \(processId)")
-            // Return a minimal result indicating the process is gone
             throw LaunchError.processTerminationFailed(-1)
         }
         
         let startTime = Date()
         let process = processInfo.process
         let handle = processInfo.handle
-        let lock = processInfo.lock
-        
-        // Use lock to safely check and terminate process
-        lock.lock()
-        defer { lock.unlock() }
         
         // Check if process is still running before attempting termination
-        // This prevents calling terminate on an already terminated process
         guard process.isRunning else {
             // Process already terminated - clean up ephemeral space and return
             logger.info("Process already terminated (not running): \(processId)")
@@ -419,7 +381,9 @@ public final class ApplicationLauncher: Sendable {
             }
             
             // Unregister the process
-            await processRegistry.unregisterProcess(processId)
+            processQueue.sync {
+                _ = runningProcesses.removeValue(forKey: processId)
+            }
             
             // Return result for already terminated process
             let result = ProcessResult(
@@ -452,7 +416,9 @@ public final class ApplicationLauncher: Sendable {
         let resourceUsage = await collectResourceUsage(for: handle)
         
         // Unregister process
-        await processRegistry.unregisterProcess(processId)
+        processQueue.sync {
+            _ = runningProcesses.removeValue(forKey: processId)
+        }
         
         // Clean up ephemeral space
         do {
@@ -484,21 +450,25 @@ public final class ApplicationLauncher: Sendable {
     /// Gets information about all running processes
     /// - Returns: Array of process handles for running processes
     public func getRunningProcesses() async -> [ProcessHandle] {
-        let processes = await processRegistry.getAllProcesses()
-        return processes.map { $0.handle }
+        return processQueue.sync {
+            return runningProcesses.values.map { $0.handle }
+        }
     }
     
     /// Gets information about a specific running process
     /// - Parameter processId: ID of the process handle
     /// - Returns: Process handle if found, nil otherwise
     public func getProcessInfo(_ processId: UUID) async -> ProcessHandle? {
-        let processInfo = await processRegistry.getProcess(processId)
-        return processInfo?.handle
+        return processQueue.sync {
+            return runningProcesses[processId]?.handle
+        }
     }
     
     /// Terminates all running processes and cleans up
     public func terminateAllProcesses() async {
-        let processes = await processRegistry.getAllProcesses()
+        let processes = processQueue.sync {
+            return Array(runningProcesses.values)
+        }
         
         logger.warning("Emergency termination of \(processes.count) running processes")
         
@@ -604,7 +574,10 @@ public final class ApplicationLauncher: Sendable {
         logger.info("Process terminated: PID \(handle.processId), exit code: \(process.terminationStatus)")
         
         // Get process start time from registry if available
-        let startTime = await processRegistry.getProcess(handle.id)?.startTime ?? Date()
+        let startTime = processQueue.sync {
+            return runningProcesses[handle.id]?.startTime ?? Date()
+        }
+        
         let executionTime = Date().timeIntervalSince(startTime)
         
         // Collect resource usage
@@ -619,10 +592,11 @@ public final class ApplicationLauncher: Sendable {
             standardError: nil,
             resourceUsage: resourceUsage
         )
-        await processRegistry.storeCompletedProcess(handle.id, result: result)
         
-        // Clean up process registration
-        await processRegistry.unregisterProcess(handle.id)
+        processQueue.sync {
+            completedProcesses[handle.id] = result
+            runningProcesses.removeValue(forKey: handle.id)
+        }
         
         // Clean up ephemeral space if configured
         if handle.configuration.killOnParentExit {
