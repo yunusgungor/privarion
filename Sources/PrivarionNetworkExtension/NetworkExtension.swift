@@ -598,30 +598,348 @@ public class PrivarionPacketTunnelProvider: NEPacketTunnelProvider {
 
 /// Content Filter Provider for web content filtering
 /// Filters web content in Safari and system webviews
+/// Requirements: 5.1-5.10
+@available(macOS 10.15, *)
 public class PrivarionContentFilterProvider: NEFilterDataProvider {
+    
+    // MARK: - Properties
+    
+    /// Logger instance
     private let logger = Logger(label: "com.privarion.network-extension.content-filter")
     
+    /// File logger for content filter logs
+    private let fileLogger: FileLogger
+    
+    /// DNS filter for domain checking
+    private let dnsFilter: DNSFilter
+    
+    /// Blocklist manager for tracking domain detection
+    private let blocklistManager: BlocklistManager
+    
+    /// Fingerprinting patterns to detect in content
+    private let fingerprintingPatterns: [String] = [
+        "canvas.toDataURL",
+        "canvas.getImageData",
+        "WebGLRenderingContext",
+        "AudioContext.createOscillator",
+        "navigator.plugins",
+        "navigator.mimeTypes",
+        "screen.colorDepth",
+        "screen.pixelDepth",
+        "navigator.hardwareConcurrency",
+        "navigator.deviceMemory",
+        "navigator.getBattery",
+        "navigator.getGamepads",
+        "RTCPeerConnection",
+        "enumerateDevices"
+    ]
+    
+    /// Telemetry patterns to detect in outbound data
+    private let telemetryPatterns: [String] = [
+        "analytics",
+        "tracking",
+        "telemetry",
+        "beacon",
+        "collect",
+        "event",
+        "pageview",
+        "impression",
+        "conversion",
+        "attribution"
+    ]
+    
+    /// Flow tracking for monitoring
+    private var activeFlows: [String: FlowInfo] = [:]
+    private let flowQueue = DispatchQueue(label: "com.privarion.content-filter.flows", attributes: .concurrent)
+    
+    // MARK: - Initialization
+    
+    public override init() {
+        self.fileLogger = FileLogger(logFilePath: "/var/log/privarion/network-extension.log")
+        self.dnsFilter = DNSFilter()
+        self.blocklistManager = BlocklistManager()
+        super.init()
+        
+        logger.info("Content Filter Provider initialized")
+        fileLogger.log("[\(ISO8601DateFormatter().string(from: Date()))] Content Filter Provider initialized")
+    }
+    
+    // MARK: - Flow Handling
+    
+    /// Handle new network flow and evaluate against filtering rules
+    /// Returns verdict to allow, drop, or monitor the flow
+    /// - Parameter flow: The new network flow to evaluate
+    /// - Returns: Verdict for the flow (allow, drop, or filter with monitoring)
+    /// - Requirement: 5.1, 5.2, 5.3, 5.4, 5.9
     public override func handleNewFlow(_ flow: NEFilterFlow) -> NEFilterNewFlowVerdict {
-        logger.info("Handling new flow")
-        // Implementation will be added in subsequent tasks
+        let timestamp = ISO8601DateFormatter().string(from: Date())
+        
+        // Extract flow information
+        guard let socketFlow = flow as? NEFilterSocketFlow else {
+            logger.debug("Non-socket flow, allowing")
+            return .allow()
+        }
+        
+        // Get destination endpoint
+        let remoteEndpoint = socketFlow.remoteEndpoint
+        var destinationHost: String?
+        var destinationPort: Int?
+        
+        if let hostEndpoint = remoteEndpoint as? NWHostEndpoint {
+            destinationHost = hostEndpoint.hostname
+            destinationPort = Int(hostEndpoint.port)
+        }
+        
+        guard let host = destinationHost else {
+            logger.debug("Could not extract destination host, allowing")
+            return .allow()
+        }
+        
+        logger.info("Evaluating new flow", metadata: [
+            "destination": "\(host)",
+            "port": "\(destinationPort ?? 0)"
+        ])
+        
+        // Requirement 5.2: Evaluate flow destination against tracking domain list
+        // Requirement 5.3: Return drop verdict for tracking domains
+        if blocklistManager.shouldBlockDomain(host) {
+            logger.info("Dropping flow to tracking domain", metadata: ["domain": "\(host)"])
+            fileLogger.log("[\(timestamp)] BLOCKED: Flow to tracking domain \(host):\(destinationPort ?? 0)")
+            
+            // Log blocked flow (Requirement 5.10)
+            logBlockedFlow(
+                url: host,
+                timestamp: timestamp,
+                reason: "tracking domain"
+            )
+            
+            return .drop()
+        }
+        
+        // Requirement 5.4: Return filter verdict with monitoring for fingerprinting domains
+        if dnsFilter.isFingerprintingDomain(host) {
+            logger.info("Monitoring flow to fingerprinting domain", metadata: ["domain": "\(host)"])
+            fileLogger.log("[\(timestamp)] MONITORING: Flow to fingerprinting domain \(host):\(destinationPort ?? 0)")
+            
+            // Track flow for monitoring
+            let flowID = generateFlowID(flow)
+            trackFlow(flowID: flowID, host: host, port: destinationPort ?? 0)
+            
+            // Return filter verdict with monitoring (Requirement 5.4)
+            // The handleInboundData and handleOutboundData methods will inspect the actual content
+            return .filterDataVerdict(withFilterInbound: true, peekInboundBytes: 8192, filterOutbound: true, peekOutboundBytes: 8192)
+        }
+        
+        // Requirement 5.9: Support filtering for Safari and WKWebView
+        if isSafariOrWebView(socketFlow) {
+            logger.debug("Monitoring Safari/WebView flow", metadata: ["destination": "\(host)"])
+            
+            let flowID = generateFlowID(flow)
+            trackFlow(flowID: flowID, host: host, port: destinationPort ?? 0)
+            
+            // Monitor both inbound and outbound data for Safari/WebView
+            // The data inspection happens in handleInboundData and handleOutboundData
+            return .filterDataVerdict(withFilterInbound: true, peekInboundBytes: 8192, filterOutbound: true, peekOutboundBytes: 8192)
+        }
+        
+        // Allow other flows
+        logger.debug("Allowing flow", metadata: ["destination": "\(host)"])
         return .allow()
     }
     
+    /// Inspect inbound data for fingerprinting patterns
+    /// Modifies or blocks data containing fingerprinting code
+    /// - Parameters:
+    ///   - flow: The network flow
+    ///   - offset: Starting offset of the data
+    ///   - readBytes: The data to inspect
+    /// - Returns: Verdict to allow, drop, or modify the data
+    /// - Requirement: 5.5, 5.6
     public override func handleInboundData(from flow: NEFilterFlow,
                                           readBytesStartOffset offset: Int,
                                           readBytes: Data) -> NEFilterDataVerdict {
-        logger.debug("Handling inbound data", metadata: ["offset": "\(offset)", "bytes": "\(readBytes.count)"])
-        // Implementation will be added in subsequent tasks
+        let timestamp = ISO8601DateFormatter().string(from: Date())
+        
+        logger.debug("Inspecting inbound data", metadata: [
+            "offset": "\(offset)",
+            "bytes": "\(readBytes.count)"
+        ])
+        
+        // Convert data to string for pattern matching
+        guard let content = String(data: readBytes, encoding: .utf8) else {
+            // Not text content, allow
+            return .allow()
+        }
+        
+        // Check for fingerprinting patterns (Requirement 5.5)
+        for pattern in fingerprintingPatterns {
+            if content.contains(pattern) {
+                logger.warning("Detected fingerprinting pattern in inbound data", metadata: [
+                    "pattern": "\(pattern)",
+                    "offset": "\(offset)"
+                ])
+                fileLogger.log("[\(timestamp)] FINGERPRINT DETECTED: Pattern '\(pattern)' in inbound data at offset \(offset)")
+                
+                // Get flow info for logging
+                if let socketFlow = flow as? NEFilterSocketFlow,
+                   let hostEndpoint = socketFlow.remoteEndpoint as? NWHostEndpoint {
+                    logBlockedFlow(
+                        url: hostEndpoint.hostname,
+                        timestamp: timestamp,
+                        reason: "fingerprinting pattern: \(pattern)"
+                    )
+                }
+                
+                // Block data containing fingerprinting code (Requirement 5.6)
+                return .drop()
+            }
+        }
+        
+        // Allow data if no fingerprinting patterns detected
         return .allow()
     }
     
+    /// Inspect outbound data for telemetry patterns
+    /// Blocks transmission of telemetry data
+    /// - Parameters:
+    ///   - flow: The network flow
+    ///   - offset: Starting offset of the data
+    ///   - readBytes: The data to inspect
+    /// - Returns: Verdict to allow or block the data
+    /// - Requirement: 5.7, 5.8
     public override func handleOutboundData(from flow: NEFilterFlow,
                                            readBytesStartOffset offset: Int,
                                            readBytes: Data) -> NEFilterDataVerdict {
-        logger.debug("Handling outbound data", metadata: ["offset": "\(offset)", "bytes": "\(readBytes.count)"])
-        // Implementation will be added in subsequent tasks
+        let timestamp = ISO8601DateFormatter().string(from: Date())
+        
+        logger.debug("Inspecting outbound data", metadata: [
+            "offset": "\(offset)",
+            "bytes": "\(readBytes.count)"
+        ])
+        
+        // Convert data to string for pattern matching
+        guard let content = String(data: readBytes, encoding: .utf8) else {
+            // Not text content, allow
+            return .allow()
+        }
+        
+        // Check for telemetry patterns (Requirement 5.7)
+        for pattern in telemetryPatterns {
+            if content.lowercased().contains(pattern) {
+                logger.warning("Detected telemetry pattern in outbound data", metadata: [
+                    "pattern": "\(pattern)",
+                    "offset": "\(offset)"
+                ])
+                fileLogger.log("[\(timestamp)] TELEMETRY BLOCKED: Pattern '\(pattern)' in outbound data at offset \(offset)")
+                
+                // Get flow info for logging
+                if let socketFlow = flow as? NEFilterSocketFlow,
+                   let hostEndpoint = socketFlow.remoteEndpoint as? NWHostEndpoint {
+                    logBlockedFlow(
+                        url: hostEndpoint.hostname,
+                        timestamp: timestamp,
+                        reason: "telemetry pattern: \(pattern)"
+                    )
+                }
+                
+                // Block transmission of telemetry data (Requirement 5.8)
+                return .drop()
+            }
+        }
+        
+        // Check for common telemetry JSON structures
+        if content.contains("\"event\"") || content.contains("\"analytics\"") || 
+           content.contains("\"tracking\"") || content.contains("\"metrics\"") {
+            
+            // Try to parse as JSON to confirm it's telemetry
+            if let jsonData = content.data(using: .utf8),
+               let json = try? JSONSerialization.jsonObject(with: jsonData) as? [String: Any] {
+                
+                // Check for telemetry-like structure
+                if json.keys.contains(where: { telemetryPatterns.contains($0.lowercased()) }) {
+                    logger.warning("Detected telemetry JSON structure in outbound data")
+                    fileLogger.log("[\(timestamp)] TELEMETRY BLOCKED: JSON structure detected in outbound data")
+                    
+                    if let socketFlow = flow as? NEFilterSocketFlow,
+                       let hostEndpoint = socketFlow.remoteEndpoint as? NWHostEndpoint {
+                        logBlockedFlow(
+                            url: hostEndpoint.hostname,
+                            timestamp: timestamp,
+                            reason: "telemetry JSON structure"
+                        )
+                    }
+                    
+                    return .drop()
+                }
+            }
+        }
+        
+        // Allow data if no telemetry patterns detected
         return .allow()
     }
+    
+    // MARK: - Helper Methods
+    
+    /// Generate unique flow identifier
+    /// - Parameter flow: The network flow
+    /// - Returns: Unique identifier string
+    private func generateFlowID(_ flow: NEFilterFlow) -> String {
+        return UUID().uuidString
+    }
+    
+    /// Track flow for monitoring
+    /// - Parameters:
+    ///   - flowID: Unique flow identifier
+    ///   - host: Destination host
+    ///   - port: Destination port
+    private func trackFlow(flowID: String, host: String, port: Int) {
+        flowQueue.async(flags: .barrier) {
+            self.activeFlows[flowID] = FlowInfo(
+                host: host,
+                port: port,
+                startTime: Date()
+            )
+        }
+    }
+    
+    /// Check if flow is from Safari or WKWebView
+    /// - Parameter flow: The socket flow to check
+    /// - Returns: True if flow is from Safari or WebView
+    /// - Requirement: 5.9
+    private func isSafariOrWebView(_ flow: NEFilterSocketFlow) -> Bool {
+        // On macOS, sourceAppIdentifier is not available
+        // Instead, we check the source application audit token if available
+        // For now, we'll monitor all HTTPS flows to web ports as a conservative approach
+        
+        if let remoteEndpoint = flow.remoteEndpoint as? NWHostEndpoint {
+            let port = Int(remoteEndpoint.port) ?? 0
+            // Common web ports
+            let webPorts = [80, 443, 8080, 8443]
+            return webPorts.contains(port)
+        }
+        
+        return false
+    }
+    
+    /// Log blocked flow with comprehensive details
+    /// - Parameters:
+    ///   - url: The blocked URL or domain
+    ///   - timestamp: ISO8601 formatted timestamp
+    ///   - reason: Reason for blocking
+    /// - Requirement: 5.10, 17.3
+    private func logBlockedFlow(url: String, timestamp: String, reason: String) {
+        let logMessage = "[\(timestamp)] BLOCKED FLOW: url=\(url) reason=\(reason)"
+        fileLogger.log(logMessage)
+    }
+}
+
+// MARK: - Supporting Types
+
+/// Flow information for tracking
+private struct FlowInfo {
+    let host: String
+    let port: Int
+    let startTime: Date
 }
 
 /// Network Extension errors

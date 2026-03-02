@@ -85,6 +85,7 @@ let package = Package(
             name: "PrivarionCore",
             dependencies: [
                 "PrivarionHook",
+                "PrivarionSharedModels",
                 .product(name: "Logging", package: "swift-log"),
                 .product(name: "Collections", package: "swift-collections"),
                 .product(name: "ArgumentParser", package: "swift-argument-parser"),
@@ -122,6 +123,7 @@ let package = Package(
             name: "PrivarionCoreTests",
             dependencies: [
                 "PrivarionCore",
+                "PrivarionSharedModels",
                 .product(name: "SwiftCheck", package: "SwiftCheck")
             ],
             exclude: ["AGENTS.md"]
